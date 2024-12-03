@@ -1,0 +1,6 @@
+SPRING_DATASOURCE_URL: jdbc:h2:mem:beaver-dev
+SPRING_H2_CONSOLE_ENABLED: false
+
+spring:
+  main:
+    allow-bean-definition-overriding: true
