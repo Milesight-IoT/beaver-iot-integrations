@@ -39,6 +39,7 @@
         <module>sample-integrations</module>
         <module>ping</module>
         <module>msc-integration</module>
+        <module>vms-integration</module>
     </modules>
 
     <properties>

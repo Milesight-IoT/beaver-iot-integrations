@@ -1,0 +1,6 @@
+integration:
+  vms-integration:
+    name: Vms Integration
+    description: "Yuanh Vms Integration"
+    icon-url: "public/vms.svg"
+    enabled: true
