@@ -39,6 +39,8 @@
         <module>sample-integrations</module>
         <module>ping</module>
         <module>msc-integration</module>
+        <module>aws-iot-integration</module>
+        <module>parser-components</module>
     </modules>
 
     <properties>
