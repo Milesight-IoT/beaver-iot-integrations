@@ -25,6 +25,9 @@ spring:
       enabled: ${SPRING_H2_CONSOLE_ENABLED:true}
       path: /public/h2-console
 
+file:
+  upload-dir: C://file
+
 camel:
   springboot:
     routes-include-pattern: classpath:routes/*.yaml

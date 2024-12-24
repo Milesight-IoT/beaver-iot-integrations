@@ -1,0 +1,11 @@
+
+integration:
+   lavatory:
+      name: "lavatory integration"
+      description: "lavatory integration"
+      icon-url: "public/lavatory-icon.svg"
+      enabled: true
+      #添加设备
+      entity-identifier-add-device: add_device
+      #删除设备
+      entity-identifier-delete-device: delete_device
