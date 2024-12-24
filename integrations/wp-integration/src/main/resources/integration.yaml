@@ -1,0 +1,10 @@
+integration:
+  wp-integration: # integration identifier
+    name: WP Conference Management # integration name
+    description: "WP Conference Management" # integration description
+    icon-url: "public/wp_icon.svg"
+    enabled: true # whether enable this integration. Must be "true" for now
+
+    entity-identifier-add-device: add_device
+    # the same to deleteDevice identifier
+    entity-identifier-delete-device: delete_device
