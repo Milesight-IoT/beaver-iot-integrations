@@ -1,0 +1,8 @@
+integration:
+  gateway:
+    name: Gateway
+    description: "Pull device data"
+    icon-url: "public/gateway-logo.svg"
+    enabled: true
+    entity-identifier-add-device: add_device
+    entity-identifier-delete-device: delete_device
