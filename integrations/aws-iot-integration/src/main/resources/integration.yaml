@@ -1,0 +1,123 @@
+
+integration:
+   aws-iot-integration:
+      name: "AWS IOT INTEGRATION"
+      description: "AWS IOT INTEGRATION"
+      icon-url: "public/aws_icon.svg"
+      enabled: true
+      #添加设备
+      entity-identifier-add-device: add_device
+      #删除设备
+      entity-identifier-delete-device: delete_device
+
+
+sdk2:
+   aws:
+      enabled: true
+      partition: aws
+      region: us-east-1
+      account-id: "637423489625"
+      assume-role-arn: arn:aws:iam::637423489625:role/IotFullAccess
+      config:
+         device-profile:
+            profiles:
+               - rf-region: RU864
+                 lora-class: A
+                 device-profile-id: 78400e87-99f2-4085-b07d-a740d29e0a66
+               - rf-region: RU864
+                 lora-class: B
+                 device-profile-id: 78400e87-99f2-4085-b07d-a740d29e0a66
+               - rf-region: RU864
+                 lora-class: C
+                 device-profile-id: 78400e87-99f2-4085-b07d-a740d29e0a66
+               - rf-region: IN865
+                 lora-class: A
+                 device-profile-id: 78400e87-99f2-4085-b07d-a740d29e0a66
+               - rf-region: IN865
+                 lora-class: B
+                 device-profile-id: 78400e87-99f2-4085-b07d-a740d29e0a66
+               - rf-region: IN865
+                 lora-class: C
+                 device-profile-id: 78400e87-99f2-4085-b07d-a740d29e0a66
+               - rf-region: EU868
+                 lora-class: A
+                 device-profile-id: 78400e87-99f2-4085-b07d-a740d29e0a66
+               - rf-region: EU868
+                 lora-class: B
+                 device-profile-id: 78400e87-99f2-4085-b07d-a740d29e0a66
+               - rf-region: EU868
+                 lora-class: C
+                 device-profile-id: 78400e87-99f2-4085-b07d-a740d29e0a66
+               - rf-region: US915
+                 lora-class: A
+                 device-profile-id: 78400e87-99f2-4085-b07d-a740d29e0a66
+               - rf-region: US915
+                 lora-class: B
+                 device-profile-id: 78400e87-99f2-4085-b07d-a740d29e0a66
+               - rf-region: US915
+                 lora-class: C
+                 device-profile-id: 78400e87-99f2-4085-b07d-a740d29e0a66
+               - rf-region: AU915
+                 lora-class: A
+                 device-profile-id: 78400e87-99f2-4085-b07d-a740d29e0a66
+               - rf-region: AU915
+                 lora-class: B
+                 device-profile-id: 78400e87-99f2-4085-b07d-a740d29e0a66
+               - rf-region: AU915
+                 lora-class: C
+                 device-profile-id: 78400e87-99f2-4085-b07d-a740d29e0a66
+               - rf-region: KR920
+                 lora-class: A
+                 device-profile-id: 78400e87-99f2-4085-b07d-a740d29e0a66
+               - rf-region: KR920
+                 lora-class: B
+                 device-profile-id: 78400e87-99f2-4085-b07d-a740d29e0a66
+               - rf-region: KR920
+                 lora-class: C
+                 device-profile-id: 78400e87-99f2-4085-b07d-a740d29e0a66
+               - rf-region: AS923_1
+                 lora-class: A
+                 device-profile-id: 78400e87-99f2-4085-b07d-a740d29e0a66
+               - rf-region: AS923_1
+                 lora-class: B
+                 device-profile-id: 78400e87-99f2-4085-b07d-a740d29e0a66
+               - rf-region: AS923_1
+                 lora-class: C
+                 device-profile-id: 78400e87-99f2-4085-b07d-a740d29e0a66
+               - rf-region: AS923_2
+                 lora-class: A
+                 device-profile-id: 78400e87-99f2-4085-b07d-a740d29e0a66
+               - rf-region: AS923_2
+                 lora-class: B
+                 device-profile-id: 78400e87-99f2-4085-b07d-a740d29e0a66
+               - rf-region: AS923_2
+                 lora-class: C
+                 device-profile-id: 78400e87-99f2-4085-b07d-a740d29e0a66
+               - rf-region: AS923_3
+                 lora-class: A
+                 device-profile-id: 78400e87-99f2-4085-b07d-a740d29e0a66
+               - rf-region: AS923_3
+                 lora-class: B
+                 device-profile-id: 78400e87-99f2-4085-b07d-a740d29e0a66
+               - rf-region: AS923_3
+                 lora-class: C
+                 device-profile-id: 78400e87-99f2-4085-b07d-a740d29e0a66
+               - rf-region: AS923_4
+                 lora-class: A
+                 device-profile-id: 78400e87-99f2-4085-b07d-a740d29e0a66
+               - rf-region: AS923_4
+                 lora-class: B
+                 device-profile-id: 78400e87-99f2-4085-b07d-a740d29e0a66
+               - rf-region: AS923_4
+                 lora-class: C
+                 device-profile-id: 78400e87-99f2-4085-b07d-a740d29e0a66
+         service-profile:
+            active-service-profile-id: aead180d-e875-4a44-9486-1aeeb49e1f6a
+            profiles:
+               - service-profile-id: aead180d-e875-4a44-9486-1aeeb49e1f6a
+                 add-gw-metadata: true
+                 pr-allowed: false
+                 ra-allowed: false
+         destination:
+            name: up_raw_lora_destination
+            rule-name: up_raw_lora_rule2
