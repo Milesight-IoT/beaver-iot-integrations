@@ -47,7 +47,7 @@ public class MscDeviceService {
     private DeviceServiceProvider deviceServiceProvider;
 
     @SneakyThrows
-    @EventSubscribe(payloadKeyExpression = "msc-integration.device.*", eventType = ExchangeEvent.EventType.DOWN)
+    @EventSubscribe(payloadKeyExpression = "msc-integration.device.*")
     public void onDeviceExchangeEvent(ExchangeEvent event) {
         val exchangePayload = event.getPayload();
         val devices = exchangePayload.getExchangeEntities()
@@ -109,7 +109,7 @@ public class MscDeviceService {
     }
 
     @SneakyThrows
-    @EventSubscribe(payloadKeyExpression = "msc-integration.integration.add_device.*", eventType = ExchangeEvent.EventType.DOWN)
+    @EventSubscribe(payloadKeyExpression = "msc-integration.integration.add_device.*")
     public void onAddDevice(Event<MscServiceEntities.AddDevice> event) {
         val deviceName = event.getPayload().getContext("device_name", "Device Name");
         if (mscClientProvider == null || mscClientProvider.getMscClient() == null) {
@@ -191,11 +191,12 @@ public class MscDeviceService {
                 .property(MscIntegrationConstants.InternalPropertyIdentifier.LAST_SYNC_TIME, AccessMod.R)
                 .valueType(EntityValueType.LONG)
                 .attributes(Map.of("internal", true))
+                .visible(false)
                 .build());
     }
 
     @SneakyThrows
-    @EventSubscribe(payloadKeyExpression = "msc-integration.integration.delete_device", eventType = ExchangeEvent.EventType.DOWN)
+    @EventSubscribe(payloadKeyExpression = "msc-integration.integration.delete_device")
     public void onDeleteDevice(Event<MscServiceEntities.DeleteDevice> event) {
         if (mscClientProvider == null || mscClientProvider.getMscClient() == null) {
             log.warn("MscClient not initiated.");

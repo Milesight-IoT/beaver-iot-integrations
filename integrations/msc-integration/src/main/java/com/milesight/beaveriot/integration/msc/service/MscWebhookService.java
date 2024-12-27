@@ -71,7 +71,7 @@ public class MscWebhookService {
         }
     }
 
-    @EventSubscribe(payloadKeyExpression = "msc-integration.integration.webhook.*", eventType = ExchangeEvent.EventType.DOWN)
+    @EventSubscribe(payloadKeyExpression = "msc-integration.integration.webhook.*")
     public void onWebhookPropertiesUpdate(Event<MscConnectionPropertiesEntities.Webhook> event) {
         enabled = Boolean.TRUE.equals(event.getPayload().getEnabled());
         if (event.getPayload().getSecretKey() != null && !event.getPayload().getSecretKey().isEmpty()) {
@@ -148,7 +148,7 @@ public class MscWebhookService {
             // recover from error
             failureCount.set(0);
         }
-        exchangeFlowExecutor.asyncExchangeUp(ExchangePayload.create(WEBHOOK_STATUS_KEY, status.name()));
+        exchangeFlowExecutor.asyncExchange(ExchangePayload.create(WEBHOOK_STATUS_KEY, status.name()));
     }
 
     private void handleDeviceData(WebhookPayload webhookPayload) {

@@ -78,7 +78,7 @@ public class MscDataSyncService {
 
     private static final ConcurrentHashMap<String, Object> deviceIdentifierToTaskLock = new ConcurrentHashMap<>(128);
 
-    @EventSubscribe(payloadKeyExpression = "msc-integration.integration.scheduled_data_fetch.*", eventType = ExchangeEvent.EventType.DOWN)
+    @EventSubscribe(payloadKeyExpression = "msc-integration.integration.scheduled_data_fetch.*")
     public void onScheduledDataFetchPropertiesUpdate(Event<MscConnectionPropertiesEntities.ScheduledDataFetch> event) {
         if (event.getPayload().getPeriod() != null) {
             periodSeconds = event.getPayload().getPeriod();
@@ -86,7 +86,7 @@ public class MscDataSyncService {
         restart();
     }
 
-    @EventSubscribe(payloadKeyExpression = "msc-integration.integration.openapi_status", eventType = ExchangeEvent.EventType.DOWN)
+    @EventSubscribe(payloadKeyExpression = "msc-integration.integration.openapi_status")
     public void onOpenapiStatusUpdate(Event<MscConnectionPropertiesEntities> event) {
         val status = event.getPayload().getOpenapiStatus();
         if (IntegrationStatus.READY.name().equals(status)) {
@@ -99,7 +99,7 @@ public class MscDataSyncService {
     }
 
     @SneakyThrows
-    @EventSubscribe(payloadKeyExpression = "msc-integration.integration.sync_device", eventType = ExchangeEvent.EventType.DOWN)
+    @EventSubscribe(payloadKeyExpression = "msc-integration.integration.sync_device")
     public void onSyncDevice(Event<MscServiceEntities.SyncDevice> event) {
         syncAllDataExecutor.submit(this::syncAllData).get();
     }
@@ -331,7 +331,7 @@ public class MscDataSyncService {
         val lastSyncTime = Optional.ofNullable(entityValueServiceProvider.findValueByKey(lastSyncTimeKey))
                 .map(JsonNode::intValue)
                 .orElse(0);
-        exchangeFlowExecutor.syncExchangeDown(ExchangePayload.create(lastSyncTimeKey, timestamp));
+        exchangeFlowExecutor.syncExchange(ExchangePayload.create(lastSyncTimeKey, timestamp));
         return lastSyncTime;
     }
 
@@ -381,8 +381,8 @@ public class MscDataSyncService {
         if (!isLatestData) {
             entityValueServiceProvider.saveHistoryRecord(payload, payload.getTimestamp());
         } else {
-            payload.putContext(ExchangeContextKeys.IGNORE_INVALID_KEY, true);
-            exchangeFlowExecutor.asyncExchangeUp(payload);
+            payload.putContext(ExchangeContextKeys.EXCHANGE_IGNORE_INVALID_KEY, true);
+            exchangeFlowExecutor.asyncExchange(payload);
         }
     }
 
