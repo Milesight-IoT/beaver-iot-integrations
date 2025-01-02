@@ -10,6 +10,7 @@ import com.milesight.beaveriot.context.integration.model.*;
 import com.milesight.beaveriot.context.integration.model.event.ExchangeEvent;
 import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
 import com.milesight.beaveriot.eventbus.api.Event;
+import com.milesight.beaveriot.eventbus.enums.EventSource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
@@ -34,7 +35,7 @@ public class PingService {
     @Autowired
     private EntityValueServiceProvider entityValueServiceProvider;
 
-    @EventSubscribe(payloadKeyExpression = PingConstants.INTEGRATION_ID + ".integration.add_device.*", eventType = ExchangeEvent.EventType.DOWN)
+    @EventSubscribe(payloadKeyExpression = PingConstants.INTEGRATION_ID + ".integration.add_device.*")
     public void onAddDevice(Event<PingIntegrationEntities.AddDevice> event) {
         String deviceName = event.getPayload().getContext("device_name", "Device Name");
         String ip = event.getPayload().getIp();
@@ -63,13 +64,13 @@ public class PingService {
         deviceServiceProvider.save(device);
     }
 
-    @EventSubscribe(payloadKeyExpression = PingConstants.INTEGRATION_ID + ".integration.delete_device", eventType = ExchangeEvent.EventType.DOWN)
+    @EventSubscribe(payloadKeyExpression = PingConstants.INTEGRATION_ID + ".integration.delete_device")
     public void onDeleteDevice(Event<ExchangePayload> event) {
         Device device = (Device) event.getPayload().getContext("device");
         deviceServiceProvider.deleteById(device.getId());
     }
 
-    @EventSubscribe(payloadKeyExpression = PingConstants.INTEGRATION_ID + ".integration.benchmark", eventType = ExchangeEvent.EventType.DOWN)
+    @EventSubscribe(payloadKeyExpression = PingConstants.INTEGRATION_ID + ".integration.benchmark")
     @Async
     public void benchmark(Event<PingIntegrationEntities> event) {
         // mark benchmark starting
@@ -88,12 +89,12 @@ public class PingService {
             // mark benchmark done
             ExchangePayload donePayload = new ExchangePayload();
             donePayload.put(detectStatusKey, PingIntegrationEntities.DetectStatus.STANDBY.ordinal());
-            exchangeFlowExecutor.syncExchangeUp(donePayload);
+            exchangeFlowExecutor.syncExchange(donePayload);
         }
     }
 
     public void doBenchmark(String detectStatusKey) {
-        exchangeFlowExecutor.syncExchangeDown(new ExchangePayload(Map.of(detectStatusKey, PingIntegrationEntities.DetectStatus.DETECTING.ordinal())));
+        exchangeFlowExecutor.syncExchange(new ExchangePayload(Map.of(detectStatusKey, PingIntegrationEntities.DetectStatus.DETECTING.ordinal())));
         int timeout = 2000;
 
         // start pinging
@@ -135,7 +136,7 @@ public class PingService {
             });
 
             Assert.notEmpty(exchangePayload, "Exchange should not be empty!");
-            exchangeFlowExecutor.asyncExchangeDown(exchangePayload);
+            exchangeFlowExecutor.asyncExchange(exchangePayload, EventSource.INTEGRATION);
         });
     }
 }
