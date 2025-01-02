@@ -1,6 +1,7 @@
 package com.milesight.beaveriot.integration.msc.service;
 
 import com.milesight.beaveriot.context.constants.IntegrationConstants;
+import com.milesight.beaveriot.eventbus.enums.EventSource;
 import com.milesight.beaveriot.integration.msc.constant.MscIntegrationConstants;
 import com.milesight.cloud.sdk.client.model.DeviceSaveOrUpdateRequest;
 import com.milesight.cloud.sdk.client.model.ThingSpec;
@@ -47,8 +48,13 @@ public class MscDeviceService {
     private DeviceServiceProvider deviceServiceProvider;
 
     @SneakyThrows
-    @EventSubscribe(payloadKeyExpression = "msc-integration.device.*", eventType = ExchangeEvent.EventType.DOWN)
+    @EventSubscribe(payloadKeyExpression = "msc-integration.device.*")
     public void onDeviceExchangeEvent(ExchangeEvent event) {
+        if (EventSource.INTEGRATION.equals(event.getEventSource())) {
+            log.debug("ignore integration event");
+            return;
+        }
+
         val exchangePayload = event.getPayload();
         val devices = exchangePayload.getExchangeEntities()
                 .values()
@@ -64,11 +70,11 @@ public class MscDeviceService {
         }
         val device = devices.get(0);
 
-        handlePropertiesPayload(device, exchangePayload);
-        handleServicePayload(device, exchangePayload);
+        publishPropertiesPayload(device, exchangePayload);
+        publishServicePayload(device, exchangePayload);
     }
 
-    private void handleServicePayload(Device device, ExchangePayload exchangePayload) {
+    private void publishServicePayload(Device device, ExchangePayload exchangePayload) {
         val objectMapper = mscClientProvider.getMscClient().getObjectMapper();
         val servicePayload = exchangePayload.getPayloadsByEntityType(EntityType.SERVICE);
         if (servicePayload.isEmpty()) {
@@ -89,7 +95,7 @@ public class MscDeviceService {
     }
 
     @SneakyThrows
-    private void handlePropertiesPayload(Device device, ExchangePayload exchangePayload) {
+    private void publishPropertiesPayload(Device device, ExchangePayload exchangePayload) {
         val objectMapper = mscClientProvider.getMscClient().getObjectMapper();
         val propertiesPayload = exchangePayload.getPayloadsByEntityType(EntityType.PROPERTY);
         if (propertiesPayload.isEmpty()) {
@@ -109,7 +115,7 @@ public class MscDeviceService {
     }
 
     @SneakyThrows
-    @EventSubscribe(payloadKeyExpression = "msc-integration.integration.add_device.*", eventType = ExchangeEvent.EventType.DOWN)
+    @EventSubscribe(payloadKeyExpression = "msc-integration.integration.add_device.*")
     public void onAddDevice(Event<MscServiceEntities.AddDevice> event) {
         val deviceName = event.getPayload().getContext("device_name", "Device Name");
         if (mscClientProvider == null || mscClientProvider.getMscClient() == null) {
@@ -191,11 +197,12 @@ public class MscDeviceService {
                 .property(MscIntegrationConstants.InternalPropertyIdentifier.LAST_SYNC_TIME, AccessMod.R)
                 .valueType(EntityValueType.LONG)
                 .attributes(Map.of("internal", true))
+                .visible(false)
                 .build());
     }
 
     @SneakyThrows
-    @EventSubscribe(payloadKeyExpression = "msc-integration.integration.delete_device", eventType = ExchangeEvent.EventType.DOWN)
+    @EventSubscribe(payloadKeyExpression = "msc-integration.integration.delete_device")
     public void onDeleteDevice(Event<MscServiceEntities.DeleteDevice> event) {
         if (mscClientProvider == null || mscClientProvider.getMscClient() == null) {
             log.warn("MscClient not initiated.");

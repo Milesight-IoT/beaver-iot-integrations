@@ -28,7 +28,7 @@ public class MyDeviceService {
     @Autowired
     private ExchangeFlowExecutor exchangeFlowExecutor;
 
-    @EventSubscribe(payloadKeyExpression = "my-integration.integration.add_device.*", eventType = ExchangeEvent.EventType.DOWN)
+    @EventSubscribe(payloadKeyExpression = "my-integration.integration.add_device.*")
     // highlight-next-line
     public void onAddDevice(Event<MyIntegrationEntities.AddDevice> event) {
         MyIntegrationEntities.AddDevice addDevice = event.getPayload();
@@ -52,18 +52,18 @@ public class MyDeviceService {
         deviceServiceProvider.save(device);
     }
 
-    @EventSubscribe(payloadKeyExpression = "my-integration.integration.delete_device", eventType = ExchangeEvent.EventType.DOWN)
+    @EventSubscribe(payloadKeyExpression = "my-integration.integration.delete_device")
     // highlight-next-line
     public void onDeleteDevice(Event<MyIntegrationEntities.DeleteDevice> event) {
         Device device = event.getPayload().getDeletedDevice();
         deviceServiceProvider.deleteById(device.getId());
     }
 
-    @EventSubscribe(payloadKeyExpression = "my-integration.integration.benchmark", eventType = ExchangeEvent.EventType.DOWN)
+    @EventSubscribe(payloadKeyExpression = "my-integration.integration.benchmark")
     // highlight-next-line
     public void doBenchmark(Event<MyIntegrationEntities> event) {
         // mark benchmark starting
-        exchangeFlowExecutor.syncExchangeDown(new ExchangePayload(Map.of("my-integration.integration.detect_status", MyIntegrationEntities.DetectStatus.DETECTING.ordinal())));
+        exchangeFlowExecutor.syncExchange(new ExchangePayload(Map.of("my-integration.integration.detect_status", MyIntegrationEntities.DetectStatus.DETECTING.ordinal())));
         int timeout = 5000;
 
         // start pinging
@@ -93,7 +93,7 @@ public class MyDeviceService {
 
             // Device have only one entity
             String deviceStatusKey = device.getEntities().get(0).getKey();
-            exchangeFlowExecutor.asyncExchangeDown(new ExchangePayload(Map.of(deviceStatusKey, (long) deviceStatus)));
+            exchangeFlowExecutor.asyncExchange(new ExchangePayload(Map.of(deviceStatusKey, (long) deviceStatus)));
         });
         Long endTimestamp = System.currentTimeMillis();
 
@@ -106,10 +106,10 @@ public class MyDeviceService {
         detectReport.setOnlineCount(activeCount.get());
         detectReport.setOfflineCount(inactiveCount.get());
 
-        exchangeFlowExecutor.syncExchangeUp(myIntegrationEntities);
+        exchangeFlowExecutor.syncExchange(myIntegrationEntities);
     }
 
-    @EventSubscribe(payloadKeyExpression = "my-integration.integration.detect_report.*", eventType = ExchangeEvent.EventType.UP)
+    @EventSubscribe(payloadKeyExpression = "my-integration.integration.detect_report.*")
     // highlight-next-line
     public void listenDetectReport(Event<MyIntegrationEntities.DetectReport> event) {
         System.out.println("[Get-Report] " + event.getPayload()); // do something with this report

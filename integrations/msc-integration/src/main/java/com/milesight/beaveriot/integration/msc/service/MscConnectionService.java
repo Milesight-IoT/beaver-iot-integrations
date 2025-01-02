@@ -3,7 +3,6 @@ package com.milesight.beaveriot.integration.msc.service;
 import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
 import com.milesight.beaveriot.context.api.ExchangeFlowExecutor;
 import com.milesight.beaveriot.context.integration.model.ExchangePayload;
-import com.milesight.beaveriot.context.integration.model.event.ExchangeEvent;
 import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
 import com.milesight.beaveriot.eventbus.api.Event;
 import com.milesight.beaveriot.integration.msc.entity.MscConnectionPropertiesEntities;
@@ -34,12 +33,12 @@ public class MscConnectionService implements IMscClientProvider {
     @Getter
     private MscClient mscClient;
 
-    @EventSubscribe(payloadKeyExpression = "msc-integration.integration.openapi.*", eventType = ExchangeEvent.EventType.DOWN)
+    @EventSubscribe(payloadKeyExpression = "msc-integration.integration.openapi.*")
     public void onOpenapiPropertiesUpdate(Event<MscConnectionPropertiesEntities.Openapi> event) {
         if (isConfigChanged(event)) {
             val openapiSettings = event.getPayload();
             initConnection(openapiSettings);
-            exchangeFlowExecutor.syncExchangeDown(new ExchangePayload(Map.of(OPENAPI_STATUS_KEY, IntegrationStatus.NOT_READY.name())));
+            exchangeFlowExecutor.syncExchange(new ExchangePayload(Map.of(OPENAPI_STATUS_KEY, IntegrationStatus.NOT_READY.name())));
         }
         testConnection();
     }
@@ -57,10 +56,10 @@ public class MscConnectionService implements IMscClientProvider {
     private void testConnection() {
         try {
             mscClient.test();
-            exchangeFlowExecutor.syncExchangeDown(new ExchangePayload(Map.of(OPENAPI_STATUS_KEY, IntegrationStatus.READY.name())));
+            exchangeFlowExecutor.syncExchange(new ExchangePayload(Map.of(OPENAPI_STATUS_KEY, IntegrationStatus.READY.name())));
         } catch (Exception e) {
             log.error("Error occurs while testing connection", e);
-            exchangeFlowExecutor.syncExchangeDown(new ExchangePayload(Map.of(OPENAPI_STATUS_KEY, IntegrationStatus.ERROR.name())));
+            exchangeFlowExecutor.syncExchange(new ExchangePayload(Map.of(OPENAPI_STATUS_KEY, IntegrationStatus.ERROR.name())));
         }
     }
 
@@ -105,7 +104,7 @@ public class MscConnectionService implements IMscClientProvider {
             }
         } catch (Exception e) {
             log.error("Error occurs while initializing connection", e);
-            exchangeFlowExecutor.syncExchangeDown(new ExchangePayload(Map.of(OPENAPI_STATUS_KEY, IntegrationStatus.NOT_READY.name())));
+            exchangeFlowExecutor.syncExchange(new ExchangePayload(Map.of(OPENAPI_STATUS_KEY, IntegrationStatus.NOT_READY.name())));
         }
     }
 
