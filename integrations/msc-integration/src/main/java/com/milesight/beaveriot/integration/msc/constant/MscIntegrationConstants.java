@@ -4,6 +4,12 @@ public interface MscIntegrationConstants {
 
     String INTEGRATION_IDENTIFIER = "msc-integration";
 
+    interface EventType {
+
+        String LATEST_VALUE = "LATEST_VALUE";
+
+    }
+
     interface DeviceAdditionalDataName {
 
         String DEVICE_ID = "device_id";

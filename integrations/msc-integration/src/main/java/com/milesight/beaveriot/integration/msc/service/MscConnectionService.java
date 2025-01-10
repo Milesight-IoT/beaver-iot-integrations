@@ -1,7 +1,6 @@
 package com.milesight.beaveriot.integration.msc.service;
 
 import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
-import com.milesight.beaveriot.context.api.ExchangeFlowExecutor;
 import com.milesight.beaveriot.context.integration.model.ExchangePayload;
 import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
 import com.milesight.beaveriot.eventbus.api.Event;
@@ -27,9 +26,6 @@ public class MscConnectionService implements IMscClientProvider {
     @Autowired
     private EntityValueServiceProvider entityValueServiceProvider;
 
-    @Autowired
-    private ExchangeFlowExecutor exchangeFlowExecutor;
-
     @Getter
     private MscClient mscClient;
 
@@ -38,7 +34,7 @@ public class MscConnectionService implements IMscClientProvider {
         if (isConfigChanged(event)) {
             val openapiSettings = event.getPayload();
             initConnection(openapiSettings);
-            exchangeFlowExecutor.syncExchange(new ExchangePayload(Map.of(OPENAPI_STATUS_KEY, IntegrationStatus.NOT_READY.name())));
+            entityValueServiceProvider.saveValuesAndPublishSync(new ExchangePayload(Map.of(OPENAPI_STATUS_KEY, IntegrationStatus.NOT_READY.name())));
         }
         testConnection();
     }
@@ -56,10 +52,10 @@ public class MscConnectionService implements IMscClientProvider {
     private void testConnection() {
         try {
             mscClient.test();
-            exchangeFlowExecutor.syncExchange(new ExchangePayload(Map.of(OPENAPI_STATUS_KEY, IntegrationStatus.READY.name())));
+            entityValueServiceProvider.saveValuesAndPublishSync(new ExchangePayload(Map.of(OPENAPI_STATUS_KEY, IntegrationStatus.READY.name())));
         } catch (Exception e) {
             log.error("Error occurs while testing connection", e);
-            exchangeFlowExecutor.syncExchange(new ExchangePayload(Map.of(OPENAPI_STATUS_KEY, IntegrationStatus.ERROR.name())));
+            entityValueServiceProvider.saveValuesAndPublishSync(new ExchangePayload(Map.of(OPENAPI_STATUS_KEY, IntegrationStatus.ERROR.name())));
         }
     }
 
@@ -104,7 +100,7 @@ public class MscConnectionService implements IMscClientProvider {
             }
         } catch (Exception e) {
             log.error("Error occurs while initializing connection", e);
-            exchangeFlowExecutor.syncExchange(new ExchangePayload(Map.of(OPENAPI_STATUS_KEY, IntegrationStatus.NOT_READY.name())));
+            entityValueServiceProvider.saveValuesAndPublishSync(new ExchangePayload(Map.of(OPENAPI_STATUS_KEY, IntegrationStatus.NOT_READY.name())));
         }
     }
 

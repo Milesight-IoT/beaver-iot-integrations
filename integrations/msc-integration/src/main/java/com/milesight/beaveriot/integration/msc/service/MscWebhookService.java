@@ -2,9 +2,7 @@ package com.milesight.beaveriot.integration.msc.service;
 
 import com.milesight.beaveriot.context.api.DeviceServiceProvider;
 import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
-import com.milesight.beaveriot.context.api.ExchangeFlowExecutor;
 import com.milesight.beaveriot.context.integration.model.ExchangePayload;
-import com.milesight.beaveriot.context.integration.model.event.ExchangeEvent;
 import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
 import com.milesight.beaveriot.eventbus.api.Event;
 import com.milesight.beaveriot.integration.msc.constant.MscIntegrationConstants;
@@ -41,9 +39,6 @@ public class MscWebhookService {
 
     @Autowired
     private EntityValueServiceProvider entityValueServiceProvider;
-
-    @Autowired
-    private ExchangeFlowExecutor exchangeFlowExecutor;
 
     @Autowired
     private DeviceServiceProvider deviceServiceProvider;
@@ -148,7 +143,7 @@ public class MscWebhookService {
             // recover from error
             failureCount.set(0);
         }
-        exchangeFlowExecutor.asyncExchange(ExchangePayload.create(WEBHOOK_STATUS_KEY, status.name()));
+        entityValueServiceProvider.saveValuesAndPublishAsync(ExchangePayload.create(WEBHOOK_STATUS_KEY, status.name()));
     }
 
     private void handleDeviceData(WebhookPayload webhookPayload) {

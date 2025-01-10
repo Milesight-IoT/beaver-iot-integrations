@@ -1,12 +1,14 @@
 package com.milesight.beaveriot.myintegration.service;
 
 import com.milesight.beaveriot.context.api.DeviceServiceProvider;
-import com.milesight.beaveriot.context.api.ExchangeFlowExecutor;
+import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
 import com.milesight.beaveriot.context.integration.enums.AccessMod;
 import com.milesight.beaveriot.context.integration.enums.EntityValueType;
-import com.milesight.beaveriot.context.integration.model.*;
-import com.milesight.beaveriot.context.integration.model.event.ExchangeEvent;
-import com.milesight.beaveriot.context.integration.proxy.ExchangePayloadProxy;
+import com.milesight.beaveriot.context.integration.model.AttributeBuilder;
+import com.milesight.beaveriot.context.integration.model.Device;
+import com.milesight.beaveriot.context.integration.model.DeviceBuilder;
+import com.milesight.beaveriot.context.integration.model.EntityBuilder;
+import com.milesight.beaveriot.context.integration.model.ExchangePayload;
 import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
 import com.milesight.beaveriot.eventbus.api.Event;
 import com.milesight.beaveriot.myintegration.entity.MyDeviceEntities;
@@ -15,7 +17,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.net.InetAddress;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -26,7 +27,7 @@ public class MyDeviceService {
     private DeviceServiceProvider deviceServiceProvider;
 
     @Autowired
-    private ExchangeFlowExecutor exchangeFlowExecutor;
+    private EntityValueServiceProvider entityValueServiceProvider;
 
     @EventSubscribe(payloadKeyExpression = "my-integration.integration.add_device.*")
     // highlight-next-line
@@ -63,7 +64,7 @@ public class MyDeviceService {
     // highlight-next-line
     public void doBenchmark(Event<MyIntegrationEntities> event) {
         // mark benchmark starting
-        exchangeFlowExecutor.syncExchange(new ExchangePayload(Map.of("my-integration.integration.detect_status", MyIntegrationEntities.DetectStatus.DETECTING.ordinal())));
+        entityValueServiceProvider.saveValuesAndPublishSync(new ExchangePayload(Map.of("my-integration.integration.detect_status", MyIntegrationEntities.DetectStatus.DETECTING.ordinal())));
         int timeout = 5000;
 
         // start pinging
@@ -93,7 +94,7 @@ public class MyDeviceService {
 
             // Device have only one entity
             String deviceStatusKey = device.getEntities().get(0).getKey();
-            exchangeFlowExecutor.asyncExchange(new ExchangePayload(Map.of(deviceStatusKey, (long) deviceStatus)));
+            entityValueServiceProvider.saveValuesAndPublishAsync(new ExchangePayload(Map.of(deviceStatusKey, (long) deviceStatus)));
         });
         Long endTimestamp = System.currentTimeMillis();
 
@@ -106,7 +107,7 @@ public class MyDeviceService {
         detectReport.setOnlineCount(activeCount.get());
         detectReport.setOfflineCount(inactiveCount.get());
 
-        exchangeFlowExecutor.syncExchange(myIntegrationEntities);
+        entityValueServiceProvider.saveValuesAndPublishSync(myIntegrationEntities);
     }
 
     @EventSubscribe(payloadKeyExpression = "my-integration.integration.detect_report.*")

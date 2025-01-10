@@ -48,13 +48,9 @@ public class MscDeviceService {
     private DeviceServiceProvider deviceServiceProvider;
 
     @SneakyThrows
-    @EventSubscribe(payloadKeyExpression = "msc-integration.device.*")
+    @EventSubscribe(payloadKeyExpression = "msc-integration.device.*", eventType = {
+            ExchangeEvent.EventType.CALL_SERVICE, ExchangeEvent.EventType.UPDATE_PROPERTY})
     public void onDeviceExchangeEvent(ExchangeEvent event) {
-        if (EventSource.INTEGRATION.equals(event.getEventSource())) {
-            log.debug("ignore integration event");
-            return;
-        }
-
         val exchangePayload = event.getPayload();
         val devices = exchangePayload.getExchangeEntities()
                 .values()

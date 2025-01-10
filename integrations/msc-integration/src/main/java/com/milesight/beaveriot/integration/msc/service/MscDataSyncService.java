@@ -3,11 +3,9 @@ package com.milesight.beaveriot.integration.msc.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.milesight.beaveriot.context.api.DeviceServiceProvider;
 import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
-import com.milesight.beaveriot.context.api.ExchangeFlowExecutor;
 import com.milesight.beaveriot.context.constants.ExchangeContextKeys;
 import com.milesight.beaveriot.context.integration.model.Device;
 import com.milesight.beaveriot.context.integration.model.ExchangePayload;
-import com.milesight.beaveriot.context.integration.model.event.ExchangeEvent;
 import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
 import com.milesight.beaveriot.eventbus.api.Event;
 import com.milesight.beaveriot.eventbus.enums.EventSource;
@@ -59,9 +57,6 @@ public class MscDataSyncService {
 
     @Autowired
     private EntityValueServiceProvider entityValueServiceProvider;
-
-    @Autowired
-    private ExchangeFlowExecutor exchangeFlowExecutor;
 
     private Timer timer;
 
@@ -332,7 +327,7 @@ public class MscDataSyncService {
         val lastSyncTime = Optional.ofNullable(entityValueServiceProvider.findValueByKey(lastSyncTimeKey))
                 .map(JsonNode::intValue)
                 .orElse(0);
-        exchangeFlowExecutor.syncExchange(ExchangePayload.create(lastSyncTimeKey, timestamp), EventSource.INTEGRATION);
+        entityValueServiceProvider.saveValuesAndPublishSync(ExchangePayload.create(lastSyncTimeKey, timestamp));
         return lastSyncTime;
     }
 
@@ -383,7 +378,7 @@ public class MscDataSyncService {
             entityValueServiceProvider.saveHistoryRecord(payload, payload.getTimestamp());
         } else {
             payload.putContext(ExchangeContextKeys.EXCHANGE_IGNORE_INVALID_KEY, true);
-            exchangeFlowExecutor.asyncExchange(payload, EventSource.INTEGRATION);
+            entityValueServiceProvider.saveValuesAndPublishAsync(payload, MscIntegrationConstants.EventType.LATEST_VALUE);
         }
     }
 
