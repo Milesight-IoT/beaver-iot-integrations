@@ -3,15 +3,17 @@ package com.milesight.beaveriot.ping;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.milesight.beaveriot.context.api.DeviceServiceProvider;
 import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
-import com.milesight.beaveriot.context.api.ExchangeFlowExecutor;
 import com.milesight.beaveriot.context.integration.enums.AccessMod;
 import com.milesight.beaveriot.context.integration.enums.EntityValueType;
-import com.milesight.beaveriot.context.integration.model.*;
-import com.milesight.beaveriot.context.integration.model.event.ExchangeEvent;
+import com.milesight.beaveriot.context.integration.model.AttributeBuilder;
+import com.milesight.beaveriot.context.integration.model.Device;
+import com.milesight.beaveriot.context.integration.model.DeviceBuilder;
+import com.milesight.beaveriot.context.integration.model.Entity;
+import com.milesight.beaveriot.context.integration.model.EntityBuilder;
+import com.milesight.beaveriot.context.integration.model.ExchangePayload;
 import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
 import com.milesight.beaveriot.eventbus.api.Event;
-import com.milesight.beaveriot.eventbus.enums.EventSource;
-import lombok.extern.slf4j.Slf4j;
+import lombok.extern.slf4j.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -28,9 +30,6 @@ import java.util.concurrent.atomic.AtomicReference;
 public class PingService {
     @Autowired
     private DeviceServiceProvider deviceServiceProvider;
-
-    @Autowired
-    private ExchangeFlowExecutor exchangeFlowExecutor;
 
     @Autowired
     private EntityValueServiceProvider entityValueServiceProvider;
@@ -89,12 +88,12 @@ public class PingService {
             // mark benchmark done
             ExchangePayload donePayload = new ExchangePayload();
             donePayload.put(detectStatusKey, PingIntegrationEntities.DetectStatus.STANDBY.ordinal());
-            exchangeFlowExecutor.syncExchange(donePayload);
+            entityValueServiceProvider.saveValuesAndPublishSync(donePayload);
         }
     }
 
     public void doBenchmark(String detectStatusKey) {
-        exchangeFlowExecutor.syncExchange(new ExchangePayload(Map.of(detectStatusKey, PingIntegrationEntities.DetectStatus.DETECTING.ordinal())));
+        entityValueServiceProvider.saveValuesAndPublishSync(new ExchangePayload(Map.of(detectStatusKey, PingIntegrationEntities.DetectStatus.DETECTING.ordinal())));
         int timeout = 2000;
 
         // start pinging
@@ -136,7 +135,7 @@ public class PingService {
             });
 
             Assert.notEmpty(exchangePayload, "Exchange should not be empty!");
-            exchangeFlowExecutor.asyncExchange(exchangePayload, EventSource.INTEGRATION);
+            entityValueServiceProvider.saveValuesAndPublishAsync(exchangePayload);
         });
     }
 }
