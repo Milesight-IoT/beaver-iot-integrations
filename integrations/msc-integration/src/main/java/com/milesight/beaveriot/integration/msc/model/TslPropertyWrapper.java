@@ -48,7 +48,7 @@ public record TslPropertyWrapper(TslPropertySpec spec) implements TslItemWrapper
     }
 
     @Override
-    public List<TslParamWrapper> getOutputs() {
+    public List<TslParamWrapper> getParams() {
         return null;
     }
 

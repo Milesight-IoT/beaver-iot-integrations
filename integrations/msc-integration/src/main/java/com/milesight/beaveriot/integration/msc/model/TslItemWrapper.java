@@ -5,7 +5,6 @@ import com.milesight.beaveriot.context.integration.enums.AccessMod;
 import com.milesight.beaveriot.context.integration.enums.EntityType;
 import com.milesight.beaveriot.context.integration.enums.EntityValueType;
 import com.milesight.cloud.sdk.client.model.TslDataSpec;
-import lombok.*;
 
 import java.util.List;
 
@@ -25,6 +24,6 @@ public interface TslItemWrapper {
 
     AccessMod getAccessMode();
 
-    List<TslParamWrapper> getOutputs();
+    List<TslParamWrapper> getParams();
 
 }

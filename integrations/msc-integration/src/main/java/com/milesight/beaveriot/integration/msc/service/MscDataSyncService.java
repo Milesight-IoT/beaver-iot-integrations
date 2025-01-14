@@ -8,7 +8,6 @@ import com.milesight.beaveriot.context.integration.model.Device;
 import com.milesight.beaveriot.context.integration.model.ExchangePayload;
 import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
 import com.milesight.beaveriot.eventbus.api.Event;
-import com.milesight.beaveriot.eventbus.enums.EventSource;
 import com.milesight.beaveriot.integration.msc.constant.MscIntegrationConstants;
 import com.milesight.beaveriot.integration.msc.entity.MscConnectionPropertiesEntities;
 import com.milesight.beaveriot.integration.msc.entity.MscServiceEntities;

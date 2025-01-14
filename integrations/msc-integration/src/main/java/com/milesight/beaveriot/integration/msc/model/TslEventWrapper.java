@@ -5,12 +5,8 @@ import com.milesight.beaveriot.context.integration.enums.EntityType;
 import com.milesight.beaveriot.context.integration.enums.EntityValueType;
 import com.milesight.cloud.sdk.client.model.TslDataSpec;
 import com.milesight.cloud.sdk.client.model.TslEventSpec;
-import lombok.*;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 
 public record TslEventWrapper(TslEventSpec spec) implements TslItemWrapper {
@@ -51,7 +47,7 @@ public record TslEventWrapper(TslEventSpec spec) implements TslItemWrapper {
     }
 
     @Override
-    public List<TslParamWrapper> getOutputs() {
+    public List<TslParamWrapper> getParams() {
         if (spec.getOutputs() == null) {
             return List.of();
         }
