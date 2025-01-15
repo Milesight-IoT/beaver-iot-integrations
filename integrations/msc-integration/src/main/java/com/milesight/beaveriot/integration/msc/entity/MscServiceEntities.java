@@ -1,5 +1,7 @@
 package com.milesight.beaveriot.integration.msc.entity;
 
+import com.milesight.beaveriot.context.integration.context.AddDeviceAware;
+import com.milesight.beaveriot.context.integration.context.DeleteDeviceAware;
 import com.milesight.beaveriot.context.integration.entity.annotation.Attribute;
 import com.milesight.beaveriot.context.integration.entity.annotation.Entities;
 import com.milesight.beaveriot.context.integration.entity.annotation.Entity;
@@ -31,7 +33,7 @@ public class MscServiceEntities extends ExchangePayload {
     @NoArgsConstructor
     @AllArgsConstructor
     @Entities
-    public static class AddDevice extends ExchangePayload {
+    public static class AddDevice extends ExchangePayload implements AddDeviceAware {
 
         @Entity(attributes = {@Attribute(minLength = 12, maxLength = 16)})
         private String sn;
@@ -43,7 +45,7 @@ public class MscServiceEntities extends ExchangePayload {
     @Builder
     @NoArgsConstructor
     @Entities
-    public static class DeleteDevice extends ExchangePayload {
+    public static class DeleteDevice extends ExchangePayload implements DeleteDeviceAware {
 
     }
 

@@ -1,26 +1,25 @@
 package com.milesight.beaveriot.integration.msc.service;
 
-import com.milesight.beaveriot.context.constants.IntegrationConstants;
-import com.milesight.beaveriot.eventbus.enums.EventSource;
-import com.milesight.beaveriot.integration.msc.constant.MscIntegrationConstants;
-import com.milesight.cloud.sdk.client.model.DeviceSaveOrUpdateRequest;
-import com.milesight.cloud.sdk.client.model.ThingSpec;
-import com.milesight.cloud.sdk.client.model.TslPropertyDataUpdateRequest;
-import com.milesight.cloud.sdk.client.model.TslServiceCallRequest;
 import com.milesight.beaveriot.context.api.DeviceServiceProvider;
-import com.milesight.beaveriot.context.integration.model.DeviceBuilder;
-import com.milesight.beaveriot.context.integration.model.EntityBuilder;
+import com.milesight.beaveriot.context.constants.IntegrationConstants;
 import com.milesight.beaveriot.context.integration.enums.AccessMod;
 import com.milesight.beaveriot.context.integration.enums.EntityType;
 import com.milesight.beaveriot.context.integration.enums.EntityValueType;
 import com.milesight.beaveriot.context.integration.model.Device;
+import com.milesight.beaveriot.context.integration.model.DeviceBuilder;
 import com.milesight.beaveriot.context.integration.model.Entity;
+import com.milesight.beaveriot.context.integration.model.EntityBuilder;
 import com.milesight.beaveriot.context.integration.model.ExchangePayload;
 import com.milesight.beaveriot.context.integration.model.event.ExchangeEvent;
 import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
 import com.milesight.beaveriot.eventbus.api.Event;
+import com.milesight.beaveriot.integration.msc.constant.MscIntegrationConstants;
 import com.milesight.beaveriot.integration.msc.entity.MscServiceEntities;
 import com.milesight.beaveriot.integration.msc.util.MscTslUtils;
+import com.milesight.cloud.sdk.client.model.DeviceSaveOrUpdateRequest;
+import com.milesight.cloud.sdk.client.model.ThingSpec;
+import com.milesight.cloud.sdk.client.model.TslPropertyDataUpdateRequest;
+import com.milesight.cloud.sdk.client.model.TslServiceCallRequest;
 import com.milesight.msc.sdk.error.MscApiException;
 import com.milesight.msc.sdk.error.MscSdkException;
 import lombok.*;
@@ -113,7 +112,7 @@ public class MscDeviceService {
     @SneakyThrows
     @EventSubscribe(payloadKeyExpression = "msc-integration.integration.add_device.*")
     public void onAddDevice(Event<MscServiceEntities.AddDevice> event) {
-        val deviceName = event.getPayload().getContext("device_name", "Device Name");
+        val deviceName = event.getPayload().getAddDeviceName();
         if (mscClientProvider == null || mscClientProvider.getMscClient() == null) {
             log.warn("MscClient not initiated.");
             return;
@@ -205,7 +204,7 @@ public class MscDeviceService {
             return;
         }
         val device = deviceServiceProvider.findByIdentifier(
-                ((Device) event.getPayload().getContext("device")).getIdentifier(), MscIntegrationConstants.INTEGRATION_IDENTIFIER);
+                event.getPayload().getDeletedDevice().getIdentifier(), MscIntegrationConstants.INTEGRATION_IDENTIFIER);
         val additionalData = device.getAdditional();
         if (additionalData == null) {
             return;

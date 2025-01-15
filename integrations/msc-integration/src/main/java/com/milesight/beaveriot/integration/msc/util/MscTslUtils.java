@@ -164,20 +164,21 @@ public class MscTslUtils {
                     .stream()
                     .map(TslEventWrapper::new)
                     .peek(items::add)
-                    .forEach(item -> items.addAll(getOutputParams(item)));
+                    .forEach(item -> items.addAll(bindParams(item.getParams())));
         }
         if (thingSpec.getServices() != null) {
             thingSpec.getServices()
                     .stream()
                     .map(TslServiceWrapper::new)
                     .peek(items::add)
-                    .forEach(item -> items.addAll(getOutputParams(item)));
+                    .forEach(item -> items.addAll(bindParams(item.getParams())));
         }
         return items;
     }
 
-    private static List<TslParamWrapper> getOutputParams(TslItemWrapper item) {
-        return item.getOutputs().stream()
+    @NotNull
+    private static List<TslParamWrapper> bindParams(List<TslParamWrapper> params) {
+        return params.stream()
                 .peek(v -> {
                     if (v.getDataSpec().getParentId() == null) {
                         // Bind output params to its function
