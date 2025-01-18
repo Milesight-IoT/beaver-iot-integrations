@@ -324,7 +324,7 @@ public class MscDataSyncService {
         val timestamp = TimeUtils.currentTimeSeconds();
         val lastSyncTimeKey = MscIntegrationConstants.InternalPropertyIdentifier.getLastSyncTimeKey(device.getKey());
         val lastSyncTime = Optional.ofNullable(entityValueServiceProvider.findValueByKey(lastSyncTimeKey))
-                .map(JsonNode::intValue)
+                .map(n -> (int) n)
                 .orElse(0);
         entityValueServiceProvider.saveValuesAndPublishSync(ExchangePayload.create(lastSyncTimeKey, timestamp));
         return lastSyncTime;
