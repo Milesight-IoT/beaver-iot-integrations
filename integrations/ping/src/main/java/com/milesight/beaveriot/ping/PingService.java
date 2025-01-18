@@ -74,8 +74,8 @@ public class PingService {
     public void benchmark(Event<PingIntegrationEntities> event) {
         // mark benchmark starting
         String detectStatusKey = PingConstants.INTEGRATION_ID + ".integration.detect_status";
-        JsonNode detectStatusNode = entityValueServiceProvider.findValueByKey(detectStatusKey);
-        if (detectStatusNode.isNull() || detectStatusNode.asLong() == PingIntegrationEntities.DetectStatus.DETECTING.ordinal()) {
+        Long detectStatus = (Long) entityValueServiceProvider.findValueByKey(detectStatusKey);
+        if (detectStatus == PingIntegrationEntities.DetectStatus.DETECTING.ordinal()) {
             log.warn("[WARNING] Benchmark running");
             return;
         }

@@ -1,7 +1,6 @@
 package com.milesight.beaveriot.integration.msc.service;
 
 import com.milesight.beaveriot.context.constants.IntegrationConstants;
-import com.milesight.beaveriot.eventbus.enums.EventSource;
 import com.milesight.beaveriot.integration.msc.constant.MscIntegrationConstants;
 import com.milesight.cloud.sdk.client.model.DeviceSaveOrUpdateRequest;
 import com.milesight.cloud.sdk.client.model.ThingSpec;

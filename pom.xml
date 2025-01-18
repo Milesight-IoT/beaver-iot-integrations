@@ -32,9 +32,7 @@
         </license>
     </licenses>
 
-
     <modules>
-        <module>application-dev</module>
         <module>integrations</module>
     </modules>
 

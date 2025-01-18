@@ -1,4 +1,4 @@
-package com.milesight.beaveriot.myintegration.entity;
+package com.milesight.beaveriot.integrations.myintegration.entity;
 
 import com.milesight.beaveriot.context.integration.context.AddDeviceAware;
 import com.milesight.beaveriot.context.integration.context.DeleteDeviceAware;
@@ -17,23 +17,18 @@ import lombok.EqualsAndHashCode;
 @IntegrationEntities
 public class MyIntegrationEntities extends ExchangePayload {
     @Entity(type = EntityType.SERVICE, name = "Device Connection Benchmark", identifier = "benchmark")
-    // highlight-next-line
     private String benchmark;
 
     @Entity(type = EntityType.PROPERTY, name = "Detect Status", identifier = "detect_status", attributes = @Attribute(enumClass = DetectStatus.class), accessMod = AccessMod.R)
-    // highlight-next-line
-    private Integer detectStatus;
+    private Long detectStatus;
 
     @Entity(type = EntityType.EVENT, name = "Detect Report", identifier = "detect_report")
-    // highlight-next-line
     private DetectReport detectReport;
 
-    @Entity(type = EntityType.SERVICE, identifier = "add_device")
-    // highlight-next-line
+    @Entity(type = EntityType.SERVICE, identifier = "add_device", visible = false)
     private AddDevice addDevice;
 
-    @Entity(type = EntityType.SERVICE, identifier = "delete_device")
-    // highlight-next-line
+    @Entity(type = EntityType.SERVICE, identifier = "delete_device", visible = false)
     private DeleteDevice deleteDevice;
 
 

@@ -8,7 +8,6 @@ import com.milesight.beaveriot.context.integration.model.Device;
 import com.milesight.beaveriot.context.integration.model.ExchangePayload;
 import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
 import com.milesight.beaveriot.eventbus.api.Event;
-import com.milesight.beaveriot.eventbus.enums.EventSource;
 import com.milesight.beaveriot.integration.msc.constant.MscIntegrationConstants;
 import com.milesight.beaveriot.integration.msc.entity.MscConnectionPropertiesEntities;
 import com.milesight.beaveriot.integration.msc.entity.MscServiceEntities;
@@ -325,7 +324,7 @@ public class MscDataSyncService {
         val timestamp = TimeUtils.currentTimeSeconds();
         val lastSyncTimeKey = MscIntegrationConstants.InternalPropertyIdentifier.getLastSyncTimeKey(device.getKey());
         val lastSyncTime = Optional.ofNullable(entityValueServiceProvider.findValueByKey(lastSyncTimeKey))
-                .map(JsonNode::intValue)
+                .map(n -> (int) n)
                 .orElse(0);
         entityValueServiceProvider.saveValuesAndPublishSync(ExchangePayload.create(lastSyncTimeKey, timestamp));
         return lastSyncTime;
