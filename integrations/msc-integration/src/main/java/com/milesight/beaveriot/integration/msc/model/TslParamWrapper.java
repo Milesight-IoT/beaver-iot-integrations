@@ -54,7 +54,7 @@ public record TslParamWrapper(TslParamSpec spec, TslItemWrapper functionItem) im
     }
 
     @Override
-    public List<TslParamWrapper> getOutputs() {
+    public List<TslParamWrapper> getParams() {
         return null;
     }
 
