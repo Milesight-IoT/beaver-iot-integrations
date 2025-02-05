@@ -275,7 +275,7 @@ public class MscDataSyncService {
         log.info("Found {} devices from local.", allDevices.size());
         allDevices.forEach(device -> {
             try {
-                int lastSyncTime = 0;
+                long lastSyncTime = 0;
                 if (delta) {
                     lastSyncTime = getAndUpdateLastSyncTime(device);
                 }
@@ -319,19 +319,19 @@ public class MscDataSyncService {
         }, concurrentSyncDeviceDataExecutor);
     }
 
-    private int getAndUpdateLastSyncTime(Device device) {
+    private long getAndUpdateLastSyncTime(Device device) {
         // update last sync time
         val timestamp = TimeUtils.currentTimeSeconds();
         val lastSyncTimeKey = MscIntegrationConstants.InternalPropertyIdentifier.getLastSyncTimeKey(device.getKey());
         val lastSyncTime = Optional.ofNullable(entityValueServiceProvider.findValueByKey(lastSyncTimeKey))
-                .map(n -> (int) n)
-                .orElse(0);
+                .map(n -> (long) n)
+                .orElse(0L);
         entityValueServiceProvider.saveValuesAndPublishSync(ExchangePayload.create(lastSyncTimeKey, timestamp));
         return lastSyncTime;
     }
 
     @SneakyThrows
-    private void syncPropertiesHistory(Device device, int lastSyncTime) {
+    private void syncPropertiesHistory(Device device, long lastSyncTime) {
         // deviceId should not be null
         val deviceId = (String) device.getAdditional().get(MscIntegrationConstants.DeviceAdditionalDataName.DEVICE_ID);
         long time24HoursBefore = TimeUtils.currentTimeSeconds() - TimeUnit.DAYS.toSeconds(1);

@@ -32,7 +32,7 @@ public class MyIntegrationController {
                 .findValuesByKeys(statusEntityKeys)
                 .values()
                 .stream()
-                .map(n -> (int) n)
+                .map(n -> (long) n)
                 .filter(status -> status == MyDeviceEntities.DeviceStatus.ONLINE.ordinal())
                 .count();
         CountResponse resp = new CountResponse();
