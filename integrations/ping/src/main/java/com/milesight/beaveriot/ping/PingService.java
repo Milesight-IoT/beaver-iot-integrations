@@ -1,6 +1,5 @@
 package com.milesight.beaveriot.ping;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.milesight.beaveriot.context.api.DeviceServiceProvider;
 import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
 import com.milesight.beaveriot.context.integration.enums.AccessMod;
@@ -36,7 +35,7 @@ public class PingService {
 
     @EventSubscribe(payloadKeyExpression = PingConstants.INTEGRATION_ID + ".integration.add_device.*")
     public void onAddDevice(Event<PingIntegrationEntities.AddDevice> event) {
-        String deviceName = event.getPayload().getContext("device_name", "Device Name");
+        String deviceName = event.getPayload().getAddDeviceName();
         String ip = event.getPayload().getIp();
 
 
@@ -64,8 +63,8 @@ public class PingService {
     }
 
     @EventSubscribe(payloadKeyExpression = PingConstants.INTEGRATION_ID + ".integration.delete_device")
-    public void onDeleteDevice(Event<ExchangePayload> event) {
-        Device device = (Device) event.getPayload().getContext("device");
+    public void onDeleteDevice(Event<PingIntegrationEntities.DeleteDevice> event) {
+        Device device = event.getPayload().getDeletedDevice();
         deviceServiceProvider.deleteById(device.getId());
     }
 
