@@ -17,7 +17,7 @@ import lombok.EqualsAndHashCode;
 @IntegrationEntities
 public class MyIntegrationEntities extends ExchangePayload {
     @Entity(type = EntityType.SERVICE, name = "Device Connection Benchmark", identifier = "benchmark")
-    private String benchmark;
+    private Benchmark benchmark;
 
     @Entity(type = EntityType.PROPERTY, name = "Detect Status", identifier = "detect_status", attributes = @Attribute(enumClass = DetectStatus.class), accessMod = AccessMod.R)
     private Long detectStatus;
@@ -59,6 +59,12 @@ public class MyIntegrationEntities extends ExchangePayload {
     @EqualsAndHashCode(callSuper = true)
     @Entities
     public static class DeleteDevice extends ExchangePayload implements DeleteDeviceAware {
+    }
+
+    @Data
+    @EqualsAndHashCode(callSuper = true)
+    @Entities
+    public static class Benchmark extends ExchangePayload {
     }
 
     public enum DetectStatus {
