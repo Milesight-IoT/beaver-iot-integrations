@@ -1,12 +1,9 @@
 package com.milesight.beaveriot.integration.msc.service;
 
-import com.milesight.beaveriot.context.constants.IntegrationConstants;
-import com.milesight.beaveriot.integration.msc.constant.MscIntegrationConstants;
-import com.milesight.cloud.sdk.client.model.DeviceSaveOrUpdateRequest;
-import com.milesight.cloud.sdk.client.model.ThingSpec;
-import com.milesight.cloud.sdk.client.model.TslPropertyDataUpdateRequest;
-import com.milesight.cloud.sdk.client.model.TslServiceCallRequest;
+import com.milesight.beaveriot.base.enums.ErrorCode;
+import com.milesight.beaveriot.base.exception.ServiceException;
 import com.milesight.beaveriot.context.api.DeviceServiceProvider;
+import com.milesight.beaveriot.context.constants.IntegrationConstants;
 import com.milesight.beaveriot.context.integration.enums.AccessMod;
 import com.milesight.beaveriot.context.integration.enums.EntityType;
 import com.milesight.beaveriot.context.integration.enums.EntityValueType;
@@ -18,8 +15,14 @@ import com.milesight.beaveriot.context.integration.model.ExchangePayload;
 import com.milesight.beaveriot.context.integration.model.event.ExchangeEvent;
 import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
 import com.milesight.beaveriot.eventbus.api.Event;
+import com.milesight.beaveriot.integration.msc.constant.MscIntegrationConstants;
 import com.milesight.beaveriot.integration.msc.entity.MscServiceEntities;
 import com.milesight.beaveriot.integration.msc.util.MscTslUtils;
+import com.milesight.cloud.sdk.client.model.DeviceSaveOrUpdateRequest;
+import com.milesight.cloud.sdk.client.model.GenericResponseBodyDeviceInfoResponse;
+import com.milesight.cloud.sdk.client.model.ThingSpec;
+import com.milesight.cloud.sdk.client.model.TslPropertyDataUpdateRequest;
+import com.milesight.cloud.sdk.client.model.TslServiceCallRequest;
 import com.milesight.msc.sdk.error.MscApiException;
 import com.milesight.msc.sdk.error.MscSdkException;
 import lombok.*;
@@ -33,6 +36,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 
 @Slf4j
@@ -114,8 +118,9 @@ public class MscDeviceService {
     public void onAddDevice(Event<MscServiceEntities.AddDevice> event) {
         val deviceName = event.getPayload().getAddDeviceName();
         if (mscClientProvider == null || mscClientProvider.getMscClient() == null) {
-            log.warn("MscClient not initiated.");
-            return;
+            throw ServiceException
+                    .with(ErrorCode.SERVER_ERROR.getErrorCode(), "Integration has not been initialized yet.")
+                    .build();
         }
         val identifier = event.getPayload().getSn();
         val mscClient = mscClientProvider.getMscClient();
@@ -129,7 +134,12 @@ public class MscDeviceService {
         if (addDeviceResponse == null || addDeviceResponse.getData() == null
                 || addDeviceResponse.getData().getDeviceId() == null) {
             log.warn("Add device failed: '{}' '{}'", deviceName, identifier);
-            return;
+            val reason = Optional.ofNullable(addDeviceResponse)
+                    .map(GenericResponseBodyDeviceInfoResponse::getErrCode)
+                    .orElse("Unknown");
+            throw ServiceException
+                    .with(ErrorCode.SERVER_ERROR.getErrorCode(), "Add device to MSC failed. Reason: " + reason)
+                    .build();
         }
 
         val deviceId = addDeviceResponse.getData().getDeviceId();
@@ -200,8 +210,9 @@ public class MscDeviceService {
     @EventSubscribe(payloadKeyExpression = "msc-integration.integration.delete_device")
     public void onDeleteDevice(Event<MscServiceEntities.DeleteDevice> event) {
         if (mscClientProvider == null || mscClientProvider.getMscClient() == null) {
-            log.warn("MscClient not initiated.");
-            return;
+            throw ServiceException
+                    .with(ErrorCode.SERVER_ERROR.getErrorCode(), "Integration has not been initialized yet.")
+                    .build();
         }
         val device = deviceServiceProvider.findByIdentifier(
                 event.getPayload().getDeletedDevice().getIdentifier(), MscIntegrationConstants.INTEGRATION_IDENTIFIER);
