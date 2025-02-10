@@ -12,21 +12,21 @@ public class OkHttpUtil {
     private static final OkHttpClient client;
 
     static {
-        // 初始化 OkHttpClient，设置超时时间
+        // Initialize OkHttpClient and set timeout
         client = new OkHttpClient.Builder()
-                .connectTimeout(10, TimeUnit.SECONDS) // 连接超时
-                .readTimeout(120, TimeUnit.SECONDS)    // 读取超时
-                .writeTimeout(10, TimeUnit.SECONDS)   // 写入超时
+                .connectTimeout(10, TimeUnit.SECONDS)  // Connection timeout
+                .readTimeout(120, TimeUnit.SECONDS)    // Read timeout
+                .writeTimeout(10, TimeUnit.SECONDS)    // Write timeout
                 .build();
     }
 
     /**
-     * 发送 GET 请求
+     * Sends a GET request
      *
-     * @param url     请求地址
-     * @param headers 请求头（可为空）
-     * @return 响应结果
-     * @throws IOException 请求失败时抛出异常
+     * @param url     The request URL
+     * @param headers The request headers (can be null)
+     * @return The response result
+     * @throws IOException If the request fails, an exception is thrown
      */
     public static String get(String url, Map<String, String> headers) throws IOException {
         Request.Builder builder = new Request.Builder().url(url);
@@ -38,13 +38,13 @@ public class OkHttpUtil {
     }
 
     /**
-     * 发送 POST 请求（JSON 数据）
+     * Sends a POST request (JSON data)
      *
-     * @param url     请求地址
-     * @param headers 请求头（可为空）
-     * @param json    JSON 格式的请求体
-     * @return 响应结果
-     * @throws IOException 请求失败时抛出异常
+     * @param url     The request URL
+     * @param headers The request headers (can be null)
+     * @param json    The request body in JSON format
+     * @return The response result
+     * @throws IOException If the request fails, an exception is thrown
      */
     public static String postJson(String url, Map<String, String> headers, String json) throws IOException {
         MediaType JSON = MediaType.parse("application/json; charset=utf-8");
@@ -59,13 +59,13 @@ public class OkHttpUtil {
     }
 
     /**
-     * 发送 POST 请求（表单数据）
+     * Sends a POST request (form data)
      *
-     * @param url    请求地址
-     * @param headers 请求头（可为空）
-     * @param formData 表单数据
-     * @return 响应结果
-     * @throws IOException 请求失败时抛出异常
+     * @param url      The request URL
+     * @param headers  The request headers (can be null)
+     * @param formData The form data
+     * @return The response result
+     * @throws IOException If the request fails, an exception is thrown
      */
     public static String postForm(String url, Map<String, String> headers, Map<String, String> formData) throws IOException {
         FormBody.Builder formBuilder = new FormBody.Builder();
@@ -83,13 +83,13 @@ public class OkHttpUtil {
     }
 
     /**
-     * 发送 PUT 请求（JSON 数据）
+     * Sends a PUT request (JSON data)
      *
-     * @param url     请求地址
-     * @param headers 请求头（可为空）
-     * @param json    JSON 格式的请求体
-     * @return 响应结果
-     * @throws IOException 请求失败时抛出异常
+     * @param url     The request URL
+     * @param headers The request headers (can be null)
+     * @param json    The request body in JSON format
+     * @return The response result
+     * @throws IOException If the request fails, an exception is thrown
      */
     public static String putJson(String url, Map<String, String> headers, String json) throws IOException {
         MediaType JSON = MediaType.parse("application/json; charset=utf-8");
@@ -104,12 +104,12 @@ public class OkHttpUtil {
     }
 
     /**
-     * 发送 DELETE 请求
+     * Sends a DELETE request
      *
-     * @param url     请求地址
-     * @param headers 请求头（可为空）
-     * @return 响应结果
-     * @throws IOException 请求失败时抛出异常
+     * @param url     The request URL
+     * @param headers The request headers (can be null)
+     * @return The response result
+     * @throws IOException If the request fails, an exception is thrown
      */
     public static String delete(String url, Map<String, String> headers) throws IOException {
         Request.Builder builder = new Request.Builder().url(url).delete();
@@ -131,10 +131,10 @@ public class OkHttpUtil {
     }
 
     /**
-     * 添加请求头
+     * Adds request headers
      *
-     * @param builder 请求构建器
-     * @param headers 请求头
+     * @param builder The request builder
+     * @param headers The request headers
      */
     private static void addHeaders(Request.Builder builder, Map<String, String> headers) {
         if (headers != null) {

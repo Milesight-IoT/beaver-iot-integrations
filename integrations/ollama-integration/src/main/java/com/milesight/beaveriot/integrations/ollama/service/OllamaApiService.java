@@ -3,7 +3,6 @@ package com.milesight.beaveriot.integrations.ollama.service;
 import com.milesight.beaveriot.base.utils.JsonUtils;
 import com.milesight.beaveriot.context.api.EntityServiceProvider;
 import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
-import com.milesight.beaveriot.context.integration.entity.annotation.Attribute;
 import com.milesight.beaveriot.context.integration.model.AttributeBuilder;
 import com.milesight.beaveriot.context.integration.model.Entity;
 import com.milesight.beaveriot.context.integration.wrapper.AnnotatedEntityWrapper;
@@ -24,13 +23,14 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 
 @Slf4j
 @Component
 public class OllamaApiService {
-
 
     @Autowired
     private EntityValueServiceProvider entityValueServiceProvider;
@@ -153,7 +153,7 @@ public class OllamaApiService {
     private void saveModelAttributes(Map<String, String> modelsEnum) {
         Entity entity = entityServiceProvider.findByKey(MODEL_ATTRIBUTE_NAME);
         Map<String, Object> attributes = entity.getAttributes();
-        if (attributes == null){
+        if (attributes == null) {
             attributes = new LinkedHashMap<>();
         }
         attributes.put(AttributeBuilder.ATTRIBUTE_ENUM, modelsEnum);
