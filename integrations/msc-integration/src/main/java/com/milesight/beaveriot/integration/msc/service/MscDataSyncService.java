@@ -356,12 +356,19 @@ public class MscDataSyncService {
             page.getData().getList().forEach(item -> {
                 val objectMapper = mscClientProvider.getMscClient().getObjectMapper();
                 val properties = objectMapper.convertValue(item.getProperties(), JsonNode.class);
-                saveHistoryData(device.getKey(), null, properties, item.getTs() == null ? TimeUtils.currentTimeMillis() : item.getTs(), isLatestData.get());
+                saveHistoryData(device.getKey(), null, properties, truncateTimestampMs(item.getTs()), isLatestData.get());
                 if (isLatestData.get()) {
                     isLatestData.set(false);
                 }
             });
         }
+    }
+
+    private static long truncateTimestampMs(Long ts) {
+        if (ts == null) {
+            return TimeUtils.currentTimeMillis();
+        }
+        return ts - ts % 1000;
     }
 
     public void saveHistoryData(String deviceKey, String eventId, JsonNode data, long timestampMs, boolean isLatestData) {
