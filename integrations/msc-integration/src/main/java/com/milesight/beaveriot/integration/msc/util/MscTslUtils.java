@@ -20,6 +20,7 @@ import com.milesight.cloud.sdk.client.model.TslDataValidatorSpec;
 import com.milesight.cloud.sdk.client.model.TslKeyValuePair;
 import lombok.*;
 import lombok.extern.slf4j.*;
+import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nonnull;
@@ -53,7 +54,7 @@ public class MscTslUtils {
 
         val parents = items.stream()
                 .filter(item -> item.getDataSpec() == null || item.getDataSpec().getParentId() == null)
-                .map(item -> new TslNode(item, null, null, null))
+                .map(item -> new TslNode(item, null, null, null, ""))
                 .toList();
         val queue = new ArrayDeque<>(parents);
         val identifierToParentEntity = new HashMap<String, Entity>();
@@ -96,10 +97,14 @@ public class MscTslUtils {
                         .identifier(standardizeEntityIdentifier(itemPath))
                         .valueType(item.getValueType())
                         .attributes(convertTslDataSpecToEntityAttributes(item.getDataSpec()));
+                var name = item.getName();
+                if (StringUtils.isNotEmpty(node.nameSuffix)) {
+                    name = name + node.nameSuffix;
+                }
                 switch (item.getEntityType()) {
-                    case PROPERTY -> entityBuilder.property(item.getName(), item.getAccessMode());
-                    case EVENT -> entityBuilder.event(item.getName());
-                    case SERVICE -> entityBuilder.service(item.getName());
+                    case PROPERTY -> entityBuilder.property(name, item.getAccessMode());
+                    case EVENT -> entityBuilder.event(name);
+                    case SERVICE -> entityBuilder.service(name);
                 }
                 val entity = entityBuilder.build();
 
@@ -126,10 +131,10 @@ public class MscTslUtils {
                 // Array only contains one type of child item
                 val childNode = childNodes.get(0);
                 IntStream.range(0, maxArraySize.intValue()).forEach(index ->
-                        queue.add(new TslNode(childNode, itemPath, rootIdentifier, index)));
+                        queue.add(new TslNode(childNode, itemPath, rootIdentifier, index, node.nameSuffix + " - " + index)));
             } else {
                 childNodes.forEach(childNode ->
-                        queue.add(new TslNode(childNode, itemPath, rootIdentifier, null)));
+                        queue.add(new TslNode(childNode, itemPath, rootIdentifier, null, "")));
             }
         }
 
@@ -147,8 +152,13 @@ public class MscTslUtils {
         return entities;
     }
 
-    record TslNode(TslItemWrapper item, String parentPath, String rootIdentifier, Integer arrayIndex) {
-
+    record TslNode(TslItemWrapper item, String parentPath, String rootIdentifier,
+                   Integer arrayIndex, String nameSuffix) {
+        TslNode {
+            if (nameSuffix == null) {
+                nameSuffix = "";
+            }
+        }
     }
 
     private static List<TslItemWrapper> getTslItems(ThingSpec thingSpec) {
