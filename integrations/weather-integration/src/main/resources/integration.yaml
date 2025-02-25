@@ -1,0 +1,8 @@
+integration:
+  weather-integration:
+    name: Weather Integration
+    description: "Yuanh Weather Integration"
+    icon-url: "public/weather.svg"
+    enabled: true
+    entity-identifier-add-device: add_device
+    entity-identifier-delete-device: delete_device
