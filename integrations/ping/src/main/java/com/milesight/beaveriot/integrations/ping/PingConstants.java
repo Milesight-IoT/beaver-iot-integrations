@@ -1,4 +1,4 @@
-package com.milesight.beaveriot.ping;
+package com.milesight.beaveriot.integrations.ping;
 
 public class PingConstants {
     private PingConstants() {}

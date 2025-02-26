@@ -1,4 +1,4 @@
-package com.milesight.beaveriot.ping;
+package com.milesight.beaveriot.integrations.ping;
 
 import com.milesight.beaveriot.context.integration.context.AddDeviceAware;
 import com.milesight.beaveriot.context.integration.context.DeleteDeviceAware;

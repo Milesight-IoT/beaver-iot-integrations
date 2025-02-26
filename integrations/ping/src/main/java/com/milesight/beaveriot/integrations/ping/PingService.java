@@ -1,4 +1,4 @@
-package com.milesight.beaveriot.ping;
+package com.milesight.beaveriot.integrations.ping;
 
 import com.milesight.beaveriot.context.api.DeviceServiceProvider;
 import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
