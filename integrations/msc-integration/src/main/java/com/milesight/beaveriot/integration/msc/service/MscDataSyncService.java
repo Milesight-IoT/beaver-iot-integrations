@@ -244,6 +244,7 @@ public class MscDataSyncService {
                 log.warn("Content is empty.");
                 return;
             }
+            pageNumber++;
             fetched += pageSize;
             total = response.getData().getTotal();
 
