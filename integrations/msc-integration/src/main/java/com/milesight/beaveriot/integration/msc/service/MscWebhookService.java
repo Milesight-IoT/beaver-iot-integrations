@@ -160,6 +160,7 @@ public class MscWebhookService {
         }
         val eventId = deviceData.getTslId();
         val data = deviceData.getPayload();
+        val ts = deviceData.getTs() != null ? deviceData.getTs() : webhookPayload.getEventCreatedTime() * 1000;
         val profile = deviceData.getDeviceProfile();
         if (data == null || profile == null) {
             log.warn("Invalid data: {}", deviceData);
@@ -175,7 +176,7 @@ public class MscWebhookService {
         }
 
         // save data
-        dataSyncService.saveHistoryData(device.getKey(), eventId, data, webhookPayload.getEventCreatedTime() * 1000, true);
+        dataSyncService.saveHistoryData(device.getKey(), eventId, data, ts, true);
     }
 
     public boolean isSignatureValid(String signature, String requestTimestamp, String requestNonce) {
