@@ -42,6 +42,8 @@ public class WebhookPayload {
         @JsonAlias("tslId")
         private String tslId;
 
+        private Long ts;
+
         @Nullable
         private JsonNode payload;
 
