@@ -39,6 +39,7 @@
         <module>sample-integrations</module>
         <module>ping</module>
         <module>msc-integration</module>
+        <module>ollama-integration</module>
     </modules>
 
     <properties>
