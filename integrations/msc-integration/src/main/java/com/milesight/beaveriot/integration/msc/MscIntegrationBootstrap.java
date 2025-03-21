@@ -8,7 +8,6 @@ import com.milesight.beaveriot.integration.msc.service.MscWebhookService;
 import lombok.extern.slf4j.*;
 import org.apache.camel.CamelContext;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Component;
 
 @Slf4j
@@ -27,15 +26,20 @@ public class MscIntegrationBootstrap implements IntegrationBootstrap {
 
     @Override
     public void onPrepared(Integration integrationConfig) {
-
+        // do nothing
     }
 
     @Override
     public void onStarted(Integration integrationConfig) {
+        // do nothing
+    }
+
+    @Override
+    public void onEnabled(String tenantId, Integration integrationConfig) {
         log.info("MSC integration starting");
-        mscConnectionService.init();
-        mscDataFetchingService.init();
-        mscWebhookService.init();
+        mscConnectionService.init(tenantId);
+        mscDataFetchingService.init(tenantId);
+        mscWebhookService.init(tenantId);
         log.info("MSC integration started");
     }
 

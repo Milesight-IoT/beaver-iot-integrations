@@ -3,6 +3,7 @@ package com.milesight.beaveriot.integration.msc.service;
 import com.milesight.beaveriot.context.api.DeviceServiceProvider;
 import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
 import com.milesight.beaveriot.context.integration.model.ExchangePayload;
+import com.milesight.beaveriot.context.security.TenantContext;
 import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
 import com.milesight.beaveriot.eventbus.api.Event;
 import com.milesight.beaveriot.integration.msc.constant.MscIntegrationConstants;
@@ -19,6 +20,8 @@ import org.springframework.stereotype.Service;
 
 import javax.crypto.Mac;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
@@ -30,12 +33,7 @@ public class MscWebhookService {
 
     private static final int MAX_FAILURES = 10;
 
-    private final AtomicInteger failureCount = new AtomicInteger(0);
-
-    @Getter
-    private boolean enabled = false;
-
-    private Mac mac;
+    private final Map<String, WebhookContext> tenantIdToWebhookContext = new ConcurrentHashMap<>();
 
     @Autowired
     private EntityValueServiceProvider entityValueServiceProvider;
@@ -50,29 +48,32 @@ public class MscWebhookService {
     @Autowired
     private MscDataSyncService dataSyncService;
 
-    public void init() {
+    public void init(String tenantId) {
         val webhookSettingsKey = MscConnectionPropertiesEntities.getKey(MscConnectionPropertiesEntities.Fields.webhook);
         val webhookSettings = entityValueServiceProvider.findValuesByKey(webhookSettingsKey, MscConnectionPropertiesEntities.Webhook.class);
         if (webhookSettings.isEmpty()) {
             log.info("Webhook settings not found");
             return;
         }
-        enabled = Boolean.TRUE.equals(webhookSettings.getEnabled());
+        val webhookContext = tenantIdToWebhookContext.computeIfAbsent(tenantId, WebhookContext::new);
+        webhookContext.enabled = Boolean.TRUE.equals(webhookSettings.getEnabled());
         if (webhookSettings.getSecretKey() != null) {
-            mac = HMacUtils.getMac(webhookSettings.getSecretKey());
+            webhookContext.mac = HMacUtils.getMac(webhookSettings.getSecretKey());
         }
-        if (!enabled) {
+        if (!webhookContext.enabled) {
             updateWebhookStatus(IntegrationStatus.NOT_READY);
         }
     }
 
     @EventSubscribe(payloadKeyExpression = "msc-integration.integration.webhook.*")
     public void onWebhookPropertiesUpdate(Event<MscConnectionPropertiesEntities.Webhook> event) {
-        enabled = Boolean.TRUE.equals(event.getPayload().getEnabled());
+        val tenantId = TenantContext.getTenantId();
+        val webhookContext = tenantIdToWebhookContext.computeIfAbsent(tenantId, WebhookContext::new);
+        webhookContext.enabled = Boolean.TRUE.equals(event.getPayload().getEnabled());
         if (event.getPayload().getSecretKey() != null && !event.getPayload().getSecretKey().isEmpty()) {
-            mac = HMacUtils.getMac(event.getPayload().getSecretKey());
+            webhookContext.mac = HMacUtils.getMac(event.getPayload().getSecretKey());
         } else {
-            mac = null;
+            tenantIdToWebhookContext.remove(tenantId);
         }
     }
 
@@ -87,7 +88,10 @@ public class MscWebhookService {
         } else {
             log.debug("Received webhook data, size: {}", webhookPayloads.size());
         }
-        if (!enabled) {
+
+        val tenantId = TenantContext.getTenantId();
+        val webhookContext = tenantIdToWebhookContext.get(tenantId);
+        if (webhookContext == null || !webhookContext.enabled) {
             log.debug("Webhook is disabled.");
             return;
         }
@@ -99,7 +103,7 @@ public class MscWebhookService {
             return;
         }
 
-        if (!isSignatureValid(signature, requestTimestamp, requestNonce)) {
+        if (!isSignatureValid(signature, requestTimestamp, requestNonce, webhookContext)) {
             log.warn("Signature invalid: {}", signature);
             markWebhookStatusAsError();
             return;
@@ -132,16 +136,26 @@ public class MscWebhookService {
      * mark as error when continuously failed to validate signature or timestamp
      */
     private void markWebhookStatusAsError() {
-        val failures = failureCount.incrementAndGet();
+        val tenantId = TenantContext.getTenantId();
+        val webhookContext = tenantIdToWebhookContext.get(tenantId);
+        if (webhookContext == null) {
+            return;
+        }
+        val failures = webhookContext.failureCount.incrementAndGet();
         if (failures > MAX_FAILURES) {
             updateWebhookStatus(IntegrationStatus.ERROR);
         }
     }
 
     private void updateWebhookStatus(@NonNull IntegrationStatus status) {
+        val tenantId = TenantContext.getTenantId();
+        val webhookContext = tenantIdToWebhookContext.get(tenantId);
+        if (webhookContext == null) {
+            return;
+        }
         if (!IntegrationStatus.ERROR.equals(status)) {
             // recover from error
-            failureCount.set(0);
+            webhookContext.failureCount.set(0);
         }
         entityValueServiceProvider.saveValuesAndPublishAsync(ExchangePayload.create(WEBHOOK_STATUS_KEY, status.name()));
     }
@@ -179,12 +193,27 @@ public class MscWebhookService {
         dataSyncService.saveHistoryData(device.getKey(), eventId, data, ts, true);
     }
 
-    public boolean isSignatureValid(String signature, String requestTimestamp, String requestNonce) {
+    public boolean isSignatureValid(String signature, String requestTimestamp, String requestNonce, WebhookContext webhookContext) {
+        val mac = webhookContext.getMac();
         if (mac != null) {
             val expectedSignature = HMacUtils.digestHex(mac, String.format("%s%s", requestTimestamp, requestNonce));
             return expectedSignature.equals(signature);
         }
         return true;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class WebhookContext {
+        private String tenantId;
+        private boolean enabled;
+        private Mac mac;
+        private AtomicInteger failureCount = new AtomicInteger(0);
+
+        public WebhookContext(String tenantId) {
+            this.tenantId = tenantId;
+        }
     }
 
 }
