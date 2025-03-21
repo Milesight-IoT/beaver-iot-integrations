@@ -6,6 +6,7 @@ import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
 import com.milesight.beaveriot.context.constants.ExchangeContextKeys;
 import com.milesight.beaveriot.context.integration.model.Device;
 import com.milesight.beaveriot.context.integration.model.ExchangePayload;
+import com.milesight.beaveriot.context.security.TenantContext;
 import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
 import com.milesight.beaveriot.eventbus.api.Event;
 import com.milesight.beaveriot.integration.msc.constant.MscIntegrationConstants;
@@ -26,8 +27,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Optional;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -57,9 +56,10 @@ public class MscDataSyncService {
     @Autowired
     private EntityValueServiceProvider entityValueServiceProvider;
 
-    private Timer timer;
+    @Autowired
+    private MscTimerService mscTimerService;
 
-    private int periodSeconds = 0;
+    private long periodSecond = 0L;
 
     // Only two existing tasks allowed at a time (one running and one waiting)
     private static final ExecutorService syncAllDataExecutor = new ThreadPoolExecutor(1, 1,
@@ -76,9 +76,10 @@ public class MscDataSyncService {
     @EventSubscribe(payloadKeyExpression = "msc-integration.integration.scheduled_data_fetch.*")
     public void onScheduledDataFetchPropertiesUpdate(Event<MscConnectionPropertiesEntities.ScheduledDataFetch> event) {
         if (event.getPayload().getPeriod() != null) {
-            periodSeconds = event.getPayload().getPeriod();
+            periodSecond = event.getPayload().getPeriod();
         }
-        restart();
+        val tenantId = TenantContext.getTenantId();
+        restart(tenantId);
     }
 
     @EventSubscribe(payloadKeyExpression = "msc-integration.integration.openapi_status")
@@ -100,62 +101,61 @@ public class MscDataSyncService {
     }
 
 
-    public void restart() {
-        stop();
-        start();
+    public void restart(String tenantId) {
+        stop(tenantId);
+        start(tenantId);
     }
 
     public void stop() {
-        if (timer != null) {
-            timer.cancel();
-            timer = null;
-        }
-        log.info("timer stopped");
+        mscTimerService.clear();
     }
 
-    public void init() {
-        start();
+    public void stop(String tenantId) {
+        mscTimerService.cancelTask(tenantId);
+        log.info("msc-integration timer stopped, tenant: '{}'", tenantId);
     }
 
-    public void start() {
-        log.info("timer starting");
-        if (timer != null) {
+    public void init(String tenantId) {
+        start(tenantId);
+    }
+
+    public void start(String tenantId) {
+        log.info("msc-integration timer starting, tenant: '{}'", tenantId);
+        if (mscTimerService.isScheduled(tenantId)) {
             return;
         }
-        if (periodSeconds == 0) {
+        if (periodSecond == 0) {
             val scheduledDataFetchSettings = entityValueServiceProvider.findValuesByKey(
                     MscConnectionPropertiesEntities.getKey(MscConnectionPropertiesEntities.Fields.scheduledDataFetch),
                     MscConnectionPropertiesEntities.ScheduledDataFetch.class);
+
             if (scheduledDataFetchSettings.isEmpty()) {
-                periodSeconds = -1;
+                periodSecond = -1;
                 return;
             }
+
             if (!Boolean.TRUE.equals(scheduledDataFetchSettings.getEnabled())
                     || scheduledDataFetchSettings.getPeriod() == null
                     || scheduledDataFetchSettings.getPeriod() == 0) {
                 // not enabled or invalid period
-                periodSeconds = -1;
+                periodSecond = -1;
             } else if (scheduledDataFetchSettings.getPeriod() > 0) {
-                periodSeconds = scheduledDataFetchSettings.getPeriod();
+                periodSecond = scheduledDataFetchSettings.getPeriod();
             }
         }
-        if (periodSeconds < 0) {
+
+        if (periodSecond < 0) {
             return;
         }
-        timer = new Timer();
 
         // setup timer
-        val periodMills = periodSeconds * 1000L;
-        timer.scheduleAtFixedRate(new TimerTask() {
-            @Override
-            public void run() {
-                try {
-                    syncAllDataExecutor.submit(() -> syncDeltaData());
-                } catch (RejectedExecutionException e) {
-                    log.error("Task rejected: ", e);
-                }
+        mscTimerService.scheduleTask(() -> {
+            try {
+                syncAllDataExecutor.submit(this::syncDeltaData);
+            } catch (RejectedExecutionException e) {
+                log.error("Task rejected: ", e);
             }
-        }, periodMills, periodMills);
+        }, tenantId, periodSecond, periodSecond);
 
         log.info("timer started");
     }
@@ -300,7 +300,6 @@ public class MscDataSyncService {
             try {
                 Device device = null;
                 switch (task.type) {
-                    case REMOVE_LOCAL_DEVICE -> device = removeLocalDevice(task.identifier);
                     case ADD_LOCAL_DEVICE -> device = addLocalDevice(task);
                     case UPDATE_LOCAL_DEVICE -> device = updateLocalDevice(task);
                 }
@@ -357,19 +356,13 @@ public class MscDataSyncService {
             page.getData().getList().forEach(item -> {
                 val objectMapper = mscClientProvider.getMscClient().getObjectMapper();
                 val properties = objectMapper.convertValue(item.getProperties(), JsonNode.class);
-                saveHistoryData(device.getKey(), null, properties, truncateTimestampMs(item.getTs()), isLatestData.get());
+                val timestamp = item.getTs() != null ? item.getTs() : TimeUtils.currentTimeMillis();
+                saveHistoryData(device.getKey(), null, properties, timestamp, isLatestData.get());
                 if (isLatestData.get()) {
                     isLatestData.set(false);
                 }
             });
         }
-    }
-
-    private static long truncateTimestampMs(Long ts) {
-        if (ts == null) {
-            return TimeUtils.currentTimeMillis();
-        }
-        return ts - ts % 1000;
     }
 
     public void saveHistoryData(String deviceKey, String eventId, JsonNode data, long timestampMs, boolean isLatestData) {
@@ -425,11 +418,6 @@ public class MscDataSyncService {
                     .get(0);
         }
         return details;
-    }
-
-    private Device removeLocalDevice(String identifier) {
-        // delete is unsupported currently
-        return null;
     }
 
 

@@ -3,6 +3,7 @@ package com.milesight.beaveriot.integration.msc.service;
 import com.milesight.beaveriot.context.api.DeviceServiceProvider;
 import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
 import com.milesight.beaveriot.context.integration.model.ExchangePayload;
+import com.milesight.beaveriot.context.security.TenantContext;
 import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
 import com.milesight.beaveriot.eventbus.api.Event;
 import com.milesight.beaveriot.integration.msc.constant.MscIntegrationConstants;
@@ -19,6 +20,8 @@ import org.springframework.stereotype.Service;
 
 import javax.crypto.Mac;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
@@ -35,7 +38,7 @@ public class MscWebhookService {
     @Getter
     private boolean enabled = false;
 
-    private Mac mac;
+    private final Map<String, Mac> tenantIdToMac = new ConcurrentHashMap<>();
 
     @Autowired
     private EntityValueServiceProvider entityValueServiceProvider;
@@ -50,7 +53,7 @@ public class MscWebhookService {
     @Autowired
     private MscDataSyncService dataSyncService;
 
-    public void init() {
+    public void init(String tenantId) {
         val webhookSettingsKey = MscConnectionPropertiesEntities.getKey(MscConnectionPropertiesEntities.Fields.webhook);
         val webhookSettings = entityValueServiceProvider.findValuesByKey(webhookSettingsKey, MscConnectionPropertiesEntities.Webhook.class);
         if (webhookSettings.isEmpty()) {
@@ -59,7 +62,7 @@ public class MscWebhookService {
         }
         enabled = Boolean.TRUE.equals(webhookSettings.getEnabled());
         if (webhookSettings.getSecretKey() != null) {
-            mac = HMacUtils.getMac(webhookSettings.getSecretKey());
+            tenantIdToMac.put(tenantId, HMacUtils.getMac(webhookSettings.getSecretKey()));
         }
         if (!enabled) {
             updateWebhookStatus(IntegrationStatus.NOT_READY);
@@ -69,10 +72,11 @@ public class MscWebhookService {
     @EventSubscribe(payloadKeyExpression = "msc-integration.integration.webhook.*")
     public void onWebhookPropertiesUpdate(Event<MscConnectionPropertiesEntities.Webhook> event) {
         enabled = Boolean.TRUE.equals(event.getPayload().getEnabled());
+        val tenantId = TenantContext.getTenantId();
         if (event.getPayload().getSecretKey() != null && !event.getPayload().getSecretKey().isEmpty()) {
-            mac = HMacUtils.getMac(event.getPayload().getSecretKey());
+            tenantIdToMac.put(tenantId, HMacUtils.getMac(event.getPayload().getSecretKey()));
         } else {
-            mac = null;
+            tenantIdToMac.remove(tenantId);
         }
     }
 
@@ -180,6 +184,8 @@ public class MscWebhookService {
     }
 
     public boolean isSignatureValid(String signature, String requestTimestamp, String requestNonce) {
+        val tenantId = TenantContext.getTenantId();
+        val mac = tenantIdToMac.get(tenantId);
         if (mac != null) {
             val expectedSignature = HMacUtils.digestHex(mac, String.format("%s%s", requestTimestamp, requestNonce));
             return expectedSignature.equals(signature);
