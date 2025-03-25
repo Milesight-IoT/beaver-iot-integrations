@@ -1,0 +1,8 @@
+integration:
+  milesight-gateway:
+    name: Milesight Gateway Embedded NS
+    description: "This integration is used to enable communication with the embedded NS of the Milesight gateway device."
+    icon-url: "public/milesight-gateway.svg"
+    enabled: true
+    entity-identifier-add-device: add-device
+    entity-identifier-delete-device: delete-device

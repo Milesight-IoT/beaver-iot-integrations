@@ -1,0 +1,30 @@
+{
+  "read_only_string": "Read Only String",
+  "write_only_string": "Write Only String",
+  "bool_field": 0,
+  "int_enum_field": 1,
+  "float_unit_field": 26.6,
+  "int_field": 50,
+  "struct": {
+    "arg1": 0,
+    "arg2": {
+      "arg1": 1,
+      "arg2": 0,
+      "arg3": {
+        "arg1": 0,
+        "arg2": 1
+      }
+    },
+    "arg3": [1, 2, 3, 4, 5, 6, 7, 8],
+    "arg4": [
+      {
+        "arg1": 1,
+        "arg2": {
+          "arg1": 1,
+          "arg2": 2
+        }
+      }
+    ]
+  },
+  "plain_array": [1, 2, 3, 4, 5, 6, 7, 8]
+}
