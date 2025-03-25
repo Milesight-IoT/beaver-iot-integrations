@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 
+import java.security.SecureRandom;
 import java.util.Map;
 
 /**
@@ -58,6 +59,19 @@ public class GatewayString {
         }
 
         return eui;
+    }
+
+    private static final String CLIENT_ID_RANDOM_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
+    public static String generateRandomString(int length) {
+        StringBuilder sb = new StringBuilder(length);
+        for (int i = 0; i < length; i++) {
+            int index = SECURE_RANDOM.nextInt(CLIENT_ID_RANDOM_CHARS.length());
+            sb.append(CLIENT_ID_RANDOM_CHARS.charAt(index));
+        }
+        return sb.toString();
     }
 
     private GatewayString() {}

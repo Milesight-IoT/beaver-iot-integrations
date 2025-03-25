@@ -52,6 +52,9 @@ public class MsGwIntegrationEntities extends ExchangePayload {
     @Entity(type = EntityType.PROPERTY, name = "Device Model Data", identifier = "device-model-data", accessMod = AccessMod.R, visible = false)
     private String deviceModelData;
 
+    @Entity(type = EntityType.PROPERTY, name = "Model Repository Url", identifier = "model-repo-url", accessMod = AccessMod.RW, attributes = @Attribute(optional = true))
+    private String modelRepoUrl;
+
     @Data
     @EqualsAndHashCode(callSuper = true)
     @Entities

@@ -79,7 +79,7 @@ public class GatewayService {
         String gatewayEui = GatewayString.standardizeEUI(request.getEui());
         Device gateway = getGatewayByEui(gatewayEui);
         String credentialId = gateway == null ? request.getCredentialId() : getGatewayCredentialId(gateway);
-        String clientId = gateway == null ? UUID.randomUUID().toString() : getGatewayClientId(gateway);
+        String clientId = resolveGatewayClientId(gateway, gatewayEui);
         // set credential
         Credentials credentials = null;
         if (credentialId == null) {
@@ -309,6 +309,14 @@ public class GatewayService {
 
     public String getGatewayCredentialId(Device gateway) {
         return  (String) gateway.getAdditional().get(GatewayData.Fields.credentialId);
+    }
+
+    private String resolveGatewayClientId(Device gateway, String gatewayEui) {
+        if (gateway != null) {
+            return getGatewayClientId(gateway);
+        }
+
+        return GATEWAY_MQTT_CLIENT_ID_PREFIX + gatewayEui + ":" + GatewayString.generateRandomString(Constants.CLIENT_ID_RANDOM_LENGTH);
     }
 
     public String getGatewayClientId(Device gateway) {

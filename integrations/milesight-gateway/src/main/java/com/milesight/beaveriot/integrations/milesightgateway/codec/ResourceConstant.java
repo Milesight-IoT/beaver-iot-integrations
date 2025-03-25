@@ -7,8 +7,7 @@ package com.milesight.beaveriot.integrations.milesightgateway.codec;
  * @date 2025/3/6
  */
 public class ResourceConstant {
-    // "https://raw.githubusercontent.com/Milesight-IoT/codec/refs/heads/release/"
-    public static final String DEFAULT_DEVICE_CODEC_URI = "https://gitlab.milesight.com/simon.zhao5731/codec/-/raw/feat/beaver-iot/";
+    public static final String DEFAULT_DEVICE_CODEC_URI = "https://raw.githubusercontent.com/Milesight-IoT/codec/refs/heads/release/";
 
     public static final String DEFAULT_DEVICE_CODEC_VERSION = "version.json";
 

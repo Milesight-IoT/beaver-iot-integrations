@@ -18,6 +18,8 @@ import java.util.function.BiPredicate;
 public class DeviceModelData {
     String version;
 
+    String source;
+
     List<VendorInfo> vendorInfoList;
 
     @Data

@@ -4,11 +4,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.milesight.beaveriot.base.enums.ErrorCode;
 import com.milesight.beaveriot.base.exception.ServiceException;
 import com.milesight.beaveriot.integrations.milesightgateway.codec.model.*;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.StringUtils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -23,8 +27,34 @@ import java.util.List;
 public class ResourceRequester {
     private final ObjectMapper json = ResourceString.jsonInstance();
 
+    @Getter
+    private String repoUrl = ResourceConstant.DEFAULT_DEVICE_CODEC_URI;
+
+    public ResourceRequester(String repoUrl) {
+        if (StringUtils.hasText(repoUrl)) {
+            this.repoUrl = repoUrl;
+        }
+    }
+
+    private String joinUrl(String base, String path) {
+        if (!base.endsWith("/")) {
+            base = base + "/";
+        }
+        if (path.startsWith("/")) {
+            path = path.substring(1);
+        }
+
+        try {
+            URI baseUri = new URI(base);
+            URI resolvedUri = baseUri.resolve(path);
+            return resolvedUri.toString();
+        } catch (URISyntaxException e) {
+            throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), "Invalid Url:" + base + " + " + path).build();
+        }
+    }
+
     private <T> T requestJsonResource(String resourcePath, Class<T> clazz) {
-        String requestUrl = ResourceConstant.DEFAULT_DEVICE_CODEC_URI + resourcePath;
+        String requestUrl = this.joinUrl(this.repoUrl, resourcePath);
         try {
             return json.readValue(new URL(requestUrl), clazz);
         } catch (Exception e) {
@@ -33,7 +63,7 @@ public class ResourceRequester {
     }
 
     public String requestJsonResource(String resourcePath) {
-        String requestUrlStr = ResourceConstant.DEFAULT_DEVICE_CODEC_URI + resourcePath;
+        String requestUrlStr = this.joinUrl(this.repoUrl, resourcePath);
         URL requestUrl;
         try {
             requestUrl = new URL(requestUrlStr);

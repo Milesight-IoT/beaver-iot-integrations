@@ -46,8 +46,6 @@ public class DeviceCodecService {
 
     ObjectMapper json = ResourceString.jsonInstance();
 
-    ResourceRequester resourceRequester = new ResourceRequester();
-
     @EventSubscribe(payloadKeyExpression = MsGwIntegrationEntities.SYNC_DEVICE_CODEC_KEY, eventType = ExchangeEvent.EventType.CALL_SERVICE)
     public void onSyncDeviceCodec(Event<MsGwIntegrationEntities> event) throws ExecutionException, InterruptedException {
         syncDeviceCodec();
@@ -55,10 +53,11 @@ public class DeviceCodecService {
 
     @DistributedLock(name = LockConstants.DEVICE_CODEC_INDEX_UPDATE_LOCK)
     public void syncDeviceCodec() throws ExecutionException, InterruptedException {
+        ResourceRequester resourceRequester = new ResourceRequester(msGwEntityService.getDeviceModelRepoUrl());
         VersionResponse versionInfo = resourceRequester.requestCodecVersion();
         DeviceModelData modelData = msGwEntityService.getModelData();
         // Check whether version updated
-        if (Objects.equals(modelData.getVersion(), versionInfo.getVersion())) {
+        if (Objects.equals(modelData.getVersion(), versionInfo.getVersion()) && Objects.equals(modelData.getSource(), resourceRequester.getRepoUrl())) {
             log.info("Ignore update. Have been in the latest version: " + versionInfo.getVersion());
             return;
         }
@@ -83,14 +82,15 @@ public class DeviceCodecService {
                         .map(CompletableFuture::join)
                         .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
 
-        saveDeviceCodecsToEntity(versionInfo.getVersion(), vendors, allResults.get());
+        saveDeviceCodecsToEntity(versionInfo.getVersion(), resourceRequester.getRepoUrl(), vendors, allResults.get());
     }
 
-    private void saveDeviceCodecsToEntity(String version, List<Vendor> vendors, Map<String, List<DeviceModelData.DeviceInfo>> vendorDevices) {
+    private void saveDeviceCodecsToEntity(String version, String repoUrl, List<Vendor> vendors, Map<String, List<DeviceModelData.DeviceInfo>> vendorDevices) {
         // save to deviceModelData of integration entities
         AnnotatedEntityWrapper<MsGwIntegrationEntities> gatewayEntitiesWrapper = new AnnotatedEntityWrapper<>();
         DeviceModelData deviceModelData = new DeviceModelData();
         deviceModelData.setVersion(version);
+        deviceModelData.setSource(repoUrl);
         deviceModelData.setVendorInfoList(vendors.stream().map(vendor -> {
             DeviceModelData.VendorInfo vendorInfo = new DeviceModelData.VendorInfo();
             vendorInfo.setId(vendor.getId());
@@ -134,6 +134,7 @@ public class DeviceCodecService {
     }
 
     public Map<String, DeviceCodecData> batchGetDeviceCodecData(List<String> vendorDeviceIdList) {
+        ResourceRequester resourceRequester = new ResourceRequester(msGwEntityService.getDeviceModelRepoUrl());
         Set<String> deviceModelSet = new HashSet<>(vendorDeviceIdList);
         Map<String, DeviceModelData.VendorDeviceInfo> deviceModelMap = new HashMap<>();
         Map<String, String> vendorResourceMap = new HashMap<>();

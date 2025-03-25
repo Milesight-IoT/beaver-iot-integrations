@@ -11,17 +11,14 @@ import com.milesight.beaveriot.integrations.milesightgateway.entity.GatewayEntit
 import com.milesight.beaveriot.integrations.milesightgateway.entity.MsGwIntegrationEntities;
 import com.milesight.beaveriot.integrations.milesightgateway.model.DeviceConnectStatus;
 import com.milesight.beaveriot.integrations.milesightgateway.model.DeviceModelData;
-import com.milesight.beaveriot.integrations.milesightgateway.util.Constants;
 import com.milesight.beaveriot.integrations.milesightgateway.util.GatewayString;
 import com.milesight.beaveriot.integrations.milesightgateway.codec.ResourceString;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -58,6 +55,15 @@ public class MsGwEntityService {
         return getGatewayRelation().entrySet().stream()
                 .flatMap(entry -> entry.getValue().stream().map(device -> Map.entry(device, entry.getKey())))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
+
+    public String getDeviceModelRepoUrl() {
+        Optional<Object> repoUrl = new AnnotatedEntityWrapper<MsGwIntegrationEntities>().getValue(MsGwIntegrationEntities::getModelRepoUrl);
+        if (repoUrl.isEmpty() || !StringUtils.hasText((String) repoUrl.get())) {
+            return null;
+        }
+
+        return (String) repoUrl.get();
     }
 
     public void saveGatewayRelation(Map<String, List<String>> gatewayRelation) {

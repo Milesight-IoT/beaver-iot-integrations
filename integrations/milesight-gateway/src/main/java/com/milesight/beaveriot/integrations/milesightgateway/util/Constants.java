@@ -17,6 +17,8 @@ public class Constants {
 
     public static final String GATEWAY_IDENTIFIER_PREFIX = "GW-";
 
+    public static final String GATEWAY_MQTT_CLIENT_ID_PREFIX = "msgw:";
+
     public static final String GATEWAY_MQTT_UPLINK_SCOPE = "uplink";
 
     public static final String GATEWAY_MQTT_DOWNLINK_SCOPE = "downlink";
@@ -24,6 +26,8 @@ public class Constants {
     public static final String GATEWAY_MQTT_REQUEST_SCOPE = "request";
 
     public static final String GATEWAY_MQTT_RESPONSE_SCOPE = "response";
+
+    public static final Integer CLIENT_ID_RANDOM_LENGTH = 12;
 
     private Constants() {}
 }
