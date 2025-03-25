@@ -38,12 +38,11 @@ public class MilesightGatewayBootstrap implements IntegrationBootstrap {
 
     @Override
     public void onStarted(Integration integrationConfig) {
-
+        msGwMqttClient.init();
     }
 
     @Override
     public void onEnabled(String tenantId, Integration integrationConfig) {
-        msGwMqttClient.init();
         gatewayService.syncGatewayListToAddDeviceGatewayEuiList();
         deviceCodecService.syncDeviceModelListToAdd(msGwEntityService.getModelData());
     }

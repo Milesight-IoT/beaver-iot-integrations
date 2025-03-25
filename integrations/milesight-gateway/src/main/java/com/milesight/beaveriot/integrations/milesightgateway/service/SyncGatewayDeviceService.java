@@ -9,7 +9,6 @@ import com.milesight.beaveriot.context.api.DeviceServiceProvider;
 import com.milesight.beaveriot.context.integration.model.Device;
 import com.milesight.beaveriot.context.integration.model.DeviceBuilder;
 import com.milesight.beaveriot.context.integration.wrapper.EntityWrapper;
-import com.milesight.beaveriot.context.security.TenantContext;
 import com.milesight.beaveriot.integrations.milesightgateway.codec.DeviceHelper;
 import com.milesight.beaveriot.integrations.milesightgateway.model.DeviceCodecData;
 import com.milesight.beaveriot.integrations.milesightgateway.model.DeviceModelData;
@@ -28,6 +27,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ObjectUtils;
+import org.springframework.util.StringUtils;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -60,6 +60,9 @@ public class SyncGatewayDeviceService {
 
     @Autowired
     MsGwEntityService msGwEntityService;
+
+    @Autowired
+    TaskExecutor taskExecutor;
 
     private static final ObjectMapper json = GatewayString.jsonInstance();
 
@@ -124,15 +127,17 @@ public class SyncGatewayDeviceService {
         String applicationId = gatewayService.getGatewayApplicationId(gateway);
 
         // batch reset device codec
-        final String tenantId = TenantContext.getTenantId();
         List<CompletableFuture<UpdateGatewayDeviceResponse>> futures = request.getDevices().stream()
                 .map(syncRequest -> CompletableFuture.supplyAsync(() -> {
-                    TenantContext.setTenantId(tenantId);
                     Map<String, Object> deviceItemData = gatewayService.doUpdateGatewayDevice(gatewayEui, syncRequest.getEui(), applicationId, Map.of(
                                     DeviceListItemFields.PAYLOAD_CODEC_ID, NONE_CODEC_ID,
                                     DeviceListItemFields.PAYLOAD_NAME, ""
                             ));
                     UpdateGatewayDeviceResponse response = new UpdateGatewayDeviceResponse();
+                    if (ObjectUtils.isEmpty(deviceItemData)) {
+                        return response;
+                    }
+
                     response.setDeviceName((String) deviceItemData.get(DeviceListItemFields.NAME));
                     GatewayDeviceData deviceData = new GatewayDeviceData();
                     deviceData.setEui(syncRequest.getEui());
@@ -143,10 +148,11 @@ public class SyncGatewayDeviceService {
                     deviceData.setFrameCounterValidation(!(Boolean) deviceItemData.get(DeviceListItemFields.SKIP_F_CNT_CHECK));
                     response.setDeviceData(deviceData);
                     return response;
-                })).toList();
+                }, taskExecutor)).toList();
         List<UpdateGatewayDeviceResponse> deviceItemList = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).thenApply(v ->
                         futures.stream()
                                 .map(CompletableFuture::join)
+                                .filter(response -> StringUtils.hasText(response.getDeviceName()))
                                 .toList()).join();
 
         // get codecs
