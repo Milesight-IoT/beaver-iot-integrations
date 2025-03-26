@@ -13,10 +13,12 @@ import com.milesight.beaveriot.context.integration.enums.CredentialsType;
 import com.milesight.beaveriot.context.integration.model.*;
 import com.milesight.beaveriot.context.integration.model.event.DeviceEvent;
 import com.milesight.beaveriot.context.integration.model.event.ExchangeEvent;
+import com.milesight.beaveriot.context.integration.wrapper.AnnotatedTemplateEntityWrapper;
 import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
 import com.milesight.beaveriot.eventbus.api.Event;
 import com.milesight.beaveriot.integrations.milesightgateway.entity.GatewayEntities;
 import com.milesight.beaveriot.integrations.milesightgateway.entity.MsGwIntegrationEntities;
+import com.milesight.beaveriot.integrations.milesightgateway.model.DeviceConnectStatus;
 import com.milesight.beaveriot.integrations.milesightgateway.model.GatewayDeviceData;
 import com.milesight.beaveriot.integrations.milesightgateway.model.api.DeviceListItemFields;
 import com.milesight.beaveriot.integrations.milesightgateway.model.request.FetchGatewayCredentialRequest;
@@ -235,13 +237,14 @@ public class GatewayService {
         }
         
         // build and add gateway device
-        Device gatewayDevice = new DeviceBuilder(INTEGRATION_ID)
+        Device gateway = new DeviceBuilder(INTEGRATION_ID)
                 .name(request.getName())
                 .identifier(GatewayString.getGatewayIdentifier(newGatewayData.getEui()))
                 .additional(json.convertValue(newGatewayData, new TypeReference<>() {}))
                 .entities(new AnnotatedTemplateEntityBuilder(INTEGRATION_ID, newGatewayData.getEui()).build(GatewayEntities.class))
                 .build();
-        deviceServiceProvider.save(gatewayDevice);
+        deviceServiceProvider.save(gateway);
+        new AnnotatedTemplateEntityWrapper<GatewayEntities>(gateway.getIdentifier()).saveValue(GatewayEntities::getStatus, DeviceConnectStatus.ONLINE);
 
         // add to relation
 
@@ -249,7 +252,7 @@ public class GatewayService {
         msGwEntityService.saveGatewayRelation(gatewayRelation);
 
         // add to add device gateway list
-        manageAddDeviceGatewayEui(List.of(gatewayDevice), AddDeviceGatewayEuiOperation.ADD);
+        manageAddDeviceGatewayEui(List.of(gateway), AddDeviceGatewayEuiOperation.ADD);
 
         // check duplicate eui
         return newGatewayData;
