@@ -4,9 +4,11 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.milesight.beaveriot.integrations.milesightgateway.entity.GatewayEntities;
 
 import java.security.SecureRandom;
 import java.util.Map;
+import java.util.zip.CRC32;
 
 /**
  * MilesightJson class.
@@ -43,6 +45,18 @@ public class GatewayString {
         return identifier.startsWith(Constants.GATEWAY_IDENTIFIER_PREFIX);
     }
 
+    public static String getGatewayKey(String gatewayEui) {
+        return Constants.INTEGRATION_ID + "." + "device" + "." + getGatewayIdentifier(gatewayEui);
+    }
+
+    public static String getGatewayStatusKey(String gatewayIdentifier) {
+        return Constants.INTEGRATION_ID + "." + "device" + "." + gatewayIdentifier + "." + GatewayEntities.STATUS_KEY;
+    }
+
+    public static String parseGatewayIdentifier(String key) {
+        return key.split("\\.")[2];
+    }
+
     public static String getDeviceKey(String deviceEui) {
         return Constants.INTEGRATION_ID + ".device." + deviceEui;
     }
@@ -51,14 +65,9 @@ public class GatewayString {
         return getDeviceKey(deviceEui) + "." + entityIdentifier;
     }
 
-    public static String getDeviceEuiByKey(String deviceKey) {
+    public static String getDeviceIdentifierByKey(String deviceKey) {
         String[] keyParts = deviceKey.split("\\.");
-        String eui = keyParts[keyParts.length - 1];
-        if (isGatewayIdentifier(eui)) {
-            eui = eui.substring(Constants.GATEWAY_IDENTIFIER_PREFIX.length());
-        }
-
-        return eui;
+        return keyParts[keyParts.length - 1];
     }
 
     private static final String CLIENT_ID_RANDOM_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -72,6 +81,45 @@ public class GatewayString {
             sb.append(CLIENT_ID_RANDOM_CHARS.charAt(index));
         }
         return sb.toString();
+    }
+
+    public static String hashTo6Digits(String input) {
+        CRC32 crc = new CRC32();
+        crc.update(input.getBytes());
+        long hashValue = crc.getValue();
+        int hash = (int) (hashValue % 1000000);
+        return String.format("%06d", hash);
+    }
+
+    public static String generateGatewayClientId(String gatewayEui) {
+        String strToHash = Constants.GATEWAY_MQTT_CLIENT_ID_PREFIX + gatewayEui + ":" + GatewayString.generateRandomString(Constants.CLIENT_ID_RANDOM_LENGTH);
+        return strToHash + ":" + hashTo6Digits(strToHash);
+    }
+
+    public static boolean validateGatewayClientId(String clientId, String gatewayEui) {
+        String[] parts = clientId.split(":");
+        if (parts.length != 4) {
+            return false;
+        }
+
+        if (!(parts[0] + ":").equals(Constants.GATEWAY_MQTT_CLIENT_ID_PREFIX)) {
+            return false;
+        }
+
+        if (!parts[1].equals(gatewayEui)) {
+            return false;
+        }
+
+        if (parts[2].length() != Constants.CLIENT_ID_RANDOM_LENGTH) {
+            return false;
+        }
+
+        return hashTo6Digits(parts[0] + ":" + parts[1] + ":" + parts[2]).equals(parts[3]);
+    }
+
+    public static String parseGatewayEuiFromClientId(String clientId) {
+        String[] parts = clientId.split(":");
+        return parts.length < 2 ? null : parts[1];
     }
 
     private GatewayString() {}

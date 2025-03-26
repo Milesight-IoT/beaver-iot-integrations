@@ -55,18 +55,19 @@ public class MilesightGatewayController {
     public ResponseBody<GatewayListResponse> getGateways() {
         GatewayListResponse response = new GatewayListResponse();
         List<Device> gateways = gatewayService.getAllGateways();
-        Map<String, List<String>> gatewayDeviceRelation = deviceService.getGatewayDeviceRelation();
+        Map<String, List<String>> gatewayDeviceRelation = msGwEntityService.getGatewayRelation();
         if (ObjectUtils.isEmpty(gatewayDeviceRelation)) {
             return ResponseBuilder.success(response);
         }
 
-        Map<String, DeviceConnectStatus> gatewayStatusMap = msGwEntityService.getGatewayStatus(gateways.stream().map(Device::getKey).toList());
+        Map<String, DeviceConnectStatus> gatewayStatusMap = msGwEntityService.getGatewayStatus(gateways.stream().map(Device::getIdentifier).toList());
         response.setGateways(gateways.stream().map(gateway -> {
             GatewayListItem listItem = new GatewayListItem();
             listItem.setName(gateway.getName());
             listItem.setDeviceId(gateway.getId().toString());
             listItem.setDeviceKey(gateway.getKey());
-            listItem.setStatus(gatewayStatusMap.get(gateway.getKey()));
+            DeviceConnectStatus status = gatewayStatusMap.get(gateway.getIdentifier());
+            listItem.setStatus(status == null ? DeviceConnectStatus.ONLINE : status);
 
             List<String> deviceEuiList = gatewayDeviceRelation.get(gatewayService.getGatewayEui(gateway));
             listItem.setDeviceCount(deviceEuiList == null ? 0 : deviceEuiList.size());
@@ -110,7 +111,12 @@ public class MilesightGatewayController {
 
     @GetMapping("/gateways/{gatewayEUI}/devices")
     public ResponseBody<List<GatewayDeviceListItem>> getGatewayDevices(@PathVariable("gatewayEUI") String eui) {
-        return ResponseBuilder.success(deviceService.getDevicesOfGateway(eui).stream().map(device -> {
+        List<String> deviceEuiList = msGwEntityService.getGatewayRelation().get(GatewayString.standardizeEUI(eui));
+        if (deviceEuiList == null) {
+            return ResponseBuilder.success(List.of());
+        }
+
+        return ResponseBuilder.success(deviceService.getDevices(deviceEuiList).stream().map(device -> {
             GatewayDeviceListItem item = new GatewayDeviceListItem();
             item.setId(device.getId().toString());
             item.setKey(device.getKey());

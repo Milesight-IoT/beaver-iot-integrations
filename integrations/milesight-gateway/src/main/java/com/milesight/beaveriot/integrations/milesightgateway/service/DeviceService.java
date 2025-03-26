@@ -19,10 +19,7 @@ import com.milesight.beaveriot.integrations.milesightgateway.codec.CodecExecutor
 import com.milesight.beaveriot.integrations.milesightgateway.codec.EntityValueConverter;
 import com.milesight.beaveriot.integrations.milesightgateway.entity.MsGwIntegrationEntities;
 import com.milesight.beaveriot.integrations.milesightgateway.codec.DeviceHelper;
-import com.milesight.beaveriot.integrations.milesightgateway.model.DeviceCodecData;
-import com.milesight.beaveriot.integrations.milesightgateway.model.GatewayData;
-import com.milesight.beaveriot.integrations.milesightgateway.model.GatewayDeviceData;
-import com.milesight.beaveriot.integrations.milesightgateway.model.GatewayDeviceOperation;
+import com.milesight.beaveriot.integrations.milesightgateway.model.*;
 import com.milesight.beaveriot.integrations.milesightgateway.model.api.AddDeviceRequest;
 import com.milesight.beaveriot.integrations.milesightgateway.util.Constants;
 import com.milesight.beaveriot.integrations.milesightgateway.util.GatewayRequester;
@@ -156,29 +153,9 @@ public class DeviceService {
         }
     }
 
-    public Map<String, List<String>> getGatewayDeviceRelation() {
-        try {
-            AnnotatedEntityWrapper<MsGwIntegrationEntities> gatewayEntitiesWrapper = new AnnotatedEntityWrapper<>();
-            String gatewayListStr = (String) gatewayEntitiesWrapper.getValue(MsGwIntegrationEntities::getGatewayDeviceRelation).orElse("{}");
-            return json.readValue(gatewayListStr, new TypeReference<>() {});
-        } catch (Exception e) {
-            throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), "Broken gateway list data").build();
-        }
-    }
-
-    public List<Device> getDevicesOfGateway(String gatewayEui) {
-        List<String> deviceEuiList = getGatewayDeviceRelation().get(gatewayEui);
-        if (ObjectUtils.isEmpty(deviceEuiList)) {
-            return List.of();
-        }
-
-
-        return getDevices(deviceEuiList);
-    }
-
     @DistributedLock(name = LockConstants.UPDATE_GATEWAY_DEVICE_ENUM_LOCK)
     public void manageGatewayDevices(String gatewayEUI, String deviceEUI, GatewayDeviceOperation op) {
-        Map<String, List<String>> gatewayDeviceRelation = getGatewayDeviceRelation();
+        Map<String, List<String>> gatewayDeviceRelation = msGwEntityService.getGatewayRelation();
         List<String> deviceList = gatewayDeviceRelation.get(gatewayEUI);
         if (op == GatewayDeviceOperation.ADD) {
             if (deviceList.contains(deviceEUI)) {
@@ -260,7 +237,11 @@ public class DeviceService {
         allPayloads.forEach((String entityKey, Object entityValue) -> {
             Entity entity = entityMap.get(entityKey);
             String deviceKey = entity.getDeviceKey();
-            String deviceEui = GatewayString.getDeviceEuiByKey(deviceKey);
+            String deviceEui = GatewayString.getDeviceIdentifierByKey(deviceKey);
+            if (GatewayString.isGatewayIdentifier(deviceEui)) {
+                return;
+            }
+
             DevicePayload devicePayload = devicePayloadMap.computeIfAbsent(deviceEui, k -> new DevicePayload());
             devicePayload.setDeviceKey(deviceKey);
 

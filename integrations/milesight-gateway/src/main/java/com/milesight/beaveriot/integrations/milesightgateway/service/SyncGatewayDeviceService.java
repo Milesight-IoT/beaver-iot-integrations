@@ -79,7 +79,7 @@ public class SyncGatewayDeviceService {
             return List.of();
         }
 
-        List<String> existedDeviceEui = deviceService.getGatewayDeviceRelation().get(gatewayEui);
+        List<String> existedDeviceEui = msGwEntityService.getGatewayRelation().get(gatewayEui);
         Set<String> existedDeviceEuiSet = new HashSet<>();
         if (!ObjectUtils.isEmpty(existedDeviceEui)) {
             existedDeviceEuiSet.addAll(existedDeviceEui);

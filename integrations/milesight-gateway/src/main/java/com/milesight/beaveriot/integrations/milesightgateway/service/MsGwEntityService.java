@@ -7,7 +7,6 @@ import com.milesight.beaveriot.base.exception.ServiceException;
 import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
 import com.milesight.beaveriot.context.integration.wrapper.AnnotatedEntityWrapper;
 import com.milesight.beaveriot.integrations.milesightgateway.codec.ResourceConstant;
-import com.milesight.beaveriot.integrations.milesightgateway.entity.GatewayEntities;
 import com.milesight.beaveriot.integrations.milesightgateway.entity.MsGwIntegrationEntities;
 import com.milesight.beaveriot.integrations.milesightgateway.model.DeviceConnectStatus;
 import com.milesight.beaveriot.integrations.milesightgateway.model.DeviceModelData;
@@ -85,11 +84,10 @@ public class MsGwEntityService {
         }
     }
 
-    public Map<String, DeviceConnectStatus> getGatewayStatus(List<String> gatewayKeys) {
-        String statusKeyPrefix = "." + GatewayEntities.STATUS_KEY;
-        List<String> statusKeys = gatewayKeys.stream().map(key -> key + statusKeyPrefix).toList();
+    public Map<String, DeviceConnectStatus> getGatewayStatus(List<String> gatewayIdentifiers) {
+        List<String> statusKeys = gatewayIdentifiers.stream().map(GatewayString::getGatewayStatusKey).toList();
         return entityValueServiceProvider.findValuesByKeys(statusKeys).entrySet().stream()
-                .collect(Collectors.toMap(entry -> entry.getKey().substring(0, entry.getKey().length() - statusKeyPrefix.length()), entry -> DeviceConnectStatus.valueOf((String) entry.getValue())));
+                .collect(Collectors.toMap(entry -> GatewayString.parseGatewayIdentifier(entry.getKey()), entry -> DeviceConnectStatus.valueOf((String) entry.getValue())));
     }
 
     public String getDeviceDecoderScript(String deviceEui) {

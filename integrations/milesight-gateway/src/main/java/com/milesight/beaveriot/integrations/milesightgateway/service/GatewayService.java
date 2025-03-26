@@ -207,6 +207,8 @@ public class GatewayService {
 
         if (request.getClientId() == null) {
             throw ServiceException.with(ErrorCode.PARAMETER_VALIDATION_FAILED.getErrorCode(), "Client Id not provided").build();
+        } else if (!GatewayString.validateGatewayClientId(request.getClientId(), newGatewayData.getEui())) {
+            throw ServiceException.with(ErrorCode.PARAMETER_VALIDATION_FAILED.getErrorCode(), "Invalid Client Id: " + request.getClientId()).build();
         }
 
         // check profile
@@ -316,7 +318,7 @@ public class GatewayService {
             return getGatewayClientId(gateway);
         }
 
-        return GATEWAY_MQTT_CLIENT_ID_PREFIX + gatewayEui + ":" + GatewayString.generateRandomString(Constants.CLIENT_ID_RANDOM_LENGTH);
+        return GatewayString.generateGatewayClientId(gatewayEui);
     }
 
     public String getGatewayClientId(Device gateway) {

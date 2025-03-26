@@ -4,13 +4,20 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.milesight.beaveriot.base.enums.ErrorCode;
 import com.milesight.beaveriot.base.exception.ServiceException;
+import com.milesight.beaveriot.context.api.DeviceServiceProvider;
 import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
 import com.milesight.beaveriot.context.api.MqttPubSubServiceProvider;
+import com.milesight.beaveriot.context.integration.model.Device;
 import com.milesight.beaveriot.context.integration.model.ExchangePayload;
-import com.milesight.beaveriot.context.mqtt.MqttMessage;
-import com.milesight.beaveriot.context.mqtt.MqttQos;
+import com.milesight.beaveriot.context.integration.wrapper.AnnotatedEntityWrapper;
+import com.milesight.beaveriot.context.mqtt.enums.MqttQos;
+import com.milesight.beaveriot.context.mqtt.model.MqttConnectEvent;
+import com.milesight.beaveriot.context.mqtt.model.MqttDisconnectEvent;
+import com.milesight.beaveriot.context.mqtt.model.MqttMessage;
 import com.milesight.beaveriot.integrations.milesightgateway.codec.CodecExecutor;
 import com.milesight.beaveriot.integrations.milesightgateway.codec.EntityValueConverter;
+import com.milesight.beaveriot.integrations.milesightgateway.entity.MsGwIntegrationEntities;
+import com.milesight.beaveriot.integrations.milesightgateway.model.DeviceConnectStatus;
 import com.milesight.beaveriot.integrations.milesightgateway.service.MsGwEntityService;
 import com.milesight.beaveriot.integrations.milesightgateway.util.Constants;
 import com.milesight.beaveriot.integrations.milesightgateway.mqtt.model.*;
@@ -56,6 +63,9 @@ public class MsGwMqttClient {
     @Autowired
     MsGwEntityService msGwEntityService;
 
+    @Autowired
+    DeviceServiceProvider deviceServiceProvider;
+
     private final Map<String, CompletableFuture<MqttRawResponse>> pendingRequests = new ConcurrentHashMap<>();
 
     private final ObjectMapper json = GatewayString.jsonInstance();
@@ -72,6 +82,9 @@ public class MsGwMqttClient {
         mqttServiceProvider.subscribe(getMqttTopic("+", Constants.GATEWAY_MQTT_RESPONSE_SCOPE), (MqttMessage message) -> {
             this.onResponse(parseGatewayIdFromTopic(message.getTopicSubPath()), new String(message.getPayload(), StandardCharsets.UTF_8), message);
         }, false);
+
+        mqttServiceProvider.onConnect(this::onGatewayConnect);
+        mqttServiceProvider.onDisconnect(this::onGatewayDisconnect);
     }
 
     private void onDataUplink(String gatewayEui, String message) {
@@ -125,6 +138,46 @@ public class MsGwMqttClient {
         } catch (Exception e) {
             log.error("read response error", e);
         }
+    }
+
+    private void onGatewayConnect(MqttConnectEvent event) {
+        updateGatewayStatus(event.getClientId(), DeviceConnectStatus.ONLINE, event.getTs());
+    }
+
+    private void onGatewayDisconnect(MqttDisconnectEvent event) {
+        updateGatewayStatus(event.getClientId(), DeviceConnectStatus.OFFLINE, event.getTs());
+    }
+
+    private void updateGatewayStatus(String gatewayClientId, DeviceConnectStatus status, Long ts) {
+        String eui = GatewayString.parseGatewayEuiFromClientId(gatewayClientId);
+        if (eui == null) {
+            return;
+        }
+
+        String identifier = GatewayString.getGatewayIdentifier(eui);
+        DeviceConnectStatus curStatus = msGwEntityService.getGatewayStatus(List.of(identifier)).get(identifier);
+        if (curStatus == null) {
+            curStatus = DeviceConnectStatus.ONLINE;
+        }
+
+        if (status.equals(curStatus)) {
+            return;
+        }
+
+        Device gateway = deviceServiceProvider.findByIdentifier(identifier, Constants.INTEGRATION_ID);
+        if (gateway == null) {
+            return;
+        }
+
+        entityValueServiceProvider.saveValuesAndPublishAsync(ExchangePayload.create(Map.of(
+                GatewayString.getGatewayStatusKey(identifier), status.name()
+        )));
+        new AnnotatedEntityWrapper<MsGwIntegrationEntities.GatewayStatusEvent>().saveValues(Map.of(
+                MsGwIntegrationEntities.GatewayStatusEvent::getStatus, status.name(),
+                MsGwIntegrationEntities.GatewayStatusEvent::getGatewayName, gateway.getName(),
+                MsGwIntegrationEntities.GatewayStatusEvent::getEui, eui,
+                MsGwIntegrationEntities.GatewayStatusEvent::getStatusTimestamp, ts
+        )).publishAsync();
     }
 
     private void mqttPublish(String topic, byte[] data) {

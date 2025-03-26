@@ -27,7 +27,7 @@ public class Constants {
 
     public static final String GATEWAY_MQTT_RESPONSE_SCOPE = "response";
 
-    public static final Integer CLIENT_ID_RANDOM_LENGTH = 12;
+    public static final Integer CLIENT_ID_RANDOM_LENGTH = 6;
 
     private Constants() {}
 }

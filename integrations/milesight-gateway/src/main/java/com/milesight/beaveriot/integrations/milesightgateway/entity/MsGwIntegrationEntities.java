@@ -9,6 +9,7 @@ import com.milesight.beaveriot.context.integration.entity.annotation.Integration
 import com.milesight.beaveriot.context.integration.enums.AccessMod;
 import com.milesight.beaveriot.context.integration.enums.EntityType;
 import com.milesight.beaveriot.context.integration.model.ExchangePayload;
+import com.milesight.beaveriot.integrations.milesightgateway.model.DeviceConnectStatus;
 import com.milesight.beaveriot.integrations.milesightgateway.util.Constants;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -45,6 +46,9 @@ public class MsGwIntegrationEntities extends ExchangePayload {
 
     @Entity(type = EntityType.SERVICE, name = "Delete Device", identifier = "delete-device", visible = false)
     private DeleteDevice deleteDevice;
+
+    @Entity(type = EntityType.EVENT, name = "Gateway Status Event", identifier = "gateway-status-event")
+    private GatewayStatusEvent gatewayStatusEvent;
 
     @Entity(type = EntityType.PROPERTY, name = "Gateway Device Relation", identifier = "gateway-device-relation", accessMod = AccessMod.R, visible = false)
     private String gatewayDeviceRelation;
@@ -87,6 +91,23 @@ public class MsGwIntegrationEntities extends ExchangePayload {
     @EqualsAndHashCode(callSuper = true)
     @Entities
     public static class DeleteDevice extends ExchangePayload implements DeleteDeviceAware {}
+
+    @Data
+    @EqualsAndHashCode(callSuper = true)
+    @Entities
+    public static class GatewayStatusEvent extends ExchangePayload {
+        @Entity(name = "Device EUI")
+        private String eui;
+
+        @Entity(name = "Gateway Name", identifier = "gateway-name")
+        private String gatewayName;
+
+        @Entity(name = "Gateway Status", attributes = @Attribute(enumClass = DeviceConnectStatus.class))
+        private String status;
+
+        @Entity(name = "Status Timestamp")
+        private Long statusTimestamp;
+    }
 
     public enum EmptyEnum {
     }
