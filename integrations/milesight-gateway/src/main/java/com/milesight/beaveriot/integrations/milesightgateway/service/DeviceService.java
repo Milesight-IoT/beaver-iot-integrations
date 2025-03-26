@@ -11,7 +11,6 @@ import com.milesight.beaveriot.context.integration.model.Device;
 import com.milesight.beaveriot.context.integration.model.DeviceBuilder;
 import com.milesight.beaveriot.context.integration.model.Entity;
 import com.milesight.beaveriot.context.integration.model.event.ExchangeEvent;
-import com.milesight.beaveriot.context.integration.wrapper.AnnotatedEntityWrapper;
 import com.milesight.beaveriot.context.integration.wrapper.EntityWrapper;
 import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
 import com.milesight.beaveriot.eventbus.api.Event;
@@ -29,7 +28,6 @@ import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 
 import java.util.*;
@@ -58,8 +56,7 @@ public class DeviceService {
     private final ObjectMapper json = GatewayString.jsonInstance();
 
     public List<Device> getDevices(List<String> euiList) {
-        // TODO: batch get
-        return euiList.stream().map(eui -> deviceServiceProvider.findByIdentifier(eui, Constants.INTEGRATION_ID)).toList();
+        return deviceServiceProvider.findByIdentifiers(euiList, Constants.INTEGRATION_ID);
     }
 
     @EventSubscribe(payloadKeyExpression = Constants.INTEGRATION_ID + ".integration.add-device.*", eventType = ExchangeEvent.EventType.CALL_SERVICE)

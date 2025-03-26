@@ -148,14 +148,15 @@ public class GatewayService {
     public Device getGatewayByEui(String eui) {
         return deviceServiceProvider.findByIdentifier(GatewayString.getGatewayIdentifier(eui), INTEGRATION_ID);
     }
+
+    public List<Device> getGatewayByEuiList(List<String> euiList) {
+        List<String> identifiers = euiList.stream().map(GatewayString::getGatewayIdentifier).toList();
+        return deviceServiceProvider.findByIdentifiers(identifiers, INTEGRATION_ID);
+    }
     
     public List<Device> getAllGateways() {
-        Set<String> gatewayMap = msGwEntityService.getGatewayRelation().keySet();
-        // TODO: batch get
-        return gatewayMap.stream()
-                .map(this::getGatewayByEui)
-                .filter(Objects::nonNull)
-                .toList();
+        List<String> gatewayEuiList = msGwEntityService.getGatewayRelation().keySet().stream().toList();
+        return this.getGatewayByEuiList(gatewayEuiList);
     }
 
     private Entity getAddDeviceGatewayEntity() {

@@ -122,7 +122,7 @@ public class MilesightGatewayController {
             item.setKey(device.getKey());
             item.setEui(device.getIdentifier());
             item.setName(device.getName());
-            // TODO: get create time
+            item.setCreatedAt(device.getCreatedAt());
             return item;
         }).toList());
     }

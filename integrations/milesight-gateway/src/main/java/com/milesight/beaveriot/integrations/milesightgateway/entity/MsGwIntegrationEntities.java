@@ -72,7 +72,7 @@ public class MsGwIntegrationEntities extends ExchangePayload {
         @Entity(name = "Gateway", identifier = ADD_DEVICE_GATEWAY_EUI_IDENTIFIER, attributes = @Attribute(enumClass = EmptyEnum.class))
         private String gatewayEUI;
 
-        @Entity(identifier = "fport")
+        @Entity(name = "fPort", identifier = "fport")
         private Long fPort;
 
         @Entity(name = "Frame-counter Validation", identifier = "frame-counter-validation")
