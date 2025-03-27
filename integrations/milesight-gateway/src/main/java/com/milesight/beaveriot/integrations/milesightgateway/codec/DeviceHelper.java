@@ -260,6 +260,8 @@ public class DeviceHelper {
                     || deviceDefObject.getDataType().equals(ObjectDataType.OBJECT)
                 ) {
                     eb.valueType(EntityValueType.OBJECT);
+                } else if (deviceDefObject.getDataType().equals(ObjectDataType.BOOL)) {
+                    eb.valueType(EntityValueType.BOOLEAN);
                 } else {
                     eb.valueType(EntityValueType.LONG);
                 }
@@ -270,10 +272,17 @@ public class DeviceHelper {
         // Build enum
         AttributeBuilder ab = new AttributeBuilder();
         if (deviceDefObject.getValues() != null) {
-            ab.enums(deviceDefObject.getValues().stream().collect(Collectors.toMap(
-                    deviceDefObjectEnum -> deviceDefObjectEnum.getValue().toString(),
-                    DeviceDefObjectEnum::getName
-            )));
+            if (deviceDefObject.getDataType().equals(ObjectDataType.BOOL)) {
+                ab.enums(deviceDefObject.getValues().stream().collect(Collectors.toMap(
+                        deviceDefObjectEnum -> deviceDefObjectEnum.getValue() == 0 ? "false" : "true",
+                        DeviceDefObjectEnum::getName
+                )));
+            } else {
+                ab.enums(deviceDefObject.getValues().stream().collect(Collectors.toMap(
+                        deviceDefObjectEnum -> deviceDefObjectEnum.getValue().toString(),
+                        DeviceDefObjectEnum::getName
+                )));
+            }
         }
 
         if (StringUtils.hasText(deviceDefObject.getUnit())) {

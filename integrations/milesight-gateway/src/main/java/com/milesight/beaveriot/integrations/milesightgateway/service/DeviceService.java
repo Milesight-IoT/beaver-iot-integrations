@@ -7,6 +7,7 @@ import com.milesight.beaveriot.base.annotations.shedlock.DistributedLock;
 import com.milesight.beaveriot.base.enums.ErrorCode;
 import com.milesight.beaveriot.base.exception.ServiceException;
 import com.milesight.beaveriot.context.api.DeviceServiceProvider;
+import com.milesight.beaveriot.context.integration.enums.EntityValueType;
 import com.milesight.beaveriot.context.integration.model.Device;
 import com.milesight.beaveriot.context.integration.model.DeviceBuilder;
 import com.milesight.beaveriot.context.integration.model.Entity;
@@ -65,7 +66,7 @@ public class DeviceService {
         String deviceName = addDevice.getAddDeviceName();
         String deviceEUI = GatewayString.standardizeEUI(addDevice.getEui());
         String gatewayEUI = GatewayString.standardizeEUI(addDevice.getGatewayEUI());
-        if (getDevices(List.of(deviceEUI)).get(0) != null) {
+        if (!getDevices(List.of(deviceEUI)).isEmpty()) {
             throw ServiceException.with(ErrorCode.PARAMETER_VALIDATION_FAILED.getErrorCode(), "Duplicated device EUI: " + deviceEUI).build();
         }
 
@@ -247,7 +248,12 @@ public class DeviceService {
                 throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), "Cannot find gateway for device: " + deviceKey).build();
             }
 
-            devicePayload.getPayload().put(entityKey, entityValue);
+            Object value = entityValue;
+            if (entity.getValueType().equals(EntityValueType.BOOLEAN)) {
+                value = entityValue.equals(Boolean.FALSE) ? 0 : 1;
+            }
+
+            devicePayload.getPayload().put(entityKey, value);
         });
         return devicePayloadMap;
     }
