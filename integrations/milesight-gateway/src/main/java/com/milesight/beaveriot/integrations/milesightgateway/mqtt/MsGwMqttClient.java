@@ -24,6 +24,7 @@ import com.milesight.beaveriot.integrations.milesightgateway.mqtt.model.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -65,6 +66,9 @@ public class MsGwMqttClient {
 
     @Autowired
     DeviceServiceProvider deviceServiceProvider;
+
+    @Autowired
+    TaskExecutor taskExecutor;
 
     private final Map<String, CompletableFuture<MqttRawResponse>> pendingRequests = new ConcurrentHashMap<>();
 
@@ -236,7 +240,7 @@ public class MsGwMqttClient {
         List<MqttResponse<T>> ret = new ArrayList<>();
         List<CompletableFuture<MqttResponse<T>>> allFutures = req
                 .stream()
-                .map(r -> CompletableFuture.supplyAsync(() -> request(gatewayEui, r, responseType)))
+                .map(r -> CompletableFuture.supplyAsync(() -> request(gatewayEui, r, responseType), taskExecutor))
                 .toList();
         CompletableFuture<?>[] futuresArray = allFutures.toArray(new CompletableFuture<?>[0]);
         CompletableFuture.allOf(futuresArray).join();

@@ -20,6 +20,7 @@ import com.milesight.beaveriot.integrations.milesightgateway.entity.GatewayEntit
 import com.milesight.beaveriot.integrations.milesightgateway.entity.MsGwIntegrationEntities;
 import com.milesight.beaveriot.integrations.milesightgateway.model.DeviceConnectStatus;
 import com.milesight.beaveriot.integrations.milesightgateway.model.GatewayDeviceData;
+import com.milesight.beaveriot.integrations.milesightgateway.model.GatewayDeviceOperation;
 import com.milesight.beaveriot.integrations.milesightgateway.model.api.DeviceListItemFields;
 import com.milesight.beaveriot.integrations.milesightgateway.model.request.FetchGatewayCredentialRequest;
 import com.milesight.beaveriot.integrations.milesightgateway.model.response.MqttCredentialResponse;
@@ -36,10 +37,12 @@ import com.milesight.beaveriot.integrations.milesightgateway.util.GatewayString;
 import com.milesight.beaveriot.integrations.milesightgateway.util.LockConstants;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ObjectUtils;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
@@ -74,6 +77,9 @@ public class GatewayService {
 
     @Autowired
     CredentialsServiceProvider credentialsServiceProvider;
+
+    @Autowired
+    TaskExecutor taskExecutor;
 
     private final ObjectMapper json = GatewayString.jsonInstance();
 
@@ -171,23 +177,21 @@ public class GatewayService {
         return gatewayEuiEntity;
     }
 
-    private enum AddDeviceGatewayEuiOperation {
-        ADD, DELETE, UPDATE
+    @DistributedLock(name = LockConstants.UPDATE_GATEWAY_DEVICE_ENUM_LOCK)
+    private void putAddDeviceGatewayEui(List<Device> gateways) {
+        Entity gatewayEuiEntity = getAddDeviceGatewayEntity();
+        Map<String, String> attrEnum = json.convertValue(gatewayEuiEntity.getAttributes().get(AttributeBuilder.ATTRIBUTE_ENUM), new TypeReference<>() {});
+        gateways.forEach(gateway -> attrEnum.put(getGatewayEui(gateway), gateway.getName()));
+
+        gatewayEuiEntity.getAttributes().put(AttributeBuilder.ATTRIBUTE_ENUM, attrEnum);
+        entityServiceProvider.save(gatewayEuiEntity);
     }
 
     @DistributedLock(name = LockConstants.UPDATE_GATEWAY_DEVICE_ENUM_LOCK)
-    private void manageAddDeviceGatewayEui(List<Device> gateways, AddDeviceGatewayEuiOperation op) {
+    private void removeAddDeviceGatewayEui(List<String> gatewayEuiList) {
         Entity gatewayEuiEntity = getAddDeviceGatewayEntity();
         Map<String, String> attrEnum = json.convertValue(gatewayEuiEntity.getAttributes().get(AttributeBuilder.ATTRIBUTE_ENUM), new TypeReference<>() {});
-        switch (op) {
-            case ADD, UPDATE -> {
-                gateways.forEach(gateway -> attrEnum.put(getGatewayEui(gateway), gateway.getName()));
-            }
-            case DELETE -> {
-                gateways.forEach(gateway -> attrEnum.remove(getGatewayEui(gateway)));
-            }
-        }
-
+        gatewayEuiList.forEach(eui -> attrEnum.remove(GatewayString.standardizeEUI(eui)));
         gatewayEuiEntity.getAttributes().put(AttributeBuilder.ATTRIBUTE_ENUM, attrEnum);
         entityServiceProvider.save(gatewayEuiEntity);
     }
@@ -253,7 +257,7 @@ public class GatewayService {
         msGwEntityService.saveGatewayRelation(gatewayRelation);
 
         // add to add device gateway list
-        manageAddDeviceGatewayEui(List.of(gateway), AddDeviceGatewayEuiOperation.ADD);
+        putAddDeviceGatewayEui(List.of(gateway));
 
         // check duplicate eui
         return newGatewayData;
@@ -262,32 +266,47 @@ public class GatewayService {
     @DistributedLock(name = LockConstants.UPDATE_GATEWAY_DEVICE_RELATION_LOCK)
     public void batchDeleteGateway(List<String> gatewayEuiList) {
         Map<String, List<String>> gatewayMap = msGwEntityService.getGatewayRelation();
-        List<String> deviceEuiList = new ArrayList<>();
-        List<Device> gatewayList = new ArrayList<>();
 
+        // find gateway that have devices then delete gateways and devices
+        List<String> deviceEuiList = new ArrayList<>();
         for (String inputEUI : gatewayEuiList) {
             String gatewayEui = GatewayString.standardizeEUI(inputEUI);
-            Device gateway = getGatewayByEui(gatewayEui);
-            if (gateway != null) {
-                gatewayList.add(gateway);
-            } else {
-                log.error("Gateway not found: {}", gatewayEui);
-            }
-
             List<String> gatewayDeviceEuiList = gatewayMap.remove(gatewayEui);
             if (gatewayDeviceEuiList == null) {
                 log.error("Gateway Relation not found: {}", gatewayEui);
                 continue;
             }
 
-            deviceEuiList.addAll(gatewayDeviceEuiList);
+            if (!gatewayDeviceEuiList.isEmpty()) {
+                deviceEuiList.addAll(gatewayDeviceEuiList);
+            }
         }
 
-        // delete gateway device
+        Map<String, List<String>> gatewayDeviceToDelete = new HashMap<>();
         List<Device> deviceList = deviceService.getDevices(deviceEuiList);
-        deviceService.batchDeleteGatewayDevice(deviceList);
+        for (Device device : deviceList) {
+            GatewayDeviceData deviceData = deviceService.getDeviceData(device);
+            gatewayDeviceToDelete.computeIfAbsent(deviceData.getGatewayEUI(), k -> new ArrayList<>()).add(deviceData.getEui());
+            deviceServiceProvider.deleteById(device.getId());
+        }
+
+        List<CompletableFuture<Void>> futures = gatewayDeviceToDelete.entrySet().stream().map(entry -> CompletableFuture.runAsync(() -> {
+            String gatewayEui = entry.getKey();
+            try {
+                // check if the gateway is connected.
+                gatewayRequester.requestDeviceList(gatewayEui, 0, 0, null);
+                // delete devices
+                gatewayRequester.requestDeleteDevice(gatewayEui, entry.getValue());
+            } catch (Exception e) {
+                log.error("Delete device at gateway error: {} {}", gatewayEui, e.getMessage());
+            }
+        }, taskExecutor)).toList();
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                .thenApply(v -> futures.stream().map(CompletableFuture::join))
+                .join();
 
         // delete gateway
+        List<Device> gatewayList = getGatewayByEuiList(gatewayEuiList);
         for (Device gateway : gatewayList) {
             // TODO: optimize to batch delete
             deviceServiceProvider.deleteById(gateway.getId());
@@ -297,7 +316,7 @@ public class GatewayService {
         msGwEntityService.saveGatewayRelation(gatewayMap);
 
         // delete gateway from add device gateway eui list
-        manageAddDeviceGatewayEui(gatewayList, AddDeviceGatewayEuiOperation.DELETE);
+        removeAddDeviceGatewayEui(gatewayEuiList);
     }
 
     public String getGatewayEui(Device gateway) {
@@ -336,7 +355,10 @@ public class GatewayService {
         if (GatewayString.isGatewayIdentifier(device.getIdentifier())) {
             batchDeleteGateway(List.of(getGatewayEui(device)));
         } else {
-            deviceService.batchDeleteGatewayDevice(List.of(device));
+            GatewayDeviceData deviceData = deviceService.getDeviceData(device);
+            gatewayRequester.requestDeleteDevice(deviceData.getGatewayEUI(), List.of(deviceData.getEui()));
+            deviceService.manageGatewayDevices(deviceData.getGatewayEUI(), deviceData.getEui(), GatewayDeviceOperation.DELETE);
+            deviceServiceProvider.deleteById(device.getId());
         }
     }
 
@@ -356,7 +378,7 @@ public class GatewayService {
         Device device = event.getPayload();
         if (GatewayString.isGatewayIdentifier(device.getIdentifier())) {
             // sync gateway name to add device gateway eui list
-            manageAddDeviceGatewayEui(List.of(device), AddDeviceGatewayEuiOperation.UPDATE);
+            putAddDeviceGatewayEui(List.of(device));
         } else {
             // Sync name to the device in gateway
             GatewayDeviceData deviceData = json.convertValue(device.getAdditional(), GatewayDeviceData.class);

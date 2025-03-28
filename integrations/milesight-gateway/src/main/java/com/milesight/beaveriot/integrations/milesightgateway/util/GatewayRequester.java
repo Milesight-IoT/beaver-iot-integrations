@@ -30,7 +30,7 @@ public class GatewayRequester {
     @Autowired
     MsGwMqttClient msGwMqttClient;
 
-    private MqttRequest buildDeviceListRequest(String gatewayId, int offset, int limit, String applicationId) {
+    private MqttRequest buildDeviceListRequest(int offset, int limit, String applicationId) {
         MqttRequest req = new MqttRequest();
         req.setMethod("GET");
         String url = "/api/urdevices?order=asc&offset=" + offset + "&limit=" + limit + "&type=default";
@@ -42,9 +42,9 @@ public class GatewayRequester {
         return req;
     }
 
-    public MqttResponse<DeviceListResponse> requestDeviceList(String gatewayId, int offset, int limit, String applicationId) {
-        MqttRequest req = buildDeviceListRequest(gatewayId, offset, limit, applicationId);
-        MqttResponse<DeviceListResponse> response = msGwMqttClient.request(gatewayId, req, DeviceListResponse.class);
+    public MqttResponse<DeviceListResponse> requestDeviceList(String gatewayEui, int offset, int limit, String applicationId) {
+        MqttRequest req = buildDeviceListRequest(offset, limit, applicationId);
+        MqttResponse<DeviceListResponse> response = msGwMqttClient.request(gatewayEui, req, DeviceListResponse.class);
         if (response.getErrorBody() != null) {
             throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), response.getErrorBody().toString()).build();
         }
@@ -95,19 +95,30 @@ public class GatewayRequester {
         }
     }
 
-    public void requestDeleteDevice(String gatewayEUI, String deviceEUI) {
-        MqttRequest req = new MqttRequest();
-        req.setMethod("DELETE");
-        req.setUrl("/api/urdevices/" + deviceEUI);
-        MqttResponse<Void> response = msGwMqttClient.request(gatewayEUI, req, null);
-        if (response.getErrorBody() != null) {
-            if (response.getErrorBody().getCode().equals(5)) {
-                // The device has been removed from gateway
-                log.warn("Device " + deviceEUI + " did not exists in gateway " + gatewayEUI);
-                return;
-            }
+    public void requestDeleteDevice(String gatewayEui, List<String> deviceEuiList) {
+        List<MqttRequest> reqList = deviceEuiList.stream().map(deviceEui -> {
+            MqttRequest req = new MqttRequest();
+            req.setMethod("DELETE");
+            req.setUrl("/api/urdevices/" + deviceEui);
+            return req;
+        }).toList();
 
-            throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), response.getErrorBody().toString()).build();
+        List<MqttResponse<Void>> responses = msGwMqttClient.batchRequest(gatewayEui, reqList, Void.class);
+        StringBuilder errorMessages = new StringBuilder();
+        responses.forEach(response -> {
+            if (response.getErrorBody() != null) {
+                if (response.getErrorBody().getCode().equals(5)) {
+                    // The device has been removed from gateway
+                    log.warn(response.getUrl() + " did not exists in gateway " + response.getGatewayEUI());
+                    return;
+                }
+
+                errorMessages.append(response.getErrorBody().toString());
+            }
+        });
+
+        if (!errorMessages.isEmpty()) {
+            throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), errorMessages.toString()).build();
         }
     }
 
@@ -123,7 +134,7 @@ public class GatewayRequester {
 
         List<MqttRequest> reqList = new ArrayList<>();
         for (int offset = DEVICE_GET_BATCH_SIZE; offset < initResponse.getDevTotalCount(); offset += DEVICE_GET_BATCH_SIZE) {
-            reqList.add(buildDeviceListRequest(gatewayId, offset, DEVICE_GET_BATCH_SIZE, applicationId));
+            reqList.add(buildDeviceListRequest(offset, DEVICE_GET_BATCH_SIZE, applicationId));
         }
 
         List<MqttResponse<DeviceListResponse>> restResponses = msGwMqttClient.batchRequest(gatewayId, reqList, DeviceListResponse.class);

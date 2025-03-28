@@ -63,10 +63,10 @@ public class MsGwIntegrationEntities extends ExchangePayload {
     @EqualsAndHashCode(callSuper = true)
     @Entities
     public static class AddDevice extends ExchangePayload implements AddDeviceAware {
-        @Entity(name = "Device EUI", attributes = @Attribute(maxLength = 16, minLength = 16))
+        @Entity(name = "DevEUI", attributes = @Attribute(maxLength = 16, minLength = 16))
         private String eui;
 
-        @Entity(name = "Device Model", identifier = ADD_DEVICE_GATEWAY_DEVICE_MODEL_IDENTIFIER, attributes = @Attribute(enumClass = EmptyEnum.class))
+        @Entity(name = "Model", identifier = ADD_DEVICE_GATEWAY_DEVICE_MODEL_IDENTIFIER, attributes = @Attribute(enumClass = EmptyEnum.class))
         private String deviceModel;
 
         @Entity(name = "Gateway", identifier = ADD_DEVICE_GATEWAY_EUI_IDENTIFIER, attributes = @Attribute(enumClass = EmptyEnum.class))

@@ -82,6 +82,8 @@ public class DeviceService {
 
         deviceData.setGatewayEUI(gatewayEUI);
 
+        gatewayRequester.requestDeviceList(gatewayEUI, 0, 0, null);
+
         // get device model
         String deviceModelId = addDevice.getDeviceModel();
         DeviceCodecData codecData = deviceCodecService.batchGetDeviceCodecData(List.of(deviceModelId)).getOrDefault(deviceModelId, null);
@@ -121,13 +123,15 @@ public class DeviceService {
             throw ServiceException.with(ErrorCode.PARAMETER_VALIDATION_FAILED.getErrorCode(), "Unknown Profile " + profileName + " for Gateway " + gatewayEUI).build();
         }
 
-        addDeviceRequest.setProfileID(profileId);
         manageGatewayDevices(gatewayEUI, deviceEUI, GatewayDeviceOperation.ADD);
-
-        gatewayRequester.requestAddDevice(gatewayEUI, addDeviceRequest);
-
-        // save device
-        deviceServiceProvider.save(device);
+        addDeviceRequest.setProfileID(profileId);
+        try {
+            gatewayRequester.requestAddDevice(gatewayEUI, addDeviceRequest);
+            deviceServiceProvider.save(device);
+        } catch (Exception e) {
+            manageGatewayDevices(gatewayEUI, deviceEUI, GatewayDeviceOperation.DELETE);
+            throw e;
+        }
 
         // save script
         new EntityWrapper(updateResourceResult.getDecoderEntity()).saveValue(codecData.getDecoderStr());
@@ -136,19 +140,6 @@ public class DeviceService {
 
     public GatewayDeviceData getDeviceData(Device device) {
         return json.convertValue(device.getAdditional(), GatewayDeviceData.class);
-    }
-
-    public void batchDeleteGatewayDevice(List<Device> devices) {
-        if (devices == null || devices.isEmpty()) {
-            return;
-        }
-
-        for (Device device : devices) {
-            GatewayDeviceData deviceData = getDeviceData(device);
-            gatewayRequester.requestDeleteDevice(deviceData.getGatewayEUI(), deviceData.getEui());
-            manageGatewayDevices(deviceData.getGatewayEUI(), deviceData.getEui(), GatewayDeviceOperation.DELETE);
-            deviceServiceProvider.deleteById(device.getId());
-        }
     }
 
     @DistributedLock(name = LockConstants.UPDATE_GATEWAY_DEVICE_ENUM_LOCK)
