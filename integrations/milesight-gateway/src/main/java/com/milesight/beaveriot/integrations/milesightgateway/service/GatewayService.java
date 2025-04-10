@@ -65,7 +65,7 @@ public class GatewayService {
 
     @Autowired
     DeviceService deviceService;
-    
+
     @Autowired
     MsGwEntityService msGwEntityService;
 
@@ -91,7 +91,7 @@ public class GatewayService {
         // set credential
         Credentials credentials = null;
         if (credentialId == null) {
-            credentials = credentialsServiceProvider.getOrCreateDefaultCredentials(CredentialsType.MQTT);
+            credentials = credentialsServiceProvider.getOrCreateCredentials(CredentialsType.MQTT);
         } else {
             credentials = credentialsServiceProvider.getCredentials(Long.valueOf(credentialId)).orElse(null);
         }
@@ -159,7 +159,7 @@ public class GatewayService {
         List<String> identifiers = euiList.stream().map(GatewayString::getGatewayIdentifier).toList();
         return deviceServiceProvider.findByIdentifiers(identifiers, INTEGRATION_ID);
     }
-    
+
     public List<Device> getAllGateways() {
         List<String> gatewayEuiList = msGwEntityService.getGatewayRelation().keySet().stream().toList();
         return this.getGatewayByEuiList(gatewayEuiList);
@@ -240,7 +240,7 @@ public class GatewayService {
         if (gatewayRelation.keySet().stream().anyMatch(gatewayEui -> gatewayEui.equals(newGatewayData.getEui()))) {
             throw ServiceException.with(ErrorCode.PARAMETER_VALIDATION_FAILED.getErrorCode(), "Duplicated gateway EUI: " + newGatewayData.getEui()).build();
         }
-        
+
         // build and add gateway device
         Device gateway = new DeviceBuilder(INTEGRATION_ID)
                 .name(request.getName())
