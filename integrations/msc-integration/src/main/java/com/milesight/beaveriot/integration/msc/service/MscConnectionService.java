@@ -2,6 +2,7 @@ package com.milesight.beaveriot.integration.msc.service;
 
 import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
 import com.milesight.beaveriot.context.integration.model.ExchangePayload;
+import com.milesight.beaveriot.context.security.TenantContext;
 import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
 import com.milesight.beaveriot.eventbus.api.Event;
 import com.milesight.beaveriot.integration.msc.entity.MscConnectionPropertiesEntities;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 
 
 @Slf4j
@@ -26,31 +28,32 @@ public class MscConnectionService implements IMscClientProvider {
     @Autowired
     private EntityValueServiceProvider entityValueServiceProvider;
 
-    @Getter
-    private MscClient mscClient;
+    private final Map<String, MscClient> tenantIdToMscClient = new ConcurrentHashMap<>();
 
     @EventSubscribe(payloadKeyExpression = "msc-integration.integration.openapi.*")
     public void onOpenapiPropertiesUpdate(Event<MscConnectionPropertiesEntities.Openapi> event) {
+        val tenantId = TenantContext.getTenantId();
         if (isConfigChanged(event)) {
             val openapiSettings = event.getPayload();
-            initConnection(openapiSettings);
+            initConnection(tenantId, openapiSettings);
             entityValueServiceProvider.saveValuesAndPublishSync(new ExchangePayload(Map.of(OPENAPI_STATUS_KEY, IntegrationStatus.NOT_READY.name())));
         }
-        testConnection();
+        testConnection(tenantId);
     }
 
-    private void initConnection(MscConnectionPropertiesEntities.Openapi openapiSettings) {
-        mscClient = MscClient.builder()
+    private void initConnection(String tenantId, MscConnectionPropertiesEntities.Openapi openapiSettings) {
+        tenantIdToMscClient.put(tenantId, MscClient.builder()
                 .endpoint(openapiSettings.getServerUrl())
                 .credentials(Credentials.builder()
                         .clientId(openapiSettings.getClientId())
                         .clientSecret(openapiSettings.getClientSecret())
                         .build())
-                .build();
+                .build());
     }
 
-    private void testConnection() {
+    private void testConnection(String tenantId) {
         try {
+            val mscClient = tenantIdToMscClient.get(tenantId);
             mscClient.test();
             entityValueServiceProvider.saveValuesAndPublishSync(new ExchangePayload(Map.of(OPENAPI_STATUS_KEY, IntegrationStatus.READY.name())));
         } catch (Exception e) {
@@ -71,6 +74,8 @@ public class MscConnectionService implements IMscClientProvider {
             return false;
         }
         // check if mscClient is initiated
+        val tenantId = TenantContext.getTenantId();
+        val mscClient = tenantIdToMscClient.get(tenantId);
         if (mscClient == null) {
             return true;
         }
@@ -90,18 +95,22 @@ public class MscConnectionService implements IMscClientProvider {
         return !Objects.equals(mscClient.getConfig().getCredentials().getClientSecret(), event.getPayload().getClientSecret());
     }
 
-    public void init() {
+    public void init(String tenantId) {
         try {
             val settings = entityValueServiceProvider.findValuesByKey(
                     MscConnectionPropertiesEntities.getKey(MscConnectionPropertiesEntities.Fields.openapi), MscConnectionPropertiesEntities.Openapi.class);
             if (!settings.isEmpty()) {
-                initConnection(settings);
-                testConnection();
+                initConnection(tenantId, settings);
+                testConnection(tenantId);
             }
         } catch (Exception e) {
             log.error("Error occurs while initializing connection", e);
             entityValueServiceProvider.saveValuesAndPublishSync(new ExchangePayload(Map.of(OPENAPI_STATUS_KEY, IntegrationStatus.NOT_READY.name())));
         }
+    }
+
+    public MscClient getMscClient() {
+        return tenantIdToMscClient.get(TenantContext.getTenantId());
     }
 
 }
