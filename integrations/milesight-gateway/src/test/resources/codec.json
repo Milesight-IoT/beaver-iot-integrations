@@ -1,0 +1,368 @@
+{
+  "version": "1.0.0",
+  "bytes": "",
+  "object": [
+    {
+      "id": "read_only_string",
+      "name": "Read Only String",
+      "value": "",
+      "unit": "",
+      "access_mode": "R",
+      "data_type": "TEXT",
+      "value_type": "STRING",
+      "max_length": 6,
+      "bacnet_type": "character_string_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "write_only_string",
+      "name": "Write Only String",
+      "value": "",
+      "unit": "",
+      "access_mode": "W",
+      "data_type": "TEXT",
+      "value_type": "STRING",
+      "max_length": 6,
+      "bacnet_type": "character_string_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "bool_field",
+      "name": "Boolean Field",
+      "value": "1",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "off" },
+        { "value": 1, "name": "on" }
+      ],
+      "bacnet_type": "binary_input_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "int_enum_field",
+      "name": "Integer Enum Field",
+      "value": "",
+      "unit": "",
+      "access_mode": "R",
+      "data_type": "ENUM",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "Enum 1" },
+        { "value": 1, "name": "Enum 2" },
+        { "value": 2, "name": "Enum 3" },
+        { "value": 3, "name": "Enum 4" }
+      ],
+      "bacnet_type": "multistate_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "float_unit_field",
+      "name": "Float Unit Field",
+      "value": "26.6",
+      "unit": "°C",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "FLOAT",
+      "bacnet_type": "analog_input_object",
+      "bacnet_unit_type_id": 62,
+      "bacnet_unit_type": "UNITS_DEGREES_CELSIUS"
+    },
+    {
+      "id": "int_field",
+      "name": "Integer Field",
+      "value": "50",
+      "unit": "%r.h.",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "UINT16",
+      "bacnet_type": "analog_input_object",
+      "bacnet_unit_type_id": 29,
+      "bacnet_unit_type": "UNITS_PERCENT_RELATIVE_HUMIDITY"
+    },
+    {
+      "id": "struct",
+      "name": "Struct",
+      "access_mode": "RW",
+      "data_type": "OBJECT",
+      "value_type": "STRUCT",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "struct.arg1",
+      "name": "Struct Argument 1",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "off" },
+        { "value": 1, "name": "on" }
+      ],
+      "bacnet_type": "binary_input_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "struct.arg2",
+      "name": "Struct Argument 2",
+      "access_mode": "RW",
+      "data_type": "OBJECT",
+      "value_type": "STRUCT",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "struct.arg2.arg1",
+      "name": "Struct Argument 2 Sub Argument 1",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "UINT8",
+      "bacnet_type": "binary_input_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "struct.arg2.arg2",
+      "name": "Struct Argument 2 Sub Argument 2",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "UINT8",
+      "bacnet_type": "binary_input_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "struct.arg2.arg3",
+      "name": "Struct Argument 2 Sub Argument 3",
+      "access_mode": "RW",
+      "data_type": "OBJECT",
+      "value_type": "STRUCT",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "struct.arg2.arg3.arg1",
+      "name": "Struct Argument 2 Sub Argument 2 Sub Argument 1",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "UINT8",
+      "bacnet_type": "binary_input_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "struct.arg2.arg3.arg2",
+      "name": "Struct Argument 2 Sub Argument 2 Sub Argument 2",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "UINT8",
+      "bacnet_type": "binary_input_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "struct.arg3",
+      "name": "Struct Argument 3 Array",
+      "data_type": "ARRAY",
+      "value_type": "UINT8",
+      "max_length": 8,
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "struct.arg4",
+      "name": "Struct Argument 4",
+      "data_type": "ARRAY",
+      "value_type": "STRUCT",
+      "max_length": 6,
+      "keys": ["arg1"],
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "struct.arg4._item.arg1",
+      "name": "Struct Argument 3 Array Item Argument 1",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "UINT8",
+      "bacnet_type": "binary_input_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "struct.arg4._item.arg2",
+      "name": "Struct Argument 4 Array Item Argument 2",
+      "access_mode": "RW",
+      "data_type": "OBJECT",
+      "value_type": "STRUCT",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "struct.arg4._item.arg2.arg1",
+      "name": "Struct Argument 4 Array Item Argument 2 Sub Argument 1",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "UINT8",
+      "bacnet_type": "binary_input_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "struct.arg4._item.arg2.arg2",
+      "name": "Struct Argument 4 Array Item Argument 2 Sub Argument 2",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "UINT8",
+      "bacnet_type": "binary_input_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "plain_array",
+      "name": "Plain Array",
+      "access_mode": "RW",
+      "data_type": "ENUM",
+      "value_type": "UINT8",
+      "max_length": 8,
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "plain_array",
+      "name": "Plain Array",
+      "access_mode": "RW",
+      "data_type": "ARRAY",
+      "value_type": "UINT8",
+      "max_length": 10,
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "struct_array",
+      "name": "Struct Array",
+      "access_mode": "RW",
+      "data_type": "ARRAY",
+      "value_type": "STRUCT",
+      "max_length": 2,
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "struct_array._item.arg1",
+      "name": "Struct Array Argument 1",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "UINT8",
+      "bacnet_type": "analog_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "struct_array._item.arg2",
+      "name": "Struct Array Argument 2",
+      "access_mode": "RW",
+      "data_type": "OBJECT",
+      "value_type": "STRUCT",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "struct_array._item.arg2.sub_arg1",
+      "name": "Struct Array Argument 2 Sub Argument 1",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "disable" },
+        { "value": 1, "name": "enable" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "struct_array._item.arg2.sub_arg2",
+      "name": "Struct Array Argument 2 Sub Argument 2",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "UINT8",
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "struct_array._item.arg3",
+      "name": "Struct Array Argument 3",
+      "access_mode": "RW",
+      "data_type": "ARRAY",
+      "value_type": "UINT8",
+      "max_length": 10,
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "struct_array._item.arg4",
+      "name": "Struct Array Argument 4",
+      "access_mode": "RW",
+      "data_type": "ARRAY",
+      "value_type": "STRUCT",
+      "max_length": 8,
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "struct_array._item.arg4._item.arg1",
+      "name": "Struct Array Argument 4 Struct Array Item Argument 1",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "UINT8",
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "struct_array._item.arg4._item.arg2",
+      "name": "Struct Array Argument 4 Struct Array Item Argument 2",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "UINT8",
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    }
+  ]
+}

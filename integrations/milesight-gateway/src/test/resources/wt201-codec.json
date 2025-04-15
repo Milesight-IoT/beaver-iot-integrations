@@ -1,0 +1,2137 @@
+{
+  "version": "1.0.0",
+  "bytes": "036702010467A60005E70006E80007BC00",
+  "object": [
+    {
+      "id": "ipso_version",
+      "name": "IPSO Version",
+      "value": "",
+      "unit": "",
+      "access_mode": "R",
+      "data_type": "TEXT",
+      "value_type": "STRING",
+      "max_length": 6,
+      "bacnet_type": "character_string_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "hardware_version",
+      "name": "Hardware Version",
+      "value": "",
+      "unit": "",
+      "access_mode": "R",
+      "data_type": "TEXT",
+      "value_type": "STRING",
+      "max_length": 6,
+      "bacnet_type": "character_string_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "firmware_version",
+      "name": "Firmware Version",
+      "value": "",
+      "unit": "",
+      "access_mode": "R",
+      "data_type": "TEXT",
+      "value_type": "STRING",
+      "max_length": 6,
+      "bacnet_type": "character_string_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "tsl_version",
+      "name": "TSL Version",
+      "value": "",
+      "unit": "",
+      "access_mode": "R",
+      "data_type": "TEXT",
+      "value_type": "STRING",
+      "max_length": 6,
+      "bacnet_type": "character_string_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "device_status",
+      "name": "Device Status",
+      "value": "1",
+      "unit": "",
+      "access_mode": "R",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "off" },
+        { "value": 1, "name": "on" }
+      ],
+      "bacnet_type": "binary_input_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "lorawan_class",
+      "name": "LoRaWAN Class Type",
+      "value": "",
+      "unit": "",
+      "access_mode": "R",
+      "data_type": "ENUM",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "Class A" },
+        { "value": 1, "name": "Class B" },
+        { "value": 2, "name": "Class C" },
+        { "value": 3, "name": "Class CtoB" }
+      ],
+      "bacnet_type": "multistate_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "sn",
+      "name": "SN",
+      "value": "",
+      "unit": "",
+      "access_mode": "R",
+      "data_type": "TEXT",
+      "value_type": "STRING",
+      "max_length": 16,
+      "bacnet_type": "character_string_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "temperature",
+      "name": "Ambient Temperature",
+      "value": "26.6",
+      "unit": "°C",
+      "access_mode": "R",
+      "data_type": "NUMBER",
+      "value_type": "FLOAT",
+      "bacnet_type": "analog_input_object",
+      "bacnet_unit_type_id": 62,
+      "bacnet_unit_type": "UNITS_DEGREES_CELSIUS"
+    },
+    {
+      "id": "temperature_unit",
+      "name": "Temperature Unit",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "ENUM",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "celsius" },
+        { "value": 1, "name": "fahrenheit" }
+      ],
+      "bacnet_type": "multistate_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["temperature_control_mode", "temperature_target"]
+    },
+    {
+      "id": "target_temperature",
+      "name": "Target Temperature",
+      "value": "30",
+      "unit": "°C",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "FLOAT",
+      "bacnet_type": "analog_value_object",
+      "bacnet_unit_type_id": 62,
+      "bacnet_unit_type": "UNITS_DEGREES_CELSIUS",
+      "reference": ["temperature_control_mode", "temperature_unit"]
+    },
+    {
+      "id": "humidity",
+      "name": "Humidity",
+      "value": "50",
+      "unit": "%r.h.",
+      "access_mode": "R",
+      "data_type": "NUMBER",
+      "value_type": "FLOAT",
+      "bacnet_type": "analog_input_object",
+      "bacnet_unit_type_id": 29,
+      "bacnet_unit_type": "UNITS_PERCENT_RELATIVE_HUMIDITY"
+    },
+    {
+      "id": "temperature_control_mode",
+      "name": "Temperature Control Mode",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "ENUM",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "heat" },
+        { "value": 1, "name": "em heat" },
+        { "value": 2, "name": "cool" },
+        { "value": 3, "name": "auto" }
+      ],
+      "bacnet_type": "multistate_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "temperature_control_status",
+      "name": "Temperature Control Status",
+      "value": "",
+      "unit": "",
+      "access_mode": "R",
+      "data_type": "ENUM",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "standby" },
+        { "value": 1, "name": "stage-1 heat" },
+        { "value": 2, "name": "stage-2 heat" },
+        { "value": 3, "name": "stage-3 heat" },
+        { "value": 4, "name": "stage-4 heat" },
+        { "value": 5, "name": "em heat" },
+        { "value": 6, "name": "stage-1 cool" },
+        { "value": 7, "name": "stage-2 cool" }
+      ],
+      "bacnet_type": "multistate_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "fan_mode",
+      "name": "Fan Control Mode",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "ENUM",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "auto" },
+        { "value": 1, "name": "on" },
+        { "value": 2, "name": "circulate" },
+        { "value": 3, "name": "disable" }
+      ],
+      "bacnet_type": "multistate_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "fan_status",
+      "name": "Fan Control Status",
+      "value": "",
+      "unit": "",
+      "access_mode": "R",
+      "data_type": "ENUM",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "off" },
+        { "value": 1, "name": "high speed" },
+        { "value": 2, "name": "low speed" },
+        { "value": 3, "name": "on" }
+      ],
+      "bacnet_type": "multistate_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "wires",
+      "name": "Wires",
+      "data_type": "OBJECT",
+      "value_type": "STRUCT",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "wires.y1",
+      "name": "Y1",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "off" },
+        { "value": 1, "name": "on" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["wires.y1", "wires.gh", "wires.ob", "wires.w1", "wires.e", "wires.di", "wires.pek", "wires.w2", "wires.aux", "wires.y2", "wires.gl"]
+    },
+    {
+      "id": "wires.gh",
+      "name": "GH",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "off" },
+        { "value": 1, "name": "on" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["wires.y1", "wires.gh", "wires.ob", "wires.w1", "wires.e", "wires.di", "wires.pek", "wires.w2", "wires.aux", "wires.y2", "wires.gl"]
+    },
+    {
+      "id": "wires.ob",
+      "name": "OB",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "off" },
+        { "value": 1, "name": "on" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["wires.y1", "wires.gh", "wires.ob", "wires.w1", "wires.e", "wires.di", "wires.pek", "wires.w2", "wires.aux", "wires.y2", "wires.gl"]
+    },
+    {
+      "id": "wires.w1",
+      "name": "W1",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "off" },
+        { "value": 1, "name": "on" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["wires.y1", "wires.gh", "wires.ob", "wires.w1", "wires.e", "wires.di", "wires.pek", "wires.w2", "wires.aux", "wires.y2", "wires.gl"]
+    },
+    {
+      "id": "wires.e",
+      "name": "E",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "off" },
+        { "value": 1, "name": "on" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["wires.y1", "wires.gh", "wires.ob", "wires.w1", "wires.e", "wires.di", "wires.pek", "wires.w2", "wires.aux", "wires.y2", "wires.gl"]
+    },
+    {
+      "id": "wires.di",
+      "name": "DI",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "off" },
+        { "value": 1, "name": "on" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["wires.y1", "wires.gh", "wires.ob", "wires.w1", "wires.e", "wires.di", "wires.pek", "wires.w2", "wires.aux", "wires.y2", "wires.gl"]
+    },
+    {
+      "id": "wires.pek",
+      "name": "PEK",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "off" },
+        { "value": 1, "name": "on" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["wires.y1", "wires.gh", "wires.ob", "wires.w1", "wires.e", "wires.di", "wires.pek", "wires.w2", "wires.aux", "wires.y2", "wires.gl"]
+    },
+    {
+      "id": "wires.aux",
+      "name": "AUX",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "off" },
+        { "value": 1, "name": "on" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["wires.y1", "wires.gh", "wires.ob", "wires.w1", "wires.e", "wires.di", "wires.pek", "wires.w2", "wires.aux", "wires.y2", "wires.gl"]
+    },
+    {
+      "id": "wires.y2",
+      "name": "Y2",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "off" },
+        { "value": 1, "name": "on" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["wires.y1", "wires.gh", "wires.ob", "wires.w1", "wires.e", "wires.di", "wires.pek", "wires.w2", "wires.aux", "wires.y2", "wires.gl"]
+    },
+    {
+      "id": "wires.gl",
+      "name": "GL",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "off" },
+        { "value": 1, "name": "on" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["wires.y1", "wires.gh", "wires.ob", "wires.w1", "wires.e", "wires.di", "wires.pek", "wires.w2", "wires.aux", "wires.y2", "wires.gl"]
+    },
+    {
+      "id": "ob_mode",
+      "name": "OB Mode",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "ENUM",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "on cool" },
+        { "value": 1, "name": "on heat" },
+        { "value": 3, "name": "hold" }
+      ],
+      "bacnet_type": "multistate_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["wires.y1", "wires.gh", "wires.ob", "wires.w1", "wires.e", "wires.di", "wires.pek", "wires.w2", "wires.aux", "wires.y2", "wires.gl"]
+    },
+    {
+      "id": "wires_relay",
+      "name": "Wires Relay",
+      "data_type": "OBJECT",
+      "value_type": "STRUCT",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "wires_relay.y1",
+      "name": "Y1",
+      "value": "",
+      "unit": "",
+      "access_mode": "R",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "off" },
+        { "value": 1, "name": "on" }
+      ],
+      "bacnet_type": "binary_input_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["wires_relay.y1", "wires_relay.y2_gl", "wires_relay.w1", "wires_relay.w2_aux", "wires_relay.e", "wires_relay.g", "wires_relay.ob"]
+    },
+    {
+      "id": "wires_relay.y2_gl",
+      "name": "Y2/GL",
+      "value": "",
+      "unit": "",
+      "access_mode": "R",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "off" },
+        { "value": 1, "name": "on" }
+      ],
+      "bacnet_type": "binary_input_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["wires_relay.y1", "wires_relay.y2_gl", "wires_relay.w1", "wires_relay.w2_aux", "wires_relay.e", "wires_relay.g", "wires_relay.ob"]
+    },
+    {
+      "id": "wires_relay.w1",
+      "name": "W1",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "off" },
+        { "value": 1, "name": "on" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["wires_relay.y1", "wires_relay.y2_gl", "wires_relay.w1", "wires_relay.w2_aux", "wires_relay.e", "wires_relay.g", "wires_relay.ob"]
+    },
+    {
+      "id": "wires_relay.w2_aux",
+      "name": "W2/AUX",
+      "value": "",
+      "unit": "",
+      "access_mode": "R",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "off" },
+        { "value": 1, "name": "on" }
+      ],
+      "bacnet_type": "binary_input_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["wires_relay.y1", "wires_relay.y2_gl", "wires_relay.w1", "wires_relay.w2_aux", "wires_relay.e", "wires_relay.g", "wires_relay.ob"]
+    },
+    {
+      "id": "wires_relay.e",
+      "name": "E",
+      "value": "",
+      "unit": "",
+      "access_mode": "R",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "off" },
+        { "value": 1, "name": "on" }
+      ],
+      "bacnet_type": "binary_input_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["wires_relay.y1", "wires_relay.y2_gl", "wires_relay.w1", "wires_relay.w2_aux", "wires_relay.e", "wires_relay.g", "wires_relay.ob"]
+    },
+    {
+      "id": "wires_relay.g",
+      "name": "G",
+      "value": "",
+      "unit": "",
+      "access_mode": "R",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "off" },
+        { "value": 1, "name": "on" }
+      ],
+      "bacnet_type": "binary_input_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["wires_relay.y1", "wires_relay.y2_gl", "wires_relay.w1", "wires_relay.w2_aux", "wires_relay.e", "wires_relay.g", "wires_relay.ob"]
+    },
+    {
+      "id": "wires_relay.ob",
+      "name": "OB",
+      "value": "",
+      "unit": "",
+      "access_mode": "R",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "off" },
+        { "value": 1, "name": "on" }
+      ],
+      "bacnet_type": "binary_input_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["wires_relay.y1", "wires_relay.y2_gl", "wires_relay.w1", "wires_relay.w2_aux", "wires_relay.e", "wires_relay.g", "wires_relay.ob"]
+    },
+    {
+      "id": "plan_schedule",
+      "name": "Plan Schedule",
+      "data_type": "ARRAY",
+      "value_type": "STRUCT",
+      "max_length": 64,
+      "keys": ["event", "index"],
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "plan_schedule._item.event",
+      "name": "Event",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "ENUM",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "wake" },
+        { "value": 1, "name": "away" },
+        { "value": 2, "name": "home" },
+        { "value": 3, "name": "sleep" }
+      ],
+      "bacnet_type": "multistate_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["plan_schedule._item.event", "plan_schedule._item.index", "plan_schedule._item.enable", "plan_schedule._item.week_recycle.monday", "plan_schedule._item.week_recycle.tuesday", "plan_schedule._item.week_recycle.wednesday", "plan_schedule._item.week_recycle.thursday", "plan_schedule._item.week_recycle.friday", "plan_schedule._item.week_recycle.saturday", "plan_schedule._item.week_recycle.sunday", "plan_schedule._item.time"]
+    },
+    {
+      "id": "plan_schedule._item.index",
+      "name": "Index",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "UINT8",
+      "range": [1, 16],
+      "bacnet_type": "analog_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["plan_schedule._item.event", "plan_schedule._item.index", "plan_schedule._item.enable", "plan_schedule._item.week_recycle.monday", "plan_schedule._item.week_recycle.tuesday", "plan_schedule._item.week_recycle.wednesday", "plan_schedule._item.week_recycle.thursday", "plan_schedule._item.week_recycle.friday", "plan_schedule._item.week_recycle.saturday", "plan_schedule._item.week_recycle.sunday", "plan_schedule._item.time"]
+    },
+    {
+      "id": "plan_schedule._item.enable",
+      "name": "Enable",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "disable" },
+        { "value": 1, "name": "enable" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["plan_schedule._item.event", "plan_schedule._item.index", "plan_schedule._item.enable", "plan_schedule._item.week_recycle.monday", "plan_schedule._item.week_recycle.tuesday", "plan_schedule._item.week_recycle.wednesday", "plan_schedule._item.week_recycle.thursday", "plan_schedule._item.week_recycle.friday", "plan_schedule._item.week_recycle.saturday", "plan_schedule._item.week_recycle.sunday", "plan_schedule._item.time"]
+    },
+    {
+      "id": "plan_schedule._item.week_recycle",
+      "name": "Week Recycle",
+      "data_type": "OBJECT",
+      "value_type": "STRUCT",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "plan_schedule._item.week_recycle.monday",
+      "name": "Monday",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "disable" },
+        { "value": 1, "name": "enable" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["plan_schedule._item.event", "plan_schedule._item.index", "plan_schedule._item.enable", "plan_schedule._item.week_recycle.monday", "plan_schedule._item.week_recycle.tuesday", "plan_schedule._item.week_recycle.wednesday", "plan_schedule._item.week_recycle.thursday", "plan_schedule._item.week_recycle.friday", "plan_schedule._item.week_recycle.saturday", "plan_schedule._item.week_recycle.sunday", "plan_schedule._item.time"]
+    },
+    {
+      "id": "plan_schedule._item.week_recycle.tuesday",
+      "name": "Tuesday",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "disable" },
+        { "value": 1, "name": "enable" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["plan_schedule._item.event", "plan_schedule._item.index", "plan_schedule._item.enable", "plan_schedule._item.week_recycle.monday", "plan_schedule._item.week_recycle.tuesday", "plan_schedule._item.week_recycle.wednesday", "plan_schedule._item.week_recycle.thursday", "plan_schedule._item.week_recycle.friday", "plan_schedule._item.week_recycle.saturday", "plan_schedule._item.week_recycle.sunday", "plan_schedule._item.time"]
+    },
+    {
+      "id": "plan_schedule._item.week_recycle.wednesday",
+      "name": "Wednesday",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "disable" },
+        { "value": 1, "name": "enable" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["plan_schedule._item.event", "plan_schedule._item.index", "plan_schedule._item.enable", "plan_schedule._item.week_recycle.monday", "plan_schedule._item.week_recycle.tuesday", "plan_schedule._item.week_recycle.wednesday", "plan_schedule._item.week_recycle.thursday", "plan_schedule._item.week_recycle.friday", "plan_schedule._item.week_recycle.saturday", "plan_schedule._item.week_recycle.sunday", "plan_schedule._item.time"]
+    },
+    {
+      "id": "plan_schedule._item.week_recycle.thursday",
+      "name": "Thursday",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "disable" },
+        { "value": 1, "name": "enable" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["plan_schedule._item.event", "plan_schedule._item.index", "plan_schedule._item.enable", "plan_schedule._item.week_recycle.monday", "plan_schedule._item.week_recycle.tuesday", "plan_schedule._item.week_recycle.wednesday", "plan_schedule._item.week_recycle.thursday", "plan_schedule._item.week_recycle.friday", "plan_schedule._item.week_recycle.saturday", "plan_schedule._item.week_recycle.sunday", "plan_schedule._item.time"]
+    },
+    {
+      "id": "plan_schedule._item.week_recycle.friday",
+      "name": "Friday",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "disable" },
+        { "value": 1, "name": "enable" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["plan_schedule._item.event", "plan_schedule._item.index", "plan_schedule._item.enable", "plan_schedule._item.week_recycle.monday", "plan_schedule._item.week_recycle.tuesday", "plan_schedule._item.week_recycle.wednesday", "plan_schedule._item.week_recycle.thursday", "plan_schedule._item.week_recycle.friday", "plan_schedule._item.week_recycle.saturday", "plan_schedule._item.week_recycle.sunday", "plan_schedule._item.time"]
+    },
+    {
+      "id": "plan_schedule._item.week_recycle.saturday",
+      "name": "Saturday",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "disable" },
+        { "value": 1, "name": "enable" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["plan_schedule._item.event", "plan_schedule._item.index", "plan_schedule._item.enable", "plan_schedule._item.week_recycle.monday", "plan_schedule._item.week_recycle.tuesday", "plan_schedule._item.week_recycle.wednesday", "plan_schedule._item.week_recycle.thursday", "plan_schedule._item.week_recycle.friday", "plan_schedule._item.week_recycle.saturday", "plan_schedule._item.week_recycle.sunday", "plan_schedule._item.time"]
+    },
+    {
+      "id": "plan_schedule._item.week_recycle.sunday",
+      "name": "Sunday",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "disable" },
+        { "value": 1, "name": "enable" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["plan_schedule._item.event", "plan_schedule._item.index", "plan_schedule._item.enable", "plan_schedule._item.week_recycle.monday", "plan_schedule._item.week_recycle.tuesday", "plan_schedule._item.week_recycle.wednesday", "plan_schedule._item.week_recycle.thursday", "plan_schedule._item.week_recycle.friday", "plan_schedule._item.week_recycle.saturday", "plan_schedule._item.week_recycle.sunday", "plan_schedule._item.time"]
+    },
+    {
+      "id": "plan_schedule._item.time",
+      "name": "Time",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "UINT16",
+      "bacnet_type": "analog_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["plan_schedule._item.event", "plan_schedule._item.index", "plan_schedule._item.enable", "plan_schedule._item.week_recycle.monday", "plan_schedule._item.week_recycle.tuesday", "plan_schedule._item.week_recycle.wednesday", "plan_schedule._item.week_recycle.thursday", "plan_schedule._item.week_recycle.friday", "plan_schedule._item.week_recycle.saturday", "plan_schedule._item.week_recycle.sunday", "plan_schedule._item.time"]
+    },
+    {
+      "id": "plan_config",
+      "name": "Plan Config",
+      "data_type": "ARRAY",
+      "value_type": "STRUCT",
+      "max_length": 4,
+      "keys": ["event"],
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "plan_config._item.event",
+      "name": "Event",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "ENUM",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "wake" },
+        { "value": 1, "name": "away" },
+        { "value": 2, "name": "home" },
+        { "value": 3, "name": "sleep" }
+      ],
+      "bacnet_type": "multistate_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["plan_config._item.event", "plan_config._item.temperature_control_mode", "plan_config._item.fan_mode", "plan_config._item.target_temperature", "plan_config._item.temperature_unit", "plan_config._item.temperature_tolerance"]
+    },
+    {
+      "id": "plan_config._item.temperature_control_mode",
+      "name": "Temperature Control Mode",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "ENUM",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "heat" },
+        { "value": 1, "name": "em heat" },
+        { "value": 2, "name": "cool" },
+        { "value": 3, "name": "auto" }
+      ],
+      "bacnet_type": "multistate_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["plan_config._item.event", "plan_config._item.temperature_control_mode", "plan_config._item.fan_mode", "plan_config._item.target_temperature", "plan_config._item.temperature_unit", "plan_config._item.temperature_tolerance"]
+    },
+    {
+      "id": "plan_config._item.fan_mode",
+      "name": "Fan Mode",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "ENUM",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "auto" },
+        { "value": 1, "name": "on" },
+        { "value": 2, "name": "circulate" },
+        { "value": 3, "name": "disable" }
+      ],
+      "bacnet_type": "multistate_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["plan_config._item.event", "plan_config._item.temperature_control_mode", "plan_config._item.fan_mode", "plan_config._item.target_temperature", "plan_config._item.temperature_unit", "plan_config._item.temperature_tolerance"]
+    },
+    {
+      "id": "plan_config._item.target_temperature",
+      "name": "Target Temperature",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "FLOAT",
+      "bacnet_type": "analog_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["plan_config._item.event", "plan_config._item.temperature_control_mode", "plan_config._item.fan_mode", "plan_config._item.target_temperature", "plan_config._item.temperature_unit", "plan_config._item.temperature_tolerance"]
+    },
+    {
+      "id": "plan_config._item.temperature_unit",
+      "name": "Temperature Unit",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "ENUM",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "celsius" },
+        { "value": 1, "name": "fahrenheit" }
+      ],
+      "bacnet_type": "multistate_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["plan_config._item.event", "plan_config._item.temperature_control_mode", "plan_config._item.fan_mode", "plan_config._item.target_temperature", "plan_config._item.temperature_unit", "plan_config._item.temperature_tolerance"]
+    },
+    {
+      "id": "plan_config._item.temperature_tolerance",
+      "name": "Temperature Tolerance",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "FLOAT",
+      "bacnet_type": "analog_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["plan_config._item.event", "plan_config._item.temperature_control_mode", "plan_config._item.fan_mode", "plan_config._item.target_temperature", "plan_config._item.temperature_unit", "plan_config._item.temperature_tolerance"]
+    },
+    {
+      "id": "card_config",
+      "name": "Card Config",
+      "access_mode": "RW",
+      "data_type": "OBJECT",
+      "value_type": "STRUCT",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "card_config.enable",
+      "name": "Enable",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "disable" },
+        { "value": 1, "name": "enable" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["card_config.enable", "card_config.action_type", "card_config.in_plan_type", "card_config.out_plan_type", "card_config.invert"]
+    },
+    {
+      "id": "card_config.action_type",
+      "name": "Action Type",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "ENUM",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "power" },
+        { "value": 1, "name": "plan" }
+      ],
+      "bacnet_type": "multistate_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["card_config.enable", "card_config.action_type", "card_config.in_plan_type", "card_config.out_plan_type", "card_config.invert"]
+    },
+    {
+      "id": "card_config.in_plan_type",
+      "name": "In Plan Type",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "ENUM",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "wake" },
+        { "value": 1, "name": "away" },
+        { "value": 2, "name": "home" },
+        { "value": 3, "name": "sleep" }
+      ],
+      "bacnet_type": "multistate_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["card_config.enable", "card_config.action_type", "card_config.in_plan_type", "card_config.out_plan_type", "card_config.invert"]
+    },
+    {
+      "id": "card_config.out_plan_type",
+      "name": "Out Plan Type",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "ENUM",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "wake" },
+        { "value": 1, "name": "away" },
+        { "value": 2, "name": "home" },
+        { "value": 3, "name": "sleep" }
+      ],
+      "bacnet_type": "multistate_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["card_config.enable", "card_config.action_type", "card_config.in_plan_type", "card_config.out_plan_type", "card_config.invert"]
+    },
+    {
+      "id": "card_config.invert",
+      "name": "Invert",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "no" },
+        { "value": 1, "name": "yes" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["card_config.enable", "card_config.action_type", "card_config.in_plan_type", "card_config.out_plan_type", "card_config.invert"]
+    },
+    {
+      "id": "fan_delay_enable",
+      "name": "Fan Delay Enable",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "disable" },
+        { "value": 1, "name": "enable" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "fan_delay_time",
+      "name": "Fan Delay Time",
+      "value": "30",
+      "unit": "min",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "UINT8",
+      "bacnet_type": "analog_value_object",
+      "bacnet_unit_type_id": 72,
+      "bacnet_unit_type": "UNITS_MINUTES"
+    },
+    {
+      "id": "fan_execute_time",
+      "name": "Fan Execute Time",
+      "value": "30",
+      "unit": "min",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "UINT8",
+      "bacnet_type": "analog_value_object",
+      "bacnet_unit_type_id": 72,
+      "bacnet_unit_type": "UNITS_MINUTES"
+    },
+    {
+      "id": "plan_event",
+      "name": "Plan Event",
+      "value": "",
+      "unit": "",
+      "access_mode": "R",
+      "data_type": "ENUM",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "not executed" },
+        { "value": 1, "name": "wake" },
+        { "value": 2, "name": "away" },
+        { "value": 3, "name": "home" },
+        { "value": 4, "name": "sleep" }
+      ],
+      "bacnet_type": "multistate_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "plan_mode",
+      "name": "Plan Mode",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "ENUM",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 1, "name": "wake" },
+        { "value": 2, "name": "away" },
+        { "value": 3, "name": "home" },
+        { "value": 4, "name": "sleep" }
+      ],
+      "bacnet_type": "multistate_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "system_status",
+      "name": "System Status",
+      "value": "",
+      "unit": "",
+      "access_mode": "R",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "Off" },
+        { "value": 1, "name": "On" }
+      ],
+      "bacnet_type": "binary_input_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "control_permissions",
+      "name": "Control Permissions",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "ENUM",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "thermostat" },
+        { "value": 1, "name": "remote control" }
+      ],
+      "bacnet_type": "multistate_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "offline_control_mode",
+      "name": "Offline Control Mode",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "ENUM",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "keep" },
+        { "value": 1, "name": "thermostat" },
+        { "value": 2, "name": "off" }
+      ],
+      "bacnet_type": "multistate_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "temperature_sensor_status",
+      "name": "Temperature Sensor Status",
+      "value": "",
+      "unit": "",
+      "access_mode": "R",
+      "data_type": "ENUM",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 1, "name": "read failed" },
+        { "value": 2, "name": "out of range" }
+      ],
+      "bacnet_type": "multistate_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "humidity_sensor_status",
+      "name": "Humidity Sensor Status",
+      "value": "",
+      "unit": "",
+      "access_mode": "R",
+      "data_type": "ENUM",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 1, "name": "read failed" },
+        { "value": 2, "name": "out of range" }
+      ],
+      "bacnet_type": "multistate_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "temperature_alarm",
+      "name": "Temperature Alarm",
+      "value": "",
+      "unit": "",
+      "access_mode": "R",
+      "data_type": "ENUM",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 1, "name": "emergency heating timeout alarm" },
+        { "value": 2, "name": "auxiliary heating timeout alarm" },
+        { "value": 3, "name": "persistent low temperature alarm" },
+        { "value": 4, "name": "persistent low temperature alarm release" },
+        { "value": 5, "name": "persistent high temperature alarm" },
+        { "value": 6, "name": "persistent high temperature alarm release" },
+        { "value": 7, "name": "freeze protection alarm" },
+        { "value": 8, "name": "freeze protection alarm release" },
+        { "value": 9, "name": "threshold alarm" },
+        { "value": 10, "name": "threshold alarm release" }
+      ],
+      "bacnet_type": "multistate_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "report_interval",
+      "name": "Report Interval",
+      "value": "20",
+      "unit": "min",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "UINT16",
+      "bacnet_type": "analog_value_object",
+      "bacnet_unit_type_id": 72,
+      "bacnet_unit_type": "UNITS_MINUTES"
+    },
+    {
+      "id": "collection_interval",
+      "name": "Collection Interval",
+      "value": "60",
+      "unit": "s",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "UINT16",
+      "bacnet_type": "analog_value_object",
+      "bacnet_unit_type_id": 73,
+      "bacnet_unit_type": "UNITS_SECONDS"
+    },
+    {
+      "id": "temperature_control_enable",
+      "name": "Temperature Control Enable",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "Disable" },
+        { "value": 1, "name": "Enable" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "temperature_calibration",
+      "name": "Temperature Calibration",
+      "data_type": "OBJECT",
+      "value_type": "STRUCT",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "temperature_calibration.enable",
+      "name": "Enable",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "Disable" },
+        { "value": 1, "name": "Enable" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["temperature_calibration.enable", "temperature_calibration.temperature"]
+    },
+    {
+      "id": "temperature_calibration.temperature",
+      "name": "Temperature",
+      "value": "30",
+      "unit": "°C",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "FLOAT",
+      "bacnet_type": "analog_value_object",
+      "bacnet_unit_type_id": 62,
+      "bacnet_unit_type": "UNITS_DEGREES_CELSIUS",
+      "reference": ["temperature_calibration.enable", "temperature_calibration.temperature"]
+    },
+    {
+      "id": "humidity_calibration",
+      "name": "Humidity Calibration",
+      "data_type": "OBJECT",
+      "value_type": "STRUCT",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "humidity_calibration.enable",
+      "name": "Enable",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "disable" },
+        { "value": 1, "name": "enable" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["humidity_calibration.enable", "humidity_calibration.humidity"]
+    },
+    {
+      "id": "humidity_calibration.humidity",
+      "name": "Humidity",
+      "value": "50",
+      "unit": "%r.h.",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "FLOAT",
+      "bacnet_type": "analog_value_object",
+      "bacnet_unit_type_id": 29,
+      "bacnet_unit_type": "UNITS_PERCENT_RELATIVE_HUMIDITY",
+      "reference": ["humidity_calibration.enable", "humidity_calibration.humidity"]
+    },
+    {
+      "id": "humidity_range",
+      "name": "Humidity Range",
+      "data_type": "OBJECT",
+      "value_type": "STRUCT",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["humidity_range.min", "humidity_range.max"]
+    },
+    {
+      "id": "humidity_range.min",
+      "name": "Min",
+      "value": "10",
+      "unit": "%r.h.",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "UINT8",
+      "bacnet_type": "analog_value_object",
+      "bacnet_unit_type_id": 29,
+      "bacnet_unit_type": "UNITS_PERCENT_RELATIVE_HUMIDITY"
+    },
+    {
+      "id": "humidity_range.max",
+      "name": "Max",
+      "value": "90",
+      "unit": "%r.h.",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "UINT8",
+      "bacnet_type": "analog_value_object",
+      "bacnet_unit_type_id": 29,
+      "bacnet_unit_type": "UNITS_PERCENT_RELATIVE_HUMIDITY"
+    },
+    {
+      "id": "temperature_dehumidify",
+      "name": "Temperature Dehumidify",
+      "data_type": "OBJECT",
+      "value_type": "STRUCT",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "temperature_dehumidify.enable",
+      "name": "Enable",
+      "value": "1",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "disable" },
+        { "value": 1, "name": "enable" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["temperature_dehumidify.enable", "temperature_dehumidify.temperature_tolerance"]
+    },
+    {
+      "id": "temperature_dehumidify.temperature_tolerance",
+      "name": "Temperature Tolerance",
+      "value": "1",
+      "unit": "°C",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "FLOAT",
+      "bacnet_type": "analog_value_object",
+      "bacnet_unit_type_id": 62,
+      "bacnet_unit_type": "UNITS_DEGREES_CELSIUS",
+      "reference": ["temperature_dehumidify.enable", "temperature_dehumidify.temperature_tolerance"]
+    },
+    {
+      "id": "fan_dehumidify",
+      "name": "Fan Dehumidify",
+      "data_type": "OBJECT",
+      "value_type": "STRUCT",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "fan_dehumidify.enable",
+      "name": "Enable",
+      "value": "1",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "disable" },
+        { "value": 1, "name": "enable" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["fan_dehumidify.enable", "fan_dehumidify.execute_time"]
+    },
+    {
+      "id": "fan_dehumidify.execute_time",
+      "name": "Execute Time",
+      "value": "30",
+      "unit": "min",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "UINT8",
+      "bacnet_type": "analog_value_object",
+      "bacnet_unit_type_id": 72,
+      "bacnet_unit_type": "UNITS_MINUTES",
+      "reference": ["fan_dehumidify.enable", "fan_dehumidify.execute_time"]
+    },
+    {
+      "id": "temperature_tolerance",
+      "name": "Temperature Tolerance",
+      "data_type": "OBJECT",
+      "value_type": "STRUCT",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "temperature_tolerance.target_temperature_tolerance",
+      "name": "Target Temperature Tolerance",
+      "value": "1",
+      "unit": "°C",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "FLOAT",
+      "bacnet_type": "analog_value_object",
+      "bacnet_unit_type_id": 62,
+      "bacnet_unit_type": "UNITS_DEGREES_CELSIUS",
+      "reference": ["temperature_tolerance.target_temperature_tolerance", "temperature_tolerance.auto_temperature_tolerance"]
+    },
+    {
+      "id": "temperature_tolerance.auto_temperature_tolerance",
+      "name": "Auto Temperature Tolerance",
+      "value": "1",
+      "unit": "°C",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "FLOAT",
+      "bacnet_type": "analog_value_object",
+      "bacnet_unit_type_id": 62,
+      "bacnet_unit_type": "UNITS_DEGREES_CELSIUS",
+      "reference": ["temperature_tolerance.target_temperature_tolerance", "temperature_tolerance.auto_temperature_tolerance"]
+    },
+    {
+      "id": "temperature_level_up_condition",
+      "name": "Temperature Level Up Condition",
+      "data_type": "OBJECT",
+      "value_type": "STRUCT",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "temperature_level_up_condition.type",
+      "name": "Type",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "ENUM",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "heat" },
+        { "value": 1, "name": "cool" }
+      ],
+      "bacnet_type": "multistate_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["temperature_level_up_condition.type", "temperature_level_up_condition.time", "temperature_level_up_condition.temperature_tolerance"]
+    },
+    {
+      "id": "temperature_level_up_condition.time",
+      "name": "Time",
+      "value": "30",
+      "unit": "min",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "UINT8",
+      "bacnet_type": "analog_value_object",
+      "bacnet_unit_type_id": 72,
+      "bacnet_unit_type": "UNITS_MINUTES",
+      "reference": ["temperature_level_up_condition.type", "temperature_level_up_condition.time", "temperature_level_up_condition.temperature_tolerance"]
+    },
+    {
+      "id": "temperature_level_up_condition.temperature_tolerance",
+      "name": "Temperature Tolerance",
+      "value": "1",
+      "unit": "°C",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "FLOAT",
+      "bacnet_type": "analog_value_object",
+      "bacnet_unit_type_id": 62,
+      "bacnet_unit_type": "UNITS_DEGREES_CELSIUS",
+      "reference": ["temperature_level_up_condition.type", "temperature_level_up_condition.time", "temperature_level_up_condition.temperature_tolerance"]
+    },
+    {
+      "id": "outside_temperature_control",
+      "name": "Outside Temperature Control",
+      "data_type": "OBJECT",
+      "value_type": "STRUCT",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "outside_temperature_control.enable",
+      "name": "Enable",
+      "value": "1",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "disable" },
+        { "value": 1, "name": "enable" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["outside_temperature_control.enable", "outside_temperature_control.timeout"]
+    },
+    {
+      "id": "outside_temperature_control.timeout",
+      "name": "Timeout",
+      "value": "30",
+      "unit": "min",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "UINT8",
+      "bacnet_type": "analog_value_object",
+      "bacnet_unit_type_id": 72,
+      "bacnet_unit_type": "UNITS_MINUTES",
+      "reference": ["outside_temperature_control.enable", "outside_temperature_control.timeout"]
+    },
+    {
+      "id": "outside_temperature",
+      "name": "Outside Temperature",
+      "value": "26.6",
+      "unit": "°C",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "FLOAT",
+      "bacnet_type": "analog_value_object",
+      "bacnet_unit_type_id": 62,
+      "bacnet_unit_type": "UNITS_DEGREES_CELSIUS"
+    },
+    {
+      "id": "freeze_protection_config",
+      "name": "Freeze Protection Config",
+      "data_type": "OBJECT",
+      "value_type": "STRUCT",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "freeze_protection_config.enable",
+      "name": "Enable",
+      "value": "1",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "disable" },
+        { "value": 1, "name": "enable" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["freeze_protection_config.enable", "freeze_protection_config.temperature"]
+    },
+    {
+      "id": "freeze_protection_config.temperature",
+      "name": "Temperature",
+      "value": "5",
+      "unit": "°C",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "FLOAT",
+      "bacnet_type": "analog_value_object",
+      "bacnet_unit_type_id": 62,
+      "bacnet_unit_type": "UNITS_DEGREES_CELSIUS",
+      "reference": ["freeze_protection_config.enable", "freeze_protection_config.temperature"]
+    },
+    {
+      "id": "child_lock_config",
+      "name": "Child Lock Config",
+      "data_type": "OBJECT",
+      "value_type": "STRUCT",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "child_lock_config.power_button",
+      "name": "Power Button",
+      "value": "1",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "disable" },
+        { "value": 1, "name": "enable" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["child_lock_config.power_button", "child_lock_config.up_button", "child_lock_config.down_button", "child_lock_config.fan_button", "child_lock_config.mode_button", "child_lock_config.reset_button"]
+    },
+    {
+      "id": "child_lock_config.up_button",
+      "name": "Up Button",
+      "value": "1",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "disable" },
+        { "value": 1, "name": "enable" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["child_lock_config.power_button", "child_lock_config.up_button", "child_lock_config.down_button", "child_lock_config.fan_button", "child_lock_config.mode_button", "child_lock_config.reset_button"]
+    },
+    {
+      "id": "child_lock_config.down_button",
+      "name": "Down Button",
+      "value": "1",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "disable" },
+        { "value": 1, "name": "enable" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["child_lock_config.power_button", "child_lock_config.up_button", "child_lock_config.down_button", "child_lock_config.fan_button", "child_lock_config.mode_button", "child_lock_config.reset_button"]
+    },
+    {
+      "id": "child_lock_config.fan_button",
+      "name": "Fan Button",
+      "value": "1",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "disable" },
+        { "value": 1, "name": "enable" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["child_lock_config.power_button", "child_lock_config.up_button", "child_lock_config.down_button", "child_lock_config.fan_button", "child_lock_config.mode_button", "child_lock_config.reset_button"]
+    },
+    {
+      "id": "child_lock_config.mode_button",
+      "name": "Mode Button",
+      "value": "1",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "disable" },
+        { "value": 1, "name": "enable" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["child_lock_config.power_button", "child_lock_config.up_button", "child_lock_config.down_button", "child_lock_config.fan_button", "child_lock_config.mode_button", "child_lock_config.reset_button"]
+    },
+    {
+      "id": "child_lock_config.reset_button",
+      "name": "Reset Button",
+      "value": "1",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "disable" },
+        { "value": 1, "name": "enable" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["child_lock_config.power_button", "child_lock_config.up_button", "child_lock_config.down_button", "child_lock_config.fan_button", "child_lock_config.mode_button", "child_lock_config.reset_button"]
+    },
+    {
+      "id": "wires_relay_config",
+      "name": "Wires Relay Config",
+      "data_type": "OBJECT",
+      "value_type": "STRUCT",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "wires_relay_config.y1",
+      "name": "Y1",
+      "value": "1",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "off" },
+        { "value": 1, "name": "on" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["wires_relay_config.y1", "wires_relay_config.y2_gl", "wires_relay_config.w1", "wires_relay_config.w2_aux", "wires_relay_config.e", "wires_relay_config.g", "wires_relay_config.ob"]
+    },
+    {
+      "id": "wires_relay_config.y2_gl",
+      "name": "Y2/GL",
+      "value": "0",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "off" },
+        { "value": 1, "name": "on" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["wires_relay_config.y1", "wires_relay_config.y2_gl", "wires_relay_config.w1", "wires_relay_config.w2_aux", "wires_relay_config.e", "wires_relay_config.g", "wires_relay_config.ob"]
+    },
+    {
+      "id": "wires_relay_config.w1",
+      "name": "W1",
+      "value": "1",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "off" },
+        { "value": 1, "name": "on" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["wires_relay_config.y1", "wires_relay_config.y2_gl", "wires_relay_config.w1", "wires_relay_config.w2_aux", "wires_relay_config.e", "wires_relay_config.g", "wires_relay_config.ob"]
+    },
+    {
+      "id": "wires_relay_config.w2_aux",
+      "name": "W2/AUX",
+      "value": "0",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "off" },
+        { "value": 1, "name": "on" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["wires_relay_config.y1", "wires_relay_config.y2_gl", "wires_relay_config.w1", "wires_relay_config.w2_aux", "wires_relay_config.e", "wires_relay_config.g", "wires_relay_config.ob"]
+    },
+    {
+      "id": "wires_relay_config.e",
+      "name": "E",
+      "value": "0",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "off" },
+        { "value": 1, "name": "on" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["wires_relay_config.y1", "wires_relay_config.y2_gl", "wires_relay_config.w1", "wires_relay_config.w2_aux", "wires_relay_config.e", "wires_relay_config.g", "wires_relay_config.ob"]
+    },
+    {
+      "id": "wires_relay_config.g",
+      "name": "G",
+      "value": "0",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "off" },
+        { "value": 1, "name": "on" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["wires_relay_config.y1", "wires_relay_config.y2_gl", "wires_relay_config.w1", "wires_relay_config.w2_aux", "wires_relay_config.e", "wires_relay_config.g", "wires_relay_config.ob"]
+    },
+    {
+      "id": "wires_relay_config.ob",
+      "name": "O/B",
+      "value": "0",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "off" },
+        { "value": 1, "name": "on" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["wires_relay_config.y1", "wires_relay_config.y2_gl", "wires_relay_config.w1", "wires_relay_config.w2_aux", "wires_relay_config.e", "wires_relay_config.g", "wires_relay_config.ob"]
+    },
+    {
+      "id": "screen_display_mode",
+      "name": "Screen Display Mode",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "ENUM",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "on" },
+        { "value": 1, "name": "without plan show" },
+        { "value": 2, "name": "disable all" }
+      ],
+      "bacnet_type": "multistate_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "timezone",
+      "name": "Timezone",
+      "value": "",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "ENUM",
+      "value_type": "INT16",
+      "values": [
+        { "value": -720, "name": "UTC-12" },
+        { "value": -660, "name": "UTC-11" },
+        { "value": -600, "name": "UTC-10" },
+        { "value": -570, "name": "UTC-9:30" },
+        { "value": -540, "name": "UTC-9" },
+        { "value": -480, "name": "UTC-8" },
+        { "value": -420, "name": "UTC-7" },
+        { "value": -360, "name": "UTC-6" },
+        { "value": -300, "name": "UTC-5" },
+        { "value": -240, "name": "UTC-4" },
+        { "value": -210, "name": "UTC-3:30" },
+        { "value": -180, "name": "UTC-3" },
+        { "value": -120, "name": "UTC-2" },
+        { "value": -60, "name": "UTC-1" },
+        { "value": 0, "name": "UTC" },
+        { "value": 60, "name": "UTC+1" },
+        { "value": 120, "name": "UTC+2" },
+        { "value": 180, "name": "UTC+3" },
+        { "value": 210, "name": "UTC+3:30" },
+        { "value": 240, "name": "UTC+4" },
+        { "value": 270, "name": "UTC+4:30" },
+        { "value": 300, "name": "UTC+5" },
+        { "value": 330, "name": "UTC+5:30" },
+        { "value": 345, "name": "UTC+5:45" },
+        { "value": 360, "name": "UTC+6" },
+        { "value": 390, "name": "UTC+6:30" },
+        { "value": 420, "name": "UTC+7" },
+        { "value": 480, "name": "UTC+8" },
+        { "value": 540, "name": "UTC+9" },
+        { "value": 570, "name": "UTC+9:30" },
+        { "value": 600, "name": "UTC+10" },
+        { "value": 630, "name": "UTC+10:30" },
+        { "value": 660, "name": "UTC+11" },
+        { "value": 720, "name": "UTC+12" },
+        { "value": 765, "name": "UTC+12:45" },
+        { "value": 780, "name": "UTC+13" },
+        { "value": 840, "name": "UTC+14" }
+      ],
+      "bacnet_type": "multistate_value_object",
+      "bacnet_unit_type_id": 62,
+      "bacnet_unit_type": "UNITS_DEGREES_CELSIUS"
+    },
+    {
+      "id": "dst_config",
+      "name": "Daylight Saving Time Config",
+      "data_type": "OBJECT",
+      "value_type": "STRUCT",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "dst_config.enable",
+      "name": "Enable",
+      "value": "0",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "BOOL",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "disable" },
+        { "value": 1, "name": "enable" }
+      ],
+      "bacnet_type": "binary_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["dst_config.enable", "dst_config.offset", "dst_config.start_month", "dst_config.start_week_num", "dst_config.start_week_day", "dst_config.start_time", "dst_config.end_month", "dst_config.end_week_num", "dst_config.end_week_day", "dst_config.end_time"]
+    },
+    {
+      "id": "dst_config.offset",
+      "name": "Offset",
+      "value": "0",
+      "unit": "minute",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "INT8",
+      "bacnet_type": "analog_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["dst_config.enable", "dst_config.offset", "dst_config.start_month", "dst_config.start_week_num", "dst_config.start_week_day", "dst_config.start_time", "dst_config.end_month", "dst_config.end_week_num", "dst_config.end_week_day", "dst_config.end_time"]
+    },
+    {
+      "id": "dst_config.start_month",
+      "name": "Start Month",
+      "value": "0",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "ENUM",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 1, "name": "January" },
+        { "value": 2, "name": "February" },
+        { "value": 3, "name": "March" },
+        { "value": 4, "name": "April" },
+        { "value": 5, "name": "May" },
+        { "value": 6, "name": "June" },
+        { "value": 7, "name": "July" },
+        { "value": 8, "name": "August" },
+        { "value": 9, "name": "September" },
+        { "value": 10, "name": "October" },
+        { "value": 11, "name": "November" },
+        { "value": 12, "name": "December" }
+      ],
+      "bacnet_type": "multistate_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["dst_config.enable", "dst_config.offset", "dst_config.start_month", "dst_config.start_week_num", "dst_config.start_week_day", "dst_config.start_time", "dst_config.end_month", "dst_config.end_week_num", "dst_config.end_week_day", "dst_config.end_time"]
+    },
+    {
+      "id": "dst_config.start_week_num",
+      "name": "Start Week Number",
+      "value": "0",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "UINT8",
+      "bacnet_type": "analog_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["dst_config.enable", "dst_config.offset", "dst_config.start_month", "dst_config.start_week_num", "dst_config.start_week_day", "dst_config.start_time", "dst_config.end_month", "dst_config.end_week_num", "dst_config.end_week_day", "dst_config.end_time"]
+    },
+    {
+      "id": "dst_config.start_week_day",
+      "name": "Start Week Day",
+      "value": "0",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "ENUM",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 1, "name": "Monday" },
+        { "value": 2, "name": "Tuesday" },
+        { "value": 3, "name": "Wednesday" },
+        { "value": 4, "name": "Thursday" },
+        { "value": 5, "name": "Friday" },
+        { "value": 6, "name": "Saturday" },
+        { "value": 7, "name": "Sunday" }
+      ],
+      "bacnet_type": "multistate_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["dst_config.enable", "dst_config.offset", "dst_config.start_month", "dst_config.start_week_num", "dst_config.start_week_day", "dst_config.start_time", "dst_config.end_month", "dst_config.end_week_num", "dst_config.end_week_day", "dst_config.end_time"]
+    },
+    {
+      "id": "dst_config.start_time",
+      "name": "Start Time",
+      "value": "0",
+      "unit": "minute",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "UINT16",
+      "bacnet_type": "analog_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["dst_config.enable", "dst_config.offset", "dst_config.start_month", "dst_config.start_week_num", "dst_config.start_week_day", "dst_config.start_time", "dst_config.end_month", "dst_config.end_week_num", "dst_config.end_week_day", "dst_config.end_time"]
+    },
+    {
+      "id": "dst_config.end_month",
+      "name": "End Month",
+      "value": "0",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "ENUM",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 1, "name": "January" },
+        { "value": 2, "name": "February" },
+        { "value": 3, "name": "March" },
+        { "value": 4, "name": "April" },
+        { "value": 5, "name": "May" },
+        { "value": 6, "name": "June" },
+        { "value": 7, "name": "July" },
+        { "value": 8, "name": "August" },
+        { "value": 9, "name": "September" },
+        { "value": 10, "name": "October" },
+        { "value": 11, "name": "November" },
+        { "value": 12, "name": "December" }
+      ],
+      "bacnet_type": "multistate_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["dst_config.enable", "dst_config.offset", "dst_config.start_month", "dst_config.start_week_num", "dst_config.start_week_day", "dst_config.start_time", "dst_config.end_month", "dst_config.end_week_num", "dst_config.end_week_day", "dst_config.end_time"]
+    },
+    {
+      "id": "dst_config.end_week_num",
+      "name": "End Week Number",
+      "value": "0",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "UINT8",
+      "bacnet_type": "analog_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["dst_config.enable", "dst_config.offset", "dst_config.start_month", "dst_config.start_week_num", "dst_config.start_week_day", "dst_config.start_time", "dst_config.end_month", "dst_config.end_week_num", "dst_config.end_week_day", "dst_config.end_time"]
+    },
+    {
+      "id": "dst_config.end_week_day",
+      "name": "End Week Day",
+      "value": "0",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "ENUM",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 1, "name": "Monday" },
+        { "value": 2, "name": "Tuesday" },
+        { "value": 3, "name": "Wednesday" },
+        { "value": 4, "name": "Thursday" },
+        { "value": 5, "name": "Friday" },
+        { "value": 6, "name": "Saturday" },
+        { "value": 7, "name": "Sunday" }
+      ],
+      "bacnet_type": "multistate_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["dst_config.enable", "dst_config.offset", "dst_config.start_month", "dst_config.start_week_num", "dst_config.start_week_day", "dst_config.start_time", "dst_config.end_month", "dst_config.end_week_num", "dst_config.end_week_day", "dst_config.end_time"]
+    },
+    {
+      "id": "dst_config.end_time",
+      "name": "End Time",
+      "value": "0",
+      "unit": "minute",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "UINT16",
+      "bacnet_type": "analog_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["dst_config.enable", "dst_config.offset", "dst_config.start_month", "dst_config.start_week_num", "dst_config.start_week_day", "dst_config.start_time", "dst_config.end_month", "dst_config.end_week_num", "dst_config.end_week_day", "dst_config.end_time"]
+    },
+    {
+      "id": "temperature_alarm_config",
+      "name": "Temperature Alarm Config",
+      "data_type": "OBJECT",
+      "value_type": "STRUCT",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS"
+    },
+    {
+      "id": "temperature_alarm_config.alarm_type",
+      "name": "Type",
+      "value": "0",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "ENUM",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "temperature threshold" },
+        { "value": 1, "name": "continuous low temperature" },
+        { "value": 2, "name": "continuous high temperature" }
+      ],
+      "bacnet_type": "multistate_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["temperature_alarm_config.alarm_type", "temperature_alarm_config.condition", "temperature_alarm_config.min", "temperature_alarm_config.max", "temperature_alarm_config.lock_time", "temperature_alarm_config.continue_time"]
+    },
+    {
+      "id": "temperature_alarm_config.condition",
+      "name": "Condition",
+      "value": "0",
+      "unit": "",
+      "access_mode": "RW",
+      "data_type": "ENUM",
+      "value_type": "UINT8",
+      "values": [
+        { "value": 0, "name": "disable" },
+        { "value": 1, "name": "below" },
+        { "value": 2, "name": "above" },
+        { "value": 3, "name": "between" },
+        { "value": 4, "name": "outside" }
+      ],
+      "bacnet_type": "multistate_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["temperature_alarm_config.alarm_type", "temperature_alarm_config.condition", "temperature_alarm_config.min", "temperature_alarm_config.max", "temperature_alarm_config.lock_time", "temperature_alarm_config.continue_time"]
+    },
+    {
+      "id": "temperature_alarm_config.min",
+      "name": "Min",
+      "value": "0",
+      "unit": "°C",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "FLOAT",
+      "bacnet_type": "analog_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["temperature_alarm_config.alarm_type", "temperature_alarm_config.condition", "temperature_alarm_config.min", "temperature_alarm_config.max", "temperature_alarm_config.lock_time", "temperature_alarm_config.continue_time"]
+    },
+    {
+      "id": "temperature_alarm_config.max",
+      "name": "Max",
+      "value": "0",
+      "unit": "°C",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "FLOAT",
+      "bacnet_type": "analog_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["temperature_alarm_config.alarm_type", "temperature_alarm_config.condition", "temperature_alarm_config.min", "temperature_alarm_config.max", "temperature_alarm_config.lock_time", "temperature_alarm_config.continue_time"]
+    },
+    {
+      "id": "temperature_alarm_config.lock_time",
+      "name": "Lock Time",
+      "value": "0",
+      "unit": "minute",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "UINT16",
+      "bacnet_type": "analog_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["temperature_alarm_config.alarm_type", "temperature_alarm_config.condition", "temperature_alarm_config.min", "temperature_alarm_config.max", "temperature_alarm_config.lock_time", "temperature_alarm_config.continue_time"]
+    },
+    {
+      "id": "temperature_alarm_config.continue_time",
+      "name": "Continue Time",
+      "value": "0",
+      "unit": "minute",
+      "access_mode": "RW",
+      "data_type": "NUMBER",
+      "value_type": "UINT16",
+      "bacnet_type": "analog_value_object",
+      "bacnet_unit_type_id": 95,
+      "bacnet_unit_type": "UNITS_NO_UNITS",
+      "reference": ["temperature_alarm_config.alarm_type", "temperature_alarm_config.condition", "temperature_alarm_config.min", "temperature_alarm_config.max", "temperature_alarm_config.lock_time", "temperature_alarm_config.continue_time"]
+    }
+  ]
+}
