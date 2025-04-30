@@ -10,6 +10,9 @@ import com.milesight.beaveriot.integration.msc.constant.MscIntegrationConstants;
 import com.milesight.beaveriot.integration.msc.entity.MscConnectionPropertiesEntities;
 import com.milesight.beaveriot.integration.msc.model.IntegrationStatus;
 import com.milesight.beaveriot.integration.msc.model.WebhookPayload;
+import com.milesight.beaveriot.pubsub.MessagePubSub;
+import com.milesight.beaveriot.pubsub.api.annotation.MessageListener;
+import com.milesight.beaveriot.pubsub.api.message.RemoteBroadcastMessage;
 import com.milesight.msc.sdk.utils.HMacUtils;
 import com.milesight.msc.sdk.utils.TimeUtils;
 import lombok.*;
@@ -22,7 +25,6 @@ import javax.crypto.Mac;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 
 @Slf4j
@@ -30,8 +32,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class MscWebhookService {
 
     private static final String WEBHOOK_STATUS_KEY = MscConnectionPropertiesEntities.getKey(MscConnectionPropertiesEntities.Fields.webhookStatus);
-
-    private static final int MAX_FAILURES = 10;
 
     private final Map<String, WebhookContext> tenantIdToWebhookContext = new ConcurrentHashMap<>();
 
@@ -48,6 +48,9 @@ public class MscWebhookService {
     @Autowired
     private MscDataSyncService dataSyncService;
 
+    @Autowired
+    private MessagePubSub messagePubSub;
+
     public void init(String tenantId) {
         val webhookSettingsKey = MscConnectionPropertiesEntities.getKey(MscConnectionPropertiesEntities.Fields.webhook);
         val webhookSettings = entityValueServiceProvider.findValuesByKey(webhookSettingsKey, MscConnectionPropertiesEntities.Webhook.class);
@@ -55,26 +58,39 @@ public class MscWebhookService {
             log.info("Webhook settings not found");
             return;
         }
-        val webhookContext = tenantIdToWebhookContext.computeIfAbsent(tenantId, WebhookContext::new);
-        webhookContext.enabled = Boolean.TRUE.equals(webhookSettings.getEnabled());
-        if (webhookSettings.getSecretKey() != null) {
-            webhookContext.mac = HMacUtils.getMac(webhookSettings.getSecretKey());
-        }
-        if (!webhookContext.enabled) {
+        val enabled = webhookSettings.getEnabled();
+        val secretKey = webhookSettings.getSecretKey();
+        initWebhookContext(tenantId, enabled, secretKey);
+    }
+
+    private void initWebhookContext(String tenantId, Boolean enabled, String secretKey) {
+        if (!Boolean.TRUE.equals(enabled)) {
+            log.debug("Webhook is disabled for tenant '{}'", tenantId);
             updateWebhookStatus(IntegrationStatus.NOT_READY);
+            tenantIdToWebhookContext.remove(tenantId);
+            return;
         }
+
+        val webhookContext = tenantIdToWebhookContext.computeIfAbsent(tenantId, WebhookContext::new);
+        if (secretKey != null && !secretKey.isEmpty() && !secretKey.equals(webhookContext.secretKey)) {
+            webhookContext.mac = HMacUtils.getMac(secretKey);
+            webhookContext.secretKey = secretKey;
+        }
+        webhookContext.enabled = true;
     }
 
     @EventSubscribe(payloadKeyExpression = "msc-integration.integration.webhook.*")
     public void onWebhookPropertiesUpdate(Event<MscConnectionPropertiesEntities.Webhook> event) {
         val tenantId = TenantContext.getTenantId();
-        val webhookContext = tenantIdToWebhookContext.computeIfAbsent(tenantId, WebhookContext::new);
-        webhookContext.enabled = Boolean.TRUE.equals(event.getPayload().getEnabled());
-        if (event.getPayload().getSecretKey() != null && !event.getPayload().getSecretKey().isEmpty()) {
-            webhookContext.mac = HMacUtils.getMac(event.getPayload().getSecretKey());
-        } else {
-            tenantIdToWebhookContext.remove(tenantId);
-        }
+        val webhookSettings = event.getPayload();
+        initWebhookContext(tenantId, webhookSettings.getEnabled(), webhookSettings.getSecretKey());
+        messagePubSub.publishAfterCommit(new MscWebhookContextUpdateEvent(tenantId, webhookSettings.getEnabled(), webhookSettings.getSecretKey()));
+    }
+
+    @MessageListener
+    public void onMscWebhookContextUpdate(MscWebhookContextUpdateEvent event) {
+        log.info("update webhook context for tenant '{}'", event.getTenantId());
+        initWebhookContext(event.getTenantId(), event.getEnabled(), event.getSecretKey());
     }
 
     public void handleWebhookData(String signature,
@@ -141,10 +157,7 @@ public class MscWebhookService {
         if (webhookContext == null) {
             return;
         }
-        val failures = webhookContext.failureCount.incrementAndGet();
-        if (failures > MAX_FAILURES) {
-            updateWebhookStatus(IntegrationStatus.ERROR);
-        }
+        updateWebhookStatus(IntegrationStatus.ERROR);
     }
 
     private void updateWebhookStatus(@NonNull IntegrationStatus status) {
@@ -152,10 +165,6 @@ public class MscWebhookService {
         val webhookContext = tenantIdToWebhookContext.get(tenantId);
         if (webhookContext == null) {
             return;
-        }
-        if (!IntegrationStatus.ERROR.equals(status)) {
-            // recover from error
-            webhookContext.failureCount.set(0);
         }
         entityValueServiceProvider.saveValuesAndPublishAsync(ExchangePayload.create(WEBHOOK_STATUS_KEY, status.name()));
     }
@@ -202,18 +211,42 @@ public class MscWebhookService {
         return true;
     }
 
+    public void disable(String tenantId) {
+        val exchangePayload = ExchangePayload.create(Map.of(
+                MscConnectionPropertiesEntities.Webhook.getKey(MscConnectionPropertiesEntities.Webhook.Fields.enabled), "false",
+                WEBHOOK_STATUS_KEY, IntegrationStatus.NOT_READY.name()
+        ));
+        entityValueServiceProvider.saveValuesAndPublishSync(exchangePayload);
+    }
+
+    public void stop() {
+        tenantIdToWebhookContext.clear();
+    }
+
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
     public static class WebhookContext {
         private String tenantId;
         private boolean enabled;
+        private String secretKey;
         private Mac mac;
-        private AtomicInteger failureCount = new AtomicInteger(0);
 
         public WebhookContext(String tenantId) {
             this.tenantId = tenantId;
         }
+    }
+
+    @Data
+    @ToString(callSuper = true)
+    @EqualsAndHashCode(callSuper = true)
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class MscWebhookContextUpdateEvent extends RemoteBroadcastMessage {
+        private String tenantId;
+        private Boolean enabled;
+        private String secretKey;
     }
 
 }

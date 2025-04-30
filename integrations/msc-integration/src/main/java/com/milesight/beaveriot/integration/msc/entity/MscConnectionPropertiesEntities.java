@@ -76,6 +76,10 @@ public class MscConnectionPropertiesEntities extends ExchangePayload {
     @Entities
     public static class Webhook extends ExchangePayload {
 
+        public static String getKey(String propertyKey) {
+            return MscIntegrationConstants.INTEGRATION_IDENTIFIER + ".integration.webhook." + StringUtils.toSnakeCase(propertyKey);
+        }
+
         @Entity
         private Boolean enabled;
 
@@ -92,6 +96,10 @@ public class MscConnectionPropertiesEntities extends ExchangePayload {
     @AllArgsConstructor
     @Entities
     public static class ScheduledDataFetch extends ExchangePayload {
+
+        public static String getKey(String propertyKey) {
+            return MscIntegrationConstants.INTEGRATION_IDENTIFIER + ".integration.scheduled_data_fetch." + StringUtils.toSnakeCase(propertyKey);
+        }
 
         @Entity
         private Boolean enabled;

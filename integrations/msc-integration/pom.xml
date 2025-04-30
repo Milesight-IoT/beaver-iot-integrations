@@ -47,10 +47,17 @@
             <version>${beaver-iot.version}</version>
             <scope>provided</scope>
         </dependency>
+
+        <dependency>
+            <groupId>com.milesight.beaveriot</groupId>
+            <artifactId>scheduler</artifactId>
+            <version>${beaver-iot.version}</version>
+            <scope>provided</scope>
+        </dependency>
         <dependency>
             <groupId>com.milesight</groupId>
             <artifactId>msc-java-sdk</artifactId>
-            <version>1.0.0</version>
+            <version>1.0.1</version>
         </dependency>
 
         <!-- unit test -->

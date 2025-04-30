@@ -38,15 +38,25 @@ public class MscIntegrationBootstrap implements IntegrationBootstrap {
     public void onEnabled(String tenantId, Integration integrationConfig) {
         log.info("MSC integration starting");
         mscConnectionService.init(tenantId);
-        mscDataFetchingService.init(tenantId);
         mscWebhookService.init(tenantId);
+        log.info("MSC integration started");
+    }
+
+    @Override
+    public void onDisabled(String tenantId, Integration integrationConfig) {
+        log.info("MSC integration starting");
+        mscConnectionService.disable(tenantId);
+        mscDataFetchingService.disable(tenantId);
+        mscWebhookService.disable(tenantId);
         log.info("MSC integration started");
     }
 
     @Override
     public void onDestroy(Integration integrationConfig) {
         log.info("MSC integration stopping");
+        mscConnectionService.stop();
         mscDataFetchingService.stop();
+        mscWebhookService.stop();
         log.info("MSC integration stopped");
     }
 

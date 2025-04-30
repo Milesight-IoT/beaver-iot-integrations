@@ -1,5 +1,7 @@
 package com.milesight.beaveriot.integration.msc.service;
 
+import com.milesight.beaveriot.base.enums.ErrorCode;
+import com.milesight.beaveriot.base.exception.ServiceException;
 import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
 import com.milesight.beaveriot.context.integration.model.ExchangePayload;
 import com.milesight.beaveriot.context.security.TenantContext;
@@ -7,6 +9,9 @@ import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
 import com.milesight.beaveriot.eventbus.api.Event;
 import com.milesight.beaveriot.integration.msc.entity.MscConnectionPropertiesEntities;
 import com.milesight.beaveriot.integration.msc.model.IntegrationStatus;
+import com.milesight.beaveriot.pubsub.MessagePubSub;
+import com.milesight.beaveriot.pubsub.api.annotation.MessageListener;
+import com.milesight.beaveriot.pubsub.api.message.RemoteBroadcastMessage;
 import com.milesight.msc.sdk.MscClient;
 import com.milesight.msc.sdk.config.Credentials;
 import lombok.*;
@@ -24,29 +29,55 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MscConnectionService implements IMscClientProvider {
 
     private static final String OPENAPI_STATUS_KEY = MscConnectionPropertiesEntities.getKey(MscConnectionPropertiesEntities.Fields.openapiStatus);
-
+    private final Map<String, MscClient> tenantIdToMscClient = new ConcurrentHashMap<>();
     @Autowired
     private EntityValueServiceProvider entityValueServiceProvider;
-
-    private final Map<String, MscClient> tenantIdToMscClient = new ConcurrentHashMap<>();
+    @Autowired
+    private MessagePubSub messagePubSub;
 
     @EventSubscribe(payloadKeyExpression = "msc-integration.integration.openapi.*")
     public void onOpenapiPropertiesUpdate(Event<MscConnectionPropertiesEntities.Openapi> event) {
         val tenantId = TenantContext.getTenantId();
-        if (isConfigChanged(event)) {
-            val openapiSettings = event.getPayload();
-            initConnection(tenantId, openapiSettings);
-            entityValueServiceProvider.saveValuesAndPublishSync(new ExchangePayload(Map.of(OPENAPI_STATUS_KEY, IntegrationStatus.NOT_READY.name())));
+        val openapiSettings = event.getPayload();
+        val configChanged = isConfigChanged(event);
+        if (configChanged) {
+            initConnection(tenantId, openapiSettings.getServerUrl(), openapiSettings.getClientId(), openapiSettings.getClientSecret());
+            updateConnectionStatus(IntegrationStatus.NOT_READY);
         }
         testConnection(tenantId);
+
+        messagePubSub.publishAfterCommit(MscClientUpdateEvent.builder()
+                .tenantId(tenantId)
+                .clientId(openapiSettings.getClientId())
+                .serverUrl(openapiSettings.getServerUrl())
+                .clientSecret(openapiSettings.getClientSecret())
+                .build());
     }
 
-    private void initConnection(String tenantId, MscConnectionPropertiesEntities.Openapi openapiSettings) {
+    @MessageListener
+    public void onMscClientUpdated(MscClientUpdateEvent event) {
+        val client = tenantIdToMscClient.get(event.tenantId);
+        if (client != null
+                && Objects.equals(client.getConfig().getEndpoint(), event.serverUrl)
+                && Objects.equals(client.getConfig().getCredentials().getClientId(), event.clientId)
+                && Objects.equals(client.getConfig().getCredentials().getClientSecret(), event.clientSecret)) {
+            log.debug("msc client settings have not been changed: '{}'", event.tenantId);
+            return;
+        }
+        log.info("recreate the msc client for tenant '{}'", event.tenantId);
+        initConnection(event.tenantId, event.serverUrl, event.clientId, event.clientSecret);
+    }
+
+    public void updateConnectionStatus(IntegrationStatus status) {
+        entityValueServiceProvider.saveValuesAndPublishSync(new ExchangePayload(Map.of(OPENAPI_STATUS_KEY, status.name())));
+    }
+
+    private void initConnection(String tenantId, String serverUrl, String clientId, String clientSecret) {
         tenantIdToMscClient.put(tenantId, MscClient.builder()
-                .endpoint(openapiSettings.getServerUrl())
+                .endpoint(serverUrl)
                 .credentials(Credentials.builder()
-                        .clientId(openapiSettings.getClientId())
-                        .clientSecret(openapiSettings.getClientSecret())
+                        .clientId(clientId)
+                        .clientSecret(clientSecret)
                         .build())
                 .build());
     }
@@ -55,10 +86,13 @@ public class MscConnectionService implements IMscClientProvider {
         try {
             val mscClient = tenantIdToMscClient.get(tenantId);
             mscClient.test();
-            entityValueServiceProvider.saveValuesAndPublishSync(new ExchangePayload(Map.of(OPENAPI_STATUS_KEY, IntegrationStatus.READY.name())));
+            updateConnectionStatus(IntegrationStatus.READY);
         } catch (Exception e) {
             log.error("Error occurs while testing connection", e);
-            entityValueServiceProvider.saveValuesAndPublishSync(new ExchangePayload(Map.of(OPENAPI_STATUS_KEY, IntegrationStatus.ERROR.name())));
+            updateConnectionStatus(IntegrationStatus.ERROR);
+            throw ServiceException
+                    .with(ErrorCode.SERVER_ERROR.getErrorCode(), "Connect failed.")
+                    .build();
         }
     }
 
@@ -100,17 +134,39 @@ public class MscConnectionService implements IMscClientProvider {
             val settings = entityValueServiceProvider.findValuesByKey(
                     MscConnectionPropertiesEntities.getKey(MscConnectionPropertiesEntities.Fields.openapi), MscConnectionPropertiesEntities.Openapi.class);
             if (!settings.isEmpty()) {
-                initConnection(tenantId, settings);
+                initConnection(tenantId, settings.getServerUrl(), settings.getClientId(), settings.getClientSecret());
                 testConnection(tenantId);
             }
         } catch (Exception e) {
             log.error("Error occurs while initializing connection", e);
-            entityValueServiceProvider.saveValuesAndPublishSync(new ExchangePayload(Map.of(OPENAPI_STATUS_KEY, IntegrationStatus.NOT_READY.name())));
+            updateConnectionStatus(IntegrationStatus.NOT_READY);
         }
+    }
+
+    public void disable(String tenantId) {
+        updateConnectionStatus(IntegrationStatus.NOT_READY);
+        tenantIdToMscClient.remove(tenantId);
     }
 
     public MscClient getMscClient() {
         return tenantIdToMscClient.get(TenantContext.getTenantId());
+    }
+
+    public void stop() {
+        tenantIdToMscClient.clear();
+    }
+
+    @Data
+    @ToString(callSuper = true)
+    @EqualsAndHashCode(callSuper = true)
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class MscClientUpdateEvent extends RemoteBroadcastMessage {
+        private String tenantId;
+        private String serverUrl;
+        private String clientId;
+        private String clientSecret;
     }
 
 }
