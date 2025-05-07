@@ -1,6 +1,9 @@
 package com.milesight.beaveriot.integration.msc.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.milesight.beaveriot.base.annotations.shedlock.LockScope;
+import com.milesight.beaveriot.base.enums.ErrorCode;
+import com.milesight.beaveriot.base.exception.ServiceException;
 import com.milesight.beaveriot.context.api.DeviceServiceProvider;
 import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
 import com.milesight.beaveriot.context.constants.ExchangeContextKeys;
@@ -14,11 +17,15 @@ import com.milesight.beaveriot.integration.msc.entity.MscConnectionPropertiesEnt
 import com.milesight.beaveriot.integration.msc.entity.MscServiceEntities;
 import com.milesight.beaveriot.integration.msc.model.IntegrationStatus;
 import com.milesight.beaveriot.integration.msc.util.MscTslUtils;
+import com.milesight.beaveriot.scheduler.integration.IntegrationScheduled;
 import com.milesight.cloud.sdk.client.model.DeviceDetailResponse;
 import com.milesight.cloud.sdk.client.model.DeviceSearchRequest;
+import com.milesight.msc.sdk.error.MscSdkException;
 import com.milesight.msc.sdk.utils.TimeUtils;
 import lombok.*;
 import lombok.extern.slf4j.*;
+import net.javacrumbs.shedlock.core.LockProvider;
+import net.javacrumbs.shedlock.spring.aop.ScopedLockConfiguration;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -26,11 +33,11 @@ import org.springframework.stereotype.Service;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.util.Map;
+import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -58,172 +65,80 @@ public class MscDataSyncService {
     private EntityValueServiceProvider entityValueServiceProvider;
 
     @Autowired
-    private MscTimerService mscTimerService;
+    private LockProvider lockProvider;
 
-    private final Map<String, Long> tenantIdToPeriodSecond = new ConcurrentHashMap<>();
-
-    // Only two existing tasks allowed at a time (one running and one waiting)
-    private static final ExecutorService syncAllDataExecutor = new ThreadPoolExecutor(1, 1,
-            0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(1),
-            (r, executor) -> {
-                throw new RejectedExecutionException("Another task is running.");
-            });
-
-    private static final ExecutorService concurrentSyncDeviceDataExecutor = new ThreadPoolExecutor(2, 4,
+    private final ExecutorService executor = new ThreadPoolExecutor(2, 20,
             300L, TimeUnit.SECONDS, new LinkedBlockingQueue<>());
-
-    private static final ConcurrentHashMap<String, Object> deviceIdentifierToTaskLock = new ConcurrentHashMap<>(128);
-
-    @EventSubscribe(payloadKeyExpression = "msc-integration.integration.scheduled_data_fetch.*")
-    public void onScheduledDataFetchPropertiesUpdate(Event<MscConnectionPropertiesEntities.ScheduledDataFetch> event) {
-        val tenantId = TenantContext.getTenantId();
-        if (event.getPayload().getPeriod() != null) {
-            tenantIdToPeriodSecond.put(tenantId, event.getPayload().getPeriod().longValue());
-        }
-        restart(tenantId);
-    }
 
     @EventSubscribe(payloadKeyExpression = "msc-integration.integration.openapi_status")
     public void onOpenapiStatusUpdate(Event<MscConnectionPropertiesEntities> event) {
         val status = event.getPayload().getOpenapiStatus();
         if (IntegrationStatus.READY.name().equals(status)) {
-            try {
-                val tenantId = TenantContext.getTenantId();
-                syncAllDataExecutor.submit(() -> {
-                    TenantContext.setTenantId(tenantId);
-                    this.syncDeltaData();
-                });
-            } catch (RejectedExecutionException e) {
-                log.error("Task rejected: ", e);
-            }
+            runSyncTask(true);
         }
+    }
+
+    private void updateScheduled(boolean enabled) {
+        val exchangePayload = ExchangePayload.create(
+                MscConnectionPropertiesEntities.ScheduledDataFetch.getKey(
+                        MscConnectionPropertiesEntities.ScheduledDataFetch.Fields.enabled), enabled);
+        entityValueServiceProvider.saveValuesAndPublishSync(exchangePayload);
+    }
+
+    private Future<?> runSyncTask(boolean delta) {
+        val tenantId = TenantContext.getTenantId();
+        return executor.submit(() -> {
+            TenantContext.setTenantId(tenantId);
+            val lockConfiguration = ScopedLockConfiguration.builder(LockScope.TENANT)
+                    .name("msc-integration:sync-all")
+                    .lockAtLeastFor(Duration.ofSeconds(0))
+                    .lockAtMostFor(Duration.ofMinutes(10))
+                    .throwOnLockFailure(false)
+                    .build();
+            lockProvider.lock(lockConfiguration).ifPresentOrElse(lock -> {
+                try {
+                    log.info("Fetching data from MSC");
+                    if (delta) {
+                        log.info("Only sync differential data");
+                    }
+                    syncAllDeviceData(delta);
+                } catch (Exception e) {
+                    log.error("Error occurred while retrieving data from MSC.", e);
+                    if (e instanceof MscSdkException) {
+                        throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), e.getMessage()).build();
+                    }
+                } finally {
+                    lock.unlock();
+                }
+            }, () -> {
+                log.info("Another task is running, skipping this task");
+                throw new RejectedExecutionException("Another task is running.");
+            });
+        });
     }
 
     @SneakyThrows
     @EventSubscribe(payloadKeyExpression = "msc-integration.integration.sync_device")
     public void onSyncDevice(Event<MscServiceEntities.SyncDevice> event) {
-        val tenantId = TenantContext.getTenantId();
-        syncAllDataExecutor.submit(() -> {
-            TenantContext.setTenantId(tenantId);
-            this.syncAllData();
-        }).get();
-    }
-
-
-    public void restart(String tenantId) {
-        stop(tenantId);
-        start(tenantId);
-    }
-
-    public void stop() {
-        mscTimerService.clear();
-    }
-
-    public void stop(String tenantId) {
-        mscTimerService.cancelTask(tenantId);
-        log.info("msc-integration timer stopped, tenant: '{}'", tenantId);
-    }
-
-    public void init(String tenantId) {
-        start(tenantId);
-    }
-
-    public void start(String tenantId) {
-        log.info("msc-integration timer starting, tenant: '{}'", tenantId);
-        if (mscTimerService.isScheduled(tenantId)) {
-            return;
+        val openApiStatus = entityValueServiceProvider.findValueByKey(
+                MscConnectionPropertiesEntities.getKey(MscConnectionPropertiesEntities.Fields.openapiStatus));
+        if (!IntegrationStatus.READY.name().equalsIgnoreCase(String.valueOf(openApiStatus))) {
+            throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), "Connection is not ready.").build();
         }
-        long periodSecond = tenantIdToPeriodSecond.getOrDefault(tenantId, 0L);
-        if (periodSecond == 0) {
-            val scheduledDataFetchSettings = entityValueServiceProvider.findValuesByKey(
-                    MscConnectionPropertiesEntities.getKey(MscConnectionPropertiesEntities.Fields.scheduledDataFetch),
-                    MscConnectionPropertiesEntities.ScheduledDataFetch.class);
-
-            if (scheduledDataFetchSettings.isEmpty()) {
-                periodSecond = -1L;
-                tenantIdToPeriodSecond.put(tenantId, periodSecond);
-                return;
-            }
-
-            if (!Boolean.TRUE.equals(scheduledDataFetchSettings.getEnabled())
-                    || scheduledDataFetchSettings.getPeriod() == null
-                    || scheduledDataFetchSettings.getPeriod() == 0) {
-                // not enabled or invalid period
-                periodSecond = -1L;
-                tenantIdToPeriodSecond.put(tenantId, periodSecond);
-            } else if (scheduledDataFetchSettings.getPeriod() > 0) {
-                periodSecond = scheduledDataFetchSettings.getPeriod();
-                tenantIdToPeriodSecond.put(tenantId, periodSecond);
-            }
-        }
-
-        if (periodSecond < 0) {
-            return;
-        }
-
-        // setup timer
-        TenantContext.getTenantId();
-        mscTimerService.scheduleTask(() -> {
-            try {
-                syncAllDataExecutor.submit(() -> {
-                    TenantContext.setTenantId(tenantId);
-                    this.syncDeltaData();
-                });
-            } catch (RejectedExecutionException e) {
-                log.error("Task rejected: ", e);
-            }
-        }, tenantId, periodSecond, periodSecond);
-
-        log.info("timer started");
+        runSyncTask(false).get();
     }
 
-    /**
-     * Pull data from MSC, all devices and part of history data which created after the last execution will be added to local storage.
-     */
-    void syncDeltaData() {
-        log.info("Fetching delta data from MSC");
-        try {
-            syncAllDeviceData(true);
-        } catch (Exception e) {
-            log.error("Error while fetching delta data from MSC", e);
-        }
+    public void disable(String tenantId) {
+        updateScheduled(false);
     }
 
-    /**
-     * Pull all devices and all history data.
-     */
-    void syncAllData() {
-        log.info("Fetching all data from MSC");
-        try {
-            syncAllDeviceData(false);
-        } catch (Exception e) {
-            log.error("Error while fetching all data from MSC", e);
-        }
-    }
-
-    private Object markDeviceTaskRunning(String identifier, boolean force) {
-        var lock = deviceIdentifierToTaskLock.get(identifier);
-        if (force && lock != null) {
-            return lock;
-        } else if (lock == null) {
-            lock = new Object();
-            val previous = deviceIdentifierToTaskLock.putIfAbsent(identifier, lock);
-            if (previous == null) {
-                return lock;
-            } else {
-                // put value failed
-                if (force) {
-                    return previous;
-                }
-                return null;
-            }
-        } else {
-            return null;
-        }
-    }
-
-    private void markDeviceTaskFinished(String identifier, Object lock) {
-        deviceIdentifierToTaskLock.remove(identifier, lock);
+    @IntegrationScheduled(
+            name = "msc-integration.sync",
+            fixedRateEntity = "msc-integration.integration.scheduled_data_fetch.period",
+            enabledEntity = "msc-integration.integration.scheduled_data_fetch.enabled"
+    )
+    public void scheduledSync() {
+        runSyncTask(true);
     }
 
     @SneakyThrows
@@ -307,16 +222,21 @@ public class MscDataSyncService {
     }
 
     public CompletableFuture<Boolean> syncDeviceData(Task task) {
-        // if fetching or removing data, then return
-        val lock = markDeviceTaskRunning(task.identifier, task.type == Task.Type.REMOVE_LOCAL_DEVICE);
+        val lockConfiguration = ScopedLockConfiguration.builder(LockScope.TENANT)
+                .name("msc-integration:sync-device:" + task.identifier)
+                .lockAtLeastFor(Duration.ofSeconds(0))
+                .lockAtMostFor(Duration.ofSeconds(30))
+                .throwOnLockFailure(false)
+                .build();
+        val lock = lockProvider.lock(lockConfiguration).orElse(null);
         if (lock == null) {
             log.info("Skip execution because device task is running: {}", task.identifier);
             return CompletableFuture.completedFuture(null);
         }
         val tenantId = TenantContext.getTenantId();
         return CompletableFuture.supplyAsync(() -> {
-            TenantContext.setTenantId(tenantId);
             try {
+                TenantContext.setTenantId(tenantId);
                 Device device = null;
                 switch (task.type) {
                     case ADD_LOCAL_DEVICE -> device = addLocalDevice(task);
@@ -329,16 +249,15 @@ public class MscDataSyncService {
                 if (task.type != Task.Type.REMOVE_LOCAL_DEVICE && device == null) {
                     log.warn("Add or update local device failed: {}", task.identifier);
                     return false;
-
                 }
                 return true;
             } catch (Exception e) {
                 log.error("Error while syncing local device data.", e);
                 return false;
             } finally {
-                markDeviceTaskFinished(task.identifier, lock);
+                lock.unlock();
             }
-        }, concurrentSyncDeviceDataExecutor);
+        }, executor);
     }
 
     private long getAndUpdateLastSyncTime(Device device) {
@@ -442,6 +361,9 @@ public class MscDataSyncService {
         return details;
     }
 
+    public void stop() {
+        executor.shutdownNow();
+    }
 
     public record Task(@Nonnull Type type, @Nonnull String identifier, @Nullable DeviceDetailResponse details) {
 

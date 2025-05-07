@@ -173,7 +173,7 @@ class MscTslUtilsTest extends Specification {
 
         def arrayEntity = result.get(0)
         arrayEntity.identifier == "array_value[0]"
-        arrayEntity.name == "Array Element"
+        arrayEntity.name == "Array Element - 0"
         arrayEntity.type == EntityType.PROPERTY
         arrayEntity.valueType == EntityValueType.OBJECT
 
