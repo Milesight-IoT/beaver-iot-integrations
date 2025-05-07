@@ -379,14 +379,6 @@ public class GatewayService {
         if (GatewayString.isGatewayIdentifier(device.getIdentifier())) {
             // sync gateway name to add device gateway eui list
             putAddDeviceGatewayEui(List.of(device));
-        } else {
-            // Sync name to the device in gateway
-            GatewayDeviceData deviceData = json.convertValue(device.getAdditional(), GatewayDeviceData.class);
-            String gatewayEui = deviceData.getGatewayEUI();
-            String deviceEui = deviceData.getEui();
-            Device gateway = getGatewayByEui(gatewayEui);
-            String appId = getGatewayApplicationId(gateway);
-            doUpdateGatewayDevice(gatewayEui, deviceEui, appId, Map.of(DeviceListItemFields.NAME, device.getName()));
         }
     }
 
