@@ -2,10 +2,12 @@ package com.milesight.beaveriot.integrations.milesightgateway;
 
 import com.milesight.beaveriot.context.integration.bootstrap.IntegrationBootstrap;
 import com.milesight.beaveriot.context.integration.model.Integration;
+import com.milesight.beaveriot.integrations.milesightgateway.model.DeviceModelData;
 import com.milesight.beaveriot.integrations.milesightgateway.mqtt.MsGwMqttClient;
 import com.milesight.beaveriot.integrations.milesightgateway.service.DeviceCodecService;
 import com.milesight.beaveriot.integrations.milesightgateway.service.GatewayService;
 import com.milesight.beaveriot.integrations.milesightgateway.service.MsGwEntityService;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -42,9 +44,22 @@ public class MilesightGatewayBootstrap implements IntegrationBootstrap {
     }
 
     @Override
+    @SneakyThrows
     public void onEnabled(String tenantId, Integration integrationConfig) {
         gatewayService.syncGatewayListToAddDeviceGatewayEuiList();
-        deviceCodecService.syncDeviceModelListToAdd(msGwEntityService.getModelData());
+        DeviceModelData modelData = msGwEntityService.getModelData();
+        // init model data
+        if (deviceCodecService.isModelDataEmpty(modelData)) {
+            try {
+                deviceCodecService.syncDeviceCodec();
+            } catch (InterruptedException e) {
+                throw e;
+            } catch (Exception e) {
+                log.error("Load device codecs error: " + e.getMessage());
+            }
+        } else {
+            deviceCodecService.syncDeviceModelListToAdd(msGwEntityService.getModelData());
+        }
     }
 
     @Override

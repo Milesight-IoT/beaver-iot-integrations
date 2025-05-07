@@ -38,6 +38,10 @@ public class MsGwIntegrationEntities extends ExchangePayload {
 
     public static final String SYNC_DEVICE_CODEC_KEY = Constants.INTEGRATION_ID + ".integration." + SYNC_DEVICE_CODEC_IDENTIFIER;
 
+    public static final String MODEL_REPO_URL_IDENTIFIER = "model-repo-url";
+
+    public static final String MODEL_REPO_URL_KEY = Constants.INTEGRATION_ID + ".integration." + MODEL_REPO_URL_IDENTIFIER;
+
     @Entity(type = EntityType.SERVICE, name = "Synchronize Device Codec", identifier = SYNC_DEVICE_CODEC_IDENTIFIER)
     private EmptyPayload syncDeviceCodec;
 
@@ -56,7 +60,7 @@ public class MsGwIntegrationEntities extends ExchangePayload {
     @Entity(type = EntityType.PROPERTY, name = "Device Model Data", identifier = "device-model-data", accessMod = AccessMod.R, visible = false)
     private String deviceModelData;
 
-    @Entity(type = EntityType.PROPERTY, name = "Model Repository Url", identifier = "model-repo-url", accessMod = AccessMod.RW, attributes = @Attribute(optional = true))
+    @Entity(type = EntityType.PROPERTY, name = "Model Repository Url", identifier = MODEL_REPO_URL_IDENTIFIER, accessMod = AccessMod.RW, attributes = @Attribute(optional = true))
     private String modelRepoUrl;
 
     @Data

@@ -51,9 +51,18 @@ public class DeviceCodecService {
         syncDeviceCodec();
     }
 
-    @DistributedLock(name = LockConstants.DEVICE_CODEC_INDEX_UPDATE_LOCK)
+    @EventSubscribe(payloadKeyExpression = MsGwIntegrationEntities.MODEL_REPO_URL_KEY, eventType = ExchangeEvent.EventType.UPDATE_PROPERTY)
+    public void onUpdateRepoUrl(Event<MsGwIntegrationEntities> event) throws ExecutionException, InterruptedException {
+        syncDeviceCodec(event.getPayload().getModelRepoUrl());
+    }
+
     public void syncDeviceCodec() throws ExecutionException, InterruptedException {
-        ResourceRequester resourceRequester = new ResourceRequester(msGwEntityService.getDeviceModelRepoUrl());
+        syncDeviceCodec(msGwEntityService.getDeviceModelRepoUrl());
+    }
+
+    @DistributedLock(name = LockConstants.DEVICE_CODEC_INDEX_UPDATE_LOCK)
+    public void syncDeviceCodec(String url) throws ExecutionException, InterruptedException {
+        ResourceRequester resourceRequester = new ResourceRequester(url);
         VersionResponse versionInfo = resourceRequester.requestCodecVersion();
         DeviceModelData modelData = msGwEntityService.getModelData();
         // Check whether version updated
@@ -109,11 +118,14 @@ public class DeviceCodecService {
         syncDeviceModelListToAdd(deviceModelData);
     }
 
-    public void syncDeviceModelListToAdd(DeviceModelData deviceModelData) {
-        if (deviceModelData == null
+    public boolean isModelDataEmpty(DeviceModelData deviceModelData) {
+        return deviceModelData == null
                 ||deviceModelData.getVersion() == null
-                ||deviceModelData.getVendorInfoList() == null
-        ) {
+                ||deviceModelData.getVendorInfoList() == null;
+    }
+
+    public void syncDeviceModelListToAdd(DeviceModelData deviceModelData) {
+        if (isModelDataEmpty(deviceModelData)) {
             return;
         }
 
