@@ -1,5 +1,13 @@
 package com.milesight.beaveriot.integration.msc.service;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.MapperFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.milesight.beaveriot.base.enums.ErrorCode;
 import com.milesight.beaveriot.base.exception.ServiceException;
 import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
@@ -12,16 +20,22 @@ import com.milesight.beaveriot.integration.msc.model.IntegrationStatus;
 import com.milesight.beaveriot.pubsub.MessagePubSub;
 import com.milesight.beaveriot.pubsub.api.annotation.MessageListener;
 import com.milesight.beaveriot.pubsub.api.message.RemoteBroadcastMessage;
+import com.milesight.cloud.sdk.client.retrofit2.RFC3339DateFormat;
 import com.milesight.msc.sdk.MscClient;
 import com.milesight.msc.sdk.config.Credentials;
+import com.milesight.msc.sdk.error.MscApiException;
+import com.milesight.msc.sdk.utils.LongStringNumberDeserializer;
 import lombok.*;
 import lombok.extern.slf4j.*;
+import okhttp3.ConnectionPool;
+import org.openapitools.jackson.nullable.JsonNullableModule;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 
 @Slf4j
@@ -29,6 +43,21 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MscConnectionService implements IMscClientProvider {
 
     private static final String OPENAPI_STATUS_KEY = MscConnectionPropertiesEntities.getKey(MscConnectionPropertiesEntities.Fields.openapiStatus);
+    private static final ConnectionPool HTTP_CONNECTION_POOL = new ConnectionPool(5, 65, TimeUnit.SECONDS);
+    private static final ObjectMapper OBJECT_MAPPER = JsonMapper.builder()
+            .serializationInclusion(JsonInclude.Include.NON_NULL)
+            .configure(MapperFeature.ALLOW_COERCION_OF_SCALARS, false)
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+            .configure(DeserializationFeature.FAIL_ON_INVALID_SUBTYPE, true)
+            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+            .enable(SerializationFeature.WRITE_ENUMS_USING_TO_STRING)
+            .enable(DeserializationFeature.READ_ENUMS_USING_TO_STRING)
+            .defaultDateFormat(new RFC3339DateFormat())
+            .addModule(new SimpleModule().addDeserializer(Long.class, new LongStringNumberDeserializer()))
+            .addModule(new JavaTimeModule())
+            .addModule(new JsonNullableModule())
+            .build();
+
     private final Map<String, MscClient> tenantIdToMscClient = new ConcurrentHashMap<>();
     @Autowired
     private EntityValueServiceProvider entityValueServiceProvider;
@@ -74,6 +103,8 @@ public class MscConnectionService implements IMscClientProvider {
 
     private void initConnection(String tenantId, String serverUrl, String clientId, String clientSecret) {
         tenantIdToMscClient.put(tenantId, MscClient.builder()
+                .objectMapper(OBJECT_MAPPER)
+                .httpConnectionPool(HTTP_CONNECTION_POOL)
                 .endpoint(serverUrl)
                 .credentials(Credentials.builder()
                         .clientId(clientId)
@@ -90,8 +121,12 @@ public class MscConnectionService implements IMscClientProvider {
         } catch (Exception e) {
             log.error("Error occurs while testing connection", e);
             updateConnectionStatus(IntegrationStatus.ERROR);
+            var errorMessage = "Connection failed.";
+            if (e instanceof MscApiException) {
+                errorMessage = errorMessage + " Response: " + e.getMessage();
+            }
             throw ServiceException
-                    .with(ErrorCode.SERVER_ERROR.getErrorCode(), "Connect failed.")
+                    .with(ErrorCode.SERVER_ERROR.getErrorCode(), errorMessage)
                     .build();
         }
     }
