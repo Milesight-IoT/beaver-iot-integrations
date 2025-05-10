@@ -117,7 +117,10 @@ public class MscConnectionService implements IMscClientProvider {
         try {
             val mscClient = tenantIdToMscClient.get(tenantId);
             mscClient.test();
-            updateConnectionStatus(IntegrationStatus.READY);
+            val currentStatus = entityValueServiceProvider.findValueByKey(OPENAPI_STATUS_KEY);
+            if (!IntegrationStatus.READY.name().equalsIgnoreCase(String.valueOf(currentStatus))) {
+                updateConnectionStatus(IntegrationStatus.READY);
+            }
         } catch (Exception e) {
             log.error("Error occurs while testing connection", e);
             updateConnectionStatus(IntegrationStatus.ERROR);

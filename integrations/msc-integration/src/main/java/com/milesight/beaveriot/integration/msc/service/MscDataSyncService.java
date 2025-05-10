@@ -1,6 +1,7 @@
 package com.milesight.beaveriot.integration.msc.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.milesight.beaveriot.base.annotations.shedlock.DistributedLock;
 import com.milesight.beaveriot.base.annotations.shedlock.LockScope;
 import com.milesight.beaveriot.base.enums.ErrorCode;
 import com.milesight.beaveriot.base.exception.ServiceException;
@@ -66,6 +67,10 @@ public class MscDataSyncService {
 
     @Autowired
     private LockProvider lockProvider;
+
+    @Lazy
+    @Autowired
+    private MscDataSyncService self;
 
     private final ExecutorService executor = new ThreadPoolExecutor(2, 20,
             300L, TimeUnit.SECONDS, new LinkedBlockingQueue<>());
@@ -298,7 +303,7 @@ public class MscDataSyncService {
                 val objectMapper = mscClientProvider.getMscClient().getObjectMapper();
                 val properties = objectMapper.convertValue(item.getProperties(), JsonNode.class);
                 val timestamp = item.getTs() != null ? item.getTs() : TimeUtils.currentTimeMillis();
-                saveHistoryData(device.getKey(), null, properties, timestamp, isLatestData.get());
+                self.saveHistoryData(device.getKey(), null, properties, timestamp, isLatestData.get());
                 if (isLatestData.get()) {
                     isLatestData.set(false);
                 }
@@ -306,6 +311,7 @@ public class MscDataSyncService {
         }
     }
 
+    @DistributedLock(name = "msc-integration:saveHistoryData(#{#p0},#{#p3})", waitForLock = "5s")
     public void saveHistoryData(String deviceKey, String eventId, JsonNode data, long timestampMs, boolean isLatestData) {
         val payload = eventId == null
                 ? MscTslUtils.convertJsonNodeToExchangePayload(deviceKey, data)
@@ -314,6 +320,15 @@ public class MscDataSyncService {
             return;
         }
         payload.setTimestamp(timestampMs);
+
+        val existingKeys = entityValueServiceProvider.existHistoryRecord(payload.keySet(), timestampMs);
+        log.debug("Existing keys: {}, ts: {}", existingKeys, timestampMs);
+        payload.entrySet().removeIf(entry -> existingKeys.contains(entry.getKey()));
+        if (payload.isEmpty()) {
+            log.debug("Nothing updated: {}, {}", deviceKey, eventId);
+            return;
+        }
+
         log.debug("Save device history data: {}", payload);
         if (!isLatestData) {
             entityValueServiceProvider.saveHistoryRecord(payload, payload.getTimestamp());
