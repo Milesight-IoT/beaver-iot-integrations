@@ -25,8 +25,6 @@ public class GatewayData {
 
     private String clientId;
 
-    private Map<String, String> profile;
-
     public void setEui(String eui) {
         this.eui = GatewayString.standardizeEUI(eui);
     }

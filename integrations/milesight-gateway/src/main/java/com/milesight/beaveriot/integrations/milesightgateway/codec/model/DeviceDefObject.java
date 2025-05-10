@@ -1,6 +1,6 @@
 package com.milesight.beaveriot.integrations.milesightgateway.codec.model;
 
-import lombok.AllArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonEnumDefaultValue;
 import lombok.Data;
 
 import java.util.List;
@@ -40,6 +40,9 @@ public class DeviceDefObject {
     // private List<String> reference;
 
     public enum ACCESS_MODE {
-        R, RW, W
+        R, RW, W,
+
+        @JsonEnumDefaultValue
+        NONE
     }
 }

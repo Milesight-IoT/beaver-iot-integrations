@@ -121,7 +121,7 @@ public class SyncGatewayDeviceService {
     @DistributedLock(name = LockConstants.SYNC_GATEWAY_DEVICE_LOCK)
     public void syncGatewayDevice(String gatewayEui, SyncGatewayDeviceRequest request) {
         // check connection of gateway. In case a large number of doomed-to-fail requests were sent.
-        gatewayRequester.requestDeviceList(gatewayEui, 0, 0, null);
+        gatewayRequester.requestDeviceList(gatewayEui, 0, 1, null);
 
         Device gateway = gatewayService.getGatewayByEui(gatewayEui);
         String applicationId = gatewayService.getGatewayApplicationId(gateway);

@@ -12,7 +12,10 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
  * @date 2025/2/27
  */
 public class ResourceString {
-    private static final ObjectMapper JSON = JsonMapper.builder().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false).build();
+    private static final ObjectMapper JSON = JsonMapper.builder()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+            .configure(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_USING_DEFAULT_VALUE, true)
+            .build();
 
     static {
         JSON.setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
