@@ -21,6 +21,9 @@ import com.milesight.beaveriot.integrations.milesightgateway.entity.MsGwIntegrat
 import com.milesight.beaveriot.integrations.milesightgateway.codec.DeviceHelper;
 import com.milesight.beaveriot.integrations.milesightgateway.model.*;
 import com.milesight.beaveriot.integrations.milesightgateway.model.api.AddDeviceRequest;
+import com.milesight.beaveriot.integrations.milesightgateway.model.api.DeviceListProfileItem;
+import com.milesight.beaveriot.integrations.milesightgateway.model.api.DeviceListResponse;
+import com.milesight.beaveriot.integrations.milesightgateway.mqtt.model.MqttResponse;
 import com.milesight.beaveriot.integrations.milesightgateway.util.Constants;
 import com.milesight.beaveriot.integrations.milesightgateway.util.GatewayRequester;
 import com.milesight.beaveriot.integrations.milesightgateway.util.GatewayString;
@@ -82,7 +85,7 @@ public class DeviceService {
 
         deviceData.setGatewayEUI(gatewayEUI);
 
-        gatewayRequester.requestDeviceList(gatewayEUI, 0, 0, null);
+        MqttResponse<DeviceListResponse> deviceListResponseMqttResponse = gatewayRequester.requestDeviceList(gatewayEUI, 0, 1, null);
 
         // get device model
         String deviceModelId = addDevice.getDeviceModel();
@@ -118,13 +121,19 @@ public class DeviceService {
         addDeviceRequest.setSkipFCntCheck(!addDevice.getFrameCounterValidation());
         addDeviceRequest.setApplicationID(gatewayData.getApplicationId());
         String profileName = codecData.getResourceInfo().getDeviceProfile().get(0);
-        String profileId = gatewayData.getProfile().get(profileName);
-        if (profileId == null) {
+
+        Optional<DeviceListProfileItem> profileItem = deviceListResponseMqttResponse
+                .getSuccessBody()
+                .getProfileResult()
+                .stream()
+                .filter(deviceListProfileItem -> deviceListProfileItem.getProfileName().equals(profileName))
+                .findFirst();
+        if (profileItem.isEmpty()) {
             throw ServiceException.with(ErrorCode.PARAMETER_VALIDATION_FAILED.getErrorCode(), "Unknown Profile " + profileName + " for Gateway " + gatewayEUI).build();
         }
+        addDeviceRequest.setProfileID(profileItem.get().getProfileID());
 
         manageGatewayDevices(gatewayEUI, deviceEUI, GatewayDeviceOperation.ADD);
-        addDeviceRequest.setProfileID(profileId);
         try {
             gatewayRequester.requestAddDevice(gatewayEUI, addDeviceRequest);
             deviceServiceProvider.save(device);

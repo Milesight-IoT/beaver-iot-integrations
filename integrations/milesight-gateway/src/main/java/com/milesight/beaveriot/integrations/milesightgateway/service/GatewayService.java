@@ -126,7 +126,7 @@ public class GatewayService {
     public ConnectionValidateResponse validateGatewayConnection(String eui, String credentialId) {
         validateGatewayInfo(eui);
         ConnectionValidateResponse result = new ConnectionValidateResponse();
-        MqttResponse<DeviceListResponse> response = gatewayRequester.requestDeviceList(eui, 0, 0, null);
+        MqttResponse<DeviceListResponse> response = gatewayRequester.requestDeviceList(eui, 0, 1, null);
         DeviceListResponse responseData = response.getSuccessBody();
         if (ObjectUtils.isEmpty(responseData.getAppResult())) {
             throw ServiceException.with(ErrorCode.PARAMETER_VALIDATION_FAILED.getErrorCode(), "Empty applications.").build();
@@ -134,10 +134,6 @@ public class GatewayService {
 
         if (ObjectUtils.isEmpty(responseData.getProfileResult())) {
             throw ServiceException.with(ErrorCode.PARAMETER_VALIDATION_FAILED.getErrorCode(), "Empty profiles.").build();
-        }
-
-        if (!responseData.getProfileResult().stream().map(DeviceListProfileItem::getProfileName).collect(Collectors.toSet()).containsAll(Constants.AVAILABLE_PROFILES)) {
-            throw ServiceException.with(ErrorCode.PARAMETER_VALIDATION_FAILED.getErrorCode(), "Gateway profiles must contains " + Constants.AVAILABLE_PROFILES).build();
         }
 
         result.setAppResult(responseData.getAppResult());
@@ -218,22 +214,6 @@ public class GatewayService {
             throw ServiceException.with(ErrorCode.PARAMETER_VALIDATION_FAILED.getErrorCode(), "Invalid Client Id: " + request.getClientId()).build();
         }
 
-        // check profile
-        Map<String, String> profileMap = new HashMap<>();
-        Constants.AVAILABLE_PROFILES.forEach(profile -> {
-            Optional<DeviceListProfileItem> profileItem = validateResult
-                    .getProfileResult()
-                    .stream()
-                    .filter(pr -> pr.getProfileName().equals(profile))
-                    .findFirst();
-            if (profileItem.isEmpty()) {
-                throw ServiceException.with(ErrorCode.PARAMETER_VALIDATION_FAILED.getErrorCode(), "Profile " + profile + " not supported by gateway: " + newGatewayData.getEui()).build();
-            }
-
-            profileMap.put(profile, profileItem.get().getProfileID());
-        });
-        newGatewayData.setProfile(profileMap);
-
         // check duplicate
         Map<String, List<String>> gatewayRelation = msGwEntityService.getGatewayRelation();
 
@@ -294,7 +274,7 @@ public class GatewayService {
             String gatewayEui = entry.getKey();
             try {
                 // check if the gateway is connected.
-                gatewayRequester.requestDeviceList(gatewayEui, 0, 0, null);
+                gatewayRequester.requestDeviceList(gatewayEui, 0, 1, null);
                 // delete devices
                 gatewayRequester.requestDeleteDevice(gatewayEui, entry.getValue());
             } catch (Exception e) {

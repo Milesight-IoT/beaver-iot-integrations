@@ -25,6 +25,8 @@ public class ResourceConstant {
 
     public static final String ENTITY_LEVEL_SEPARATOR = "#";
 
+    public static final int JSON_REQUEST_CONNECTION_TIMEOUT = 3000;
+
     public static String getEntityArraySeparator(int index) {
         return "[" + index + "]";
     }

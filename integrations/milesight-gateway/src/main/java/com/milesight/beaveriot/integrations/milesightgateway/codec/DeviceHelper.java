@@ -237,17 +237,20 @@ public class DeviceHelper {
     }
 
     private static void buildEntity(DeviceDefObject deviceDefObject, EntityBuilder eb) {
-        DeviceDefObject.ACCESS_MODE accessMode = deviceDefObject.getAccessMode();
+        DeviceDefObject.ACCESS_MODE accessMode = Optional
+                .ofNullable(deviceDefObject.getAccessMode())
+                .orElse(DeviceDefObject.ACCESS_MODE.NONE);
 
-        // Build Type.
-        if (accessMode == DeviceDefObject.ACCESS_MODE.RW
-                || accessMode == DeviceDefObject.ACCESS_MODE.R
-        ) {
-            eb.property(deviceDefObject.getName(), accessMode == DeviceDefObject.ACCESS_MODE.RW ? AccessMod.RW : AccessMod.R);
-        } else if (accessMode == DeviceDefObject.ACCESS_MODE.W) {
-            eb.service(deviceDefObject.getName());
-        } else {
-            eb.event(deviceDefObject.getName());
+        switch (accessMode) {
+            case R, RW:
+                eb.property(deviceDefObject.getName(), accessMode == DeviceDefObject.ACCESS_MODE.RW ? AccessMod.RW : AccessMod.R);
+                break;
+            case W:
+                eb.service(deviceDefObject.getName());
+                break;
+            case NONE:
+                eb.event(deviceDefObject.getName());
+                break;
         }
 
         // Build Value Type

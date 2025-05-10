@@ -9,11 +9,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
+import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
@@ -53,10 +51,16 @@ public class ResourceRequester {
         }
     }
 
+    private InputStream getUrlInputStream(String url) throws IOException {
+        HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
+        connection.setConnectTimeout(ResourceConstant.JSON_REQUEST_CONNECTION_TIMEOUT);
+        return connection.getInputStream();
+    }
+
     private <T> T requestJsonResource(String resourcePath, Class<T> clazz) {
         String requestUrl = this.joinUrl(this.repoUrl, resourcePath);
         try {
-            return json.readValue(new URL(requestUrl), clazz);
+            return json.readValue(getUrlInputStream(requestUrl), clazz);
         } catch (Exception e) {
             throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), "Request json error from " + requestUrl + " : " + e.getMessage()).build();
         }
@@ -64,15 +68,9 @@ public class ResourceRequester {
 
     public String requestJsonResource(String resourcePath) {
         String requestUrlStr = this.joinUrl(this.repoUrl, resourcePath);
-        URL requestUrl;
-        try {
-            requestUrl = new URL(requestUrlStr);
-        } catch (MalformedURLException e) {
-            throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), "Invalid Url: " + requestUrlStr).build();
-        }
-
         try (
-                InputStream inputStream = requestUrl.openStream();
+
+                InputStream inputStream = getUrlInputStream(requestUrlStr);
                 ByteArrayOutputStream result = new ByteArrayOutputStream();
         ) {
             byte[] buffer = new byte[8192];
@@ -83,7 +81,7 @@ public class ResourceRequester {
 
             return result.toString(StandardCharsets.UTF_8);
         } catch (Exception e) {
-            throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), "Request json error from " + requestUrl + " : " + e.getMessage()).build();
+            throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), "Request json error from " + requestUrlStr + " : " + e.getMessage()).build();
         }
     }
 
