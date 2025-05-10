@@ -1,5 +1,6 @@
 package com.milesight.beaveriot.integration.msc.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.milesight.beaveriot.base.enums.ErrorCode;
 import com.milesight.beaveriot.base.exception.ServiceException;
 import com.milesight.beaveriot.context.api.DeviceServiceProvider;
@@ -86,11 +87,18 @@ public class MscDeviceService {
         if (serviceGroups.isEmpty()) {
             return;
         }
-        serviceGroups.forEach((serviceId, serviceProperties) ->
-                mscClientProvider.getMscClient().device().callService(deviceId, TslServiceCallRequest.builder()
+        serviceGroups.forEach((serviceId, serviceProperties) -> callService(deviceId, serviceId, serviceProperties));
+    }
+
+    @SneakyThrows
+    private void callService(String deviceId, String serviceId, JsonNode serviceProperties) {
+        mscClientProvider.getMscClient()
+                .device()
+                .callService(deviceId, TslServiceCallRequest.builder()
                         .serviceId(serviceId)
                         .inputs(serviceProperties)
-                        .build()));
+                        .build())
+                .execute();
     }
 
     @SneakyThrows
