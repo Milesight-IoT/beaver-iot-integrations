@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <version>1.1.0-SNAPSHOT</version>
+    <version>${revision}</version>
     <groupId>com.milesight.beaveriot.integrations</groupId>
     <artifactId>beaver-iot-integrations</artifactId>
     <packaging>pom</packaging>
@@ -37,10 +37,10 @@
     </modules>
 
     <properties>
+        <beaver-iot.version>1.1.0</beaver-iot.version>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <beaver-iot.version>1.1.0-SNAPSHOT</beaver-iot.version>
         <deploy.skip>false</deploy.skip>
     </properties>
 
@@ -49,7 +49,7 @@
             <dependency>
                 <groupId>com.milesight.beaveriot</groupId>
                 <artifactId>beaver-iot-parent</artifactId>
-                <version>${beaver-iot.version}</version>
+                <version>${project.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -58,6 +58,31 @@
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>flatten-maven-plugin</artifactId>
+                <version>1.2.7</version>
+                <configuration>
+                    <flattenMode>resolveCiFriendliesOnly</flattenMode>
+                    <updatePomFile>true</updatePomFile>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>flatten</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>flatten</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>flatten-clean</id>
+                        <phase>clean</phase>
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
@@ -98,9 +123,9 @@
     <profiles>
         <profile>
             <id>release</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
+            <properties>
+                <revision>${beaver-iot.version}</revision>
+            </properties>
             <build>
                 <plugins>
                     <plugin>
@@ -135,6 +160,12 @@
         </profile>
         <profile>
             <id>snapshot</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <revision>${beaver-iot.version}-SNAPSHOT</revision>
+            </properties>
             <build>
                 <plugins>
                     <plugin>
