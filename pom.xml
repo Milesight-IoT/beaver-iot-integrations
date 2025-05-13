@@ -171,6 +171,9 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-deploy-plugin</artifactId>
+                        <configuration>
+                            <skip>${deploy.skip}</skip>
+                        </configuration>
                         <executions>
                             <execution>
                                 <id>default-deploy</id>
