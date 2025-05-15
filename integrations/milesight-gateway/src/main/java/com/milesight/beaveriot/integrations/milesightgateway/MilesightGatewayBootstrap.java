@@ -47,7 +47,7 @@ public class MilesightGatewayBootstrap implements IntegrationBootstrap {
     @SneakyThrows
     public void onEnabled(String tenantId, Integration integrationConfig) {
         gatewayService.syncGatewayListToAddDeviceGatewayEuiList();
-        DeviceModelData modelData = msGwEntityService.getModelData();
+        DeviceModelData modelData = msGwEntityService.getDeviceModelData();
         // init model data
         if (deviceCodecService.isModelDataEmpty(modelData)) {
             try {
@@ -58,7 +58,7 @@ public class MilesightGatewayBootstrap implements IntegrationBootstrap {
                 log.error("Load device codecs error: " + e.getMessage());
             }
         } else {
-            deviceCodecService.syncDeviceModelListToAdd(msGwEntityService.getModelData());
+            deviceCodecService.syncDeviceModelListToAdd(msGwEntityService.getDeviceModelData());
         }
     }
 

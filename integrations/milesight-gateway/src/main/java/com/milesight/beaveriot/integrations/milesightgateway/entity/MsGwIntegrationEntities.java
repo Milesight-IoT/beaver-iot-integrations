@@ -42,6 +42,14 @@ public class MsGwIntegrationEntities extends ExchangePayload {
 
     public static final String MODEL_REPO_URL_KEY = Constants.INTEGRATION_ID + ".integration." + MODEL_REPO_URL_IDENTIFIER;
 
+    public static final String GATEWAY_DEVICE_RELATION_IDENTIFIER = "gateway-device-relation";
+
+    public static final String GATEWAY_DEVICE_RELATION_KEY = Constants.INTEGRATION_ID + ".integration." + GATEWAY_DEVICE_RELATION_IDENTIFIER;
+
+    public static final String DEVICE_MODEL_DATA_IDENTIFIER = "device-model-data";
+
+    public static final String DEVICE_MODEL_DATA_KEY = Constants.INTEGRATION_ID + ".integration." + DEVICE_MODEL_DATA_IDENTIFIER;
+
     @Entity(type = EntityType.SERVICE, name = "Synchronize Device Codec", identifier = SYNC_DEVICE_CODEC_IDENTIFIER)
     private EmptyPayload syncDeviceCodec;
 
@@ -54,10 +62,10 @@ public class MsGwIntegrationEntities extends ExchangePayload {
     @Entity(type = EntityType.EVENT, name = "Gateway Status Event", identifier = "gateway-status-event")
     private GatewayStatusEvent gatewayStatusEvent;
 
-    @Entity(type = EntityType.PROPERTY, name = "Gateway Device Relation", identifier = "gateway-device-relation", accessMod = AccessMod.R, visible = false)
+    @Entity(type = EntityType.PROPERTY, name = "Gateway Device Relation", identifier = GATEWAY_DEVICE_RELATION_IDENTIFIER, accessMod = AccessMod.R, visible = false)
     private String gatewayDeviceRelation;
 
-    @Entity(type = EntityType.PROPERTY, name = "Device Model Data", identifier = "device-model-data", accessMod = AccessMod.R, visible = false)
+    @Entity(type = EntityType.PROPERTY, name = "Device Model Data", identifier = DEVICE_MODEL_DATA_IDENTIFIER, accessMod = AccessMod.R, visible = false)
     private String deviceModelData;
 
     @Entity(type = EntityType.PROPERTY, name = "Model Repository Url", identifier = MODEL_REPO_URL_IDENTIFIER, accessMod = AccessMod.RW, attributes = @Attribute(optional = true))
