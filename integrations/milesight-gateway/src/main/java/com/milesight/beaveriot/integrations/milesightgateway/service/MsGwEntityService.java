@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.milesight.beaveriot.base.enums.ErrorCode;
 import com.milesight.beaveriot.base.exception.ServiceException;
 import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
+import com.milesight.beaveriot.context.integration.model.ExchangePayload;
 import com.milesight.beaveriot.context.integration.wrapper.AnnotatedEntityWrapper;
 import com.milesight.beaveriot.integrations.milesightgateway.codec.ResourceConstant;
 import com.milesight.beaveriot.integrations.milesightgateway.entity.MsGwIntegrationEntities;
@@ -68,13 +69,26 @@ public class MsGwEntityService {
     public void saveGatewayRelation(Map<String, List<String>> gatewayRelation) {
         try {
             String relStr = json.writeValueAsString(gatewayRelation);
-            new AnnotatedEntityWrapper<MsGwIntegrationEntities>().saveValue(MsGwIntegrationEntities::getGatewayDeviceRelation, relStr);
+            entityValueServiceProvider.saveLatestValues(ExchangePayload.create(Map.of(
+                    MsGwIntegrationEntities.GATEWAY_DEVICE_RELATION_KEY, relStr
+            )));
         } catch (Exception e) {
             throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), "Save relation error: " + e.getMessage()).build();
         }
     }
 
-    public DeviceModelData getModelData() {
+    public void saveDeviceModelData(DeviceModelData deviceModelData) {
+        try {
+            entityValueServiceProvider.saveLatestValues(ExchangePayload.create(Map.of(
+                    MsGwIntegrationEntities.DEVICE_MODEL_DATA_KEY, ResourceString.jsonInstance().writeValueAsString(deviceModelData)
+            )));
+        } catch (Exception e) {
+            throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), "Save device model error: " + e.getMessage()).build();
+        }
+    }
+
+
+    public DeviceModelData getDeviceModelData() {
         AnnotatedEntityWrapper<MsGwIntegrationEntities> gatewayEntitiesWrapper = new AnnotatedEntityWrapper<>();
         String modelDataStr = (String) gatewayEntitiesWrapper.getValue(MsGwIntegrationEntities::getDeviceModelData).orElse("{}");
         try {

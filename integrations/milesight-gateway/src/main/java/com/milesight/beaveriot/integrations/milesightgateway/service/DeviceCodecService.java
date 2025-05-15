@@ -8,7 +8,6 @@ import com.milesight.beaveriot.context.api.EntityServiceProvider;
 import com.milesight.beaveriot.context.integration.model.AttributeBuilder;
 import com.milesight.beaveriot.context.integration.model.Entity;
 import com.milesight.beaveriot.context.integration.model.event.ExchangeEvent;
-import com.milesight.beaveriot.context.integration.wrapper.AnnotatedEntityWrapper;
 import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
 import com.milesight.beaveriot.eventbus.api.Event;
 import com.milesight.beaveriot.integrations.milesightgateway.entity.MsGwIntegrationEntities;
@@ -18,7 +17,6 @@ import com.milesight.beaveriot.integrations.milesightgateway.model.DeviceModelDa
 import com.milesight.beaveriot.integrations.milesightgateway.codec.ResourceRequester;
 import com.milesight.beaveriot.integrations.milesightgateway.codec.ResourceString;
 import com.milesight.beaveriot.integrations.milesightgateway.util.LockConstants;
-import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -64,7 +62,7 @@ public class DeviceCodecService {
     public void syncDeviceCodec(String url) throws ExecutionException, InterruptedException {
         ResourceRequester resourceRequester = new ResourceRequester(url);
         VersionResponse versionInfo = resourceRequester.requestCodecVersion();
-        DeviceModelData modelData = msGwEntityService.getModelData();
+        DeviceModelData modelData = msGwEntityService.getDeviceModelData();
         // Check whether version updated
         if (Objects.equals(modelData.getVersion(), versionInfo.getVersion()) && Objects.equals(modelData.getSource(), resourceRequester.getRepoUrl())) {
             log.info("Ignore update. Have been in the latest version: " + versionInfo.getVersion());
@@ -96,7 +94,6 @@ public class DeviceCodecService {
 
     private void saveDeviceCodecsToEntity(String version, String repoUrl, List<Vendor> vendors, Map<String, List<DeviceModelData.DeviceInfo>> vendorDevices) {
         // save to deviceModelData of integration entities
-        AnnotatedEntityWrapper<MsGwIntegrationEntities> gatewayEntitiesWrapper = new AnnotatedEntityWrapper<>();
         DeviceModelData deviceModelData = new DeviceModelData();
         deviceModelData.setVersion(version);
         deviceModelData.setSource(repoUrl);
@@ -108,11 +105,7 @@ public class DeviceCodecService {
             vendorInfo.setDeviceInfoList(vendorDevices.get(vendor.getId()));
             return vendorInfo;
         }).toList());
-        try {
-            gatewayEntitiesWrapper.saveValue(MsGwIntegrationEntities::getDeviceModelData, json.writeValueAsString(deviceModelData));
-        } catch (Exception e) {
-            throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), "Save device model data.").build();
-        }
+        msGwEntityService.saveDeviceModelData(deviceModelData);
 
         // save to deviceModel enum attribute in add device of integration entities
         syncDeviceModelListToAdd(deviceModelData);
@@ -150,7 +143,7 @@ public class DeviceCodecService {
         Set<String> deviceModelSet = new HashSet<>(vendorDeviceIdList);
         Map<String, DeviceModelData.VendorDeviceInfo> deviceModelMap = new HashMap<>();
         Map<String, String> vendorResourceMap = new HashMap<>();
-        msGwEntityService.getModelData().iterateWhen((vendorInfo, deviceInfo) -> {
+        msGwEntityService.getDeviceModelData().iterateWhen((vendorInfo, deviceInfo) -> {
             String deviceModelId = DeviceModelData.getDeviceModelId(vendorInfo, deviceInfo);
             if (deviceModelSet.remove(deviceModelId)) {
                 deviceModelMap.put(deviceModelId, new DeviceModelData.VendorDeviceInfo(vendorInfo, deviceInfo));

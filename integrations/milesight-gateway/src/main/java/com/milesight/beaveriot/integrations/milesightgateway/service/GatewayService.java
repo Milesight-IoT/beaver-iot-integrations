@@ -177,9 +177,9 @@ public class GatewayService {
     @DistributedLock(name = LockConstants.UPDATE_GATEWAY_DEVICE_ENUM_LOCK)
     private void putAddDeviceGatewayEui(List<Device> gateways) {
         Entity gatewayEuiEntity = getAddDeviceGatewayEntity();
-        Map<String, String> attrEnum = json.convertValue(gatewayEuiEntity.getAttributes().get(AttributeBuilder.ATTRIBUTE_ENUM), new TypeReference<>() {});
+        LinkedHashMap<String, String> attrEnum = json.convertValue(gatewayEuiEntity.getAttributes().get(AttributeBuilder.ATTRIBUTE_ENUM), new TypeReference<>() {});
         gateways.forEach(gateway -> attrEnum.put(getGatewayEui(gateway), gateway.getName()));
-        gatewayEuiEntity.getAttributes().put(AttributeBuilder.ATTRIBUTE_DEFAULT_VALUE, getGatewayEui(gateways.get(0)));
+        gatewayEuiEntity.getAttributes().put(AttributeBuilder.ATTRIBUTE_DEFAULT_VALUE, attrEnum.entrySet().iterator().next().getKey());
 
         gatewayEuiEntity.getAttributes().put(AttributeBuilder.ATTRIBUTE_ENUM, attrEnum);
         entityServiceProvider.save(gatewayEuiEntity);
@@ -188,11 +188,11 @@ public class GatewayService {
     @DistributedLock(name = LockConstants.UPDATE_GATEWAY_DEVICE_ENUM_LOCK)
     private void removeAddDeviceGatewayEui(List<String> gatewayEuiList) {
         Entity gatewayEuiEntity = getAddDeviceGatewayEntity();
-        Map<String, String> attrEnum = json.convertValue(gatewayEuiEntity.getAttributes().get(AttributeBuilder.ATTRIBUTE_ENUM), new TypeReference<>() {});
+        LinkedHashMap<String, String> attrEnum = json.convertValue(gatewayEuiEntity.getAttributes().get(AttributeBuilder.ATTRIBUTE_ENUM), new TypeReference<>() {});
         gatewayEuiList.forEach(eui -> attrEnum.remove(GatewayString.standardizeEUI(eui)));
         gatewayEuiEntity.getAttributes().put(AttributeBuilder.ATTRIBUTE_ENUM, attrEnum);
-        if (!gatewayEuiList.isEmpty()) {
-            gatewayEuiEntity.getAttributes().put(AttributeBuilder.ATTRIBUTE_DEFAULT_VALUE, gatewayEuiList.get(0));
+        if (!attrEnum.isEmpty()) {
+            gatewayEuiEntity.getAttributes().put(AttributeBuilder.ATTRIBUTE_DEFAULT_VALUE, attrEnum.entrySet().iterator().next().getKey());
         } else {
             gatewayEuiEntity.getAttributes().remove(AttributeBuilder.ATTRIBUTE_DEFAULT_VALUE);
         }
@@ -352,13 +352,15 @@ public class GatewayService {
     public void syncGatewayListToAddDeviceGatewayEuiList() {
         List<Device> gatwayList = getAllGateways();
         Entity addDeviceGatewayEuiEntity = getAddDeviceGatewayEntity();
-        Map<String, String> euiToNameMap = gatwayList.stream().collect(Collectors.toMap(
+        LinkedHashMap<String, String> euiToNameMap = gatwayList.stream().collect(Collectors.toMap(
                 this::getGatewayEui,
-                Device::getName
+                Device::getName,
+                (existing, replacement) -> existing,
+                LinkedHashMap::new
         ));
         addDeviceGatewayEuiEntity.getAttributes().put(AttributeBuilder.ATTRIBUTE_ENUM, euiToNameMap);
         if (!gatwayList.isEmpty()) {
-            addDeviceGatewayEuiEntity.getAttributes().put(AttributeBuilder.ATTRIBUTE_DEFAULT_VALUE, getGatewayEui(gatwayList.get(0)));
+            addDeviceGatewayEuiEntity.getAttributes().put(AttributeBuilder.ATTRIBUTE_DEFAULT_VALUE, euiToNameMap.entrySet().iterator().next().getKey());
         }
         entityServiceProvider.save(addDeviceGatewayEuiEntity);
     }
