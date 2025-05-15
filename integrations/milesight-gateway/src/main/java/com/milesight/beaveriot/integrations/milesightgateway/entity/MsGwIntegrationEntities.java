@@ -67,7 +67,7 @@ public class MsGwIntegrationEntities extends ExchangePayload {
     @EqualsAndHashCode(callSuper = true)
     @Entities
     public static class AddDevice extends ExchangePayload implements AddDeviceAware {
-        @Entity(name = "DevEUI", attributes = @Attribute(maxLength = 16, minLength = 16))
+        @Entity(name = "DevEUI", attributes = @Attribute(lengthRange = "16", format = "HEX"))
         private String eui;
 
         @Entity(name = "Model", identifier = ADD_DEVICE_GATEWAY_DEVICE_MODEL_IDENTIFIER, attributes = @Attribute(enumClass = EmptyEnum.class))
@@ -76,13 +76,13 @@ public class MsGwIntegrationEntities extends ExchangePayload {
         @Entity(name = "Gateway", identifier = ADD_DEVICE_GATEWAY_EUI_IDENTIFIER, attributes = @Attribute(enumClass = EmptyEnum.class))
         private String gatewayEUI;
 
-        @Entity(name = "fPort", identifier = "fport", attributes = @Attribute(max = 223, min = 1))
+        @Entity(name = "fPort", identifier = "fport", attributes = @Attribute(max = 223, min = 1, defaultValue = "1"))
         private Long fPort;
 
         @Entity(name = "Frame-counter Validation", identifier = "frame-counter-validation")
         private Boolean frameCounterValidation;
 
-        @Entity(name = "Application Key", identifier = "app-key", attributes = @Attribute(optional = true, minLength = 32, maxLength = 32))
+        @Entity(name = "Application Key", identifier = "app-key", attributes = @Attribute(optional = true, lengthRange = "32", format = "HEX"))
         private String appKey;
     }
 

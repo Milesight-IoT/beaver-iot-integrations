@@ -35,7 +35,7 @@ public class MscServiceEntities extends ExchangePayload {
     @Entities
     public static class AddDevice extends ExchangePayload implements AddDeviceAware {
 
-        @Entity(attributes = {@Attribute(minLength = 12, maxLength = 16)})
+        @Entity(attributes = {@Attribute(lengthRange = "12,16")})
         private String sn;
 
     }

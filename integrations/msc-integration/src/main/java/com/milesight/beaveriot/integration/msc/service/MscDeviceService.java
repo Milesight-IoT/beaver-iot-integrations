@@ -130,7 +130,7 @@ public class MscDeviceService {
                     .with(ErrorCode.SERVER_ERROR.getErrorCode(), "Integration has not been initialized yet.")
                     .build();
         }
-        val identifier = event.getPayload().getSn();
+        val identifier = event.getPayload().getSn().toUpperCase();
         val mscClient = mscClientProvider.getMscClient();
         val addDeviceResponse = mscClient.device().attach(DeviceSaveOrUpdateRequest.builder()
                         .name(deviceName)
