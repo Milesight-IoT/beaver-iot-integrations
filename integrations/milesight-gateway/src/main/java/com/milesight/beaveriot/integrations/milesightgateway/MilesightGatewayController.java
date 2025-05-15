@@ -23,6 +23,7 @@ import org.springframework.util.ObjectUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -124,7 +125,7 @@ public class MilesightGatewayController {
             item.setName(device.getName());
             item.setCreatedAt(device.getCreatedAt());
             return item;
-        }).toList());
+        }).sorted(Comparator.comparingLong(GatewayDeviceListItem::getCreatedAt).reversed()).toList());
     }
 
     @GetMapping("/gateways/{gatewayEUI}/sync-devices")
