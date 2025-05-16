@@ -1,5 +1,6 @@
 package com.milesight.beaveriot.integration.msc.service;
 
+import com.milesight.beaveriot.base.exception.ServiceException;
 import com.milesight.beaveriot.context.api.DeviceServiceProvider;
 import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
 import com.milesight.beaveriot.context.integration.model.ExchangePayload;
@@ -7,6 +8,7 @@ import com.milesight.beaveriot.context.security.TenantContext;
 import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
 import com.milesight.beaveriot.eventbus.api.Event;
 import com.milesight.beaveriot.integration.msc.constant.MscIntegrationConstants;
+import com.milesight.beaveriot.integration.msc.constant.MscWebhookErrorCode;
 import com.milesight.beaveriot.integration.msc.entity.MscConnectionPropertiesEntities;
 import com.milesight.beaveriot.integration.msc.model.IntegrationStatus;
 import com.milesight.beaveriot.integration.msc.model.WebhookPayload;
@@ -77,6 +79,7 @@ public class MscWebhookService {
             webhookContext.secretKey = secretKey;
         }
         webhookContext.enabled = true;
+        updateWebhookStatus(IntegrationStatus.READY);
     }
 
     @EventSubscribe(payloadKeyExpression = "msc-integration.integration.webhook.*")
@@ -108,21 +111,16 @@ public class MscWebhookService {
         val tenantId = TenantContext.getTenantId();
         val webhookContext = tenantIdToWebhookContext.get(tenantId);
         if (webhookContext == null || !webhookContext.enabled) {
-            log.debug("Webhook is disabled.");
-            return;
+            throw ServiceException.with(MscWebhookErrorCode.WEBHOOK_NOT_FOUND).build();
         }
 
         val currentSeconds = TimeUtils.currentTimeSeconds();
         if (Long.parseLong(requestTimestamp) + 60 < currentSeconds) {
-            log.warn("Webhook request outdated: {}", requestTimestamp);
-            markWebhookStatusAsError();
-            return;
+            throw ServiceException.with(MscWebhookErrorCode.WEBHOOK_REQUEST_EXPIRED).build();
         }
 
         if (!isSignatureValid(signature, requestTimestamp, requestNonce, webhookContext)) {
-            log.warn("Signature invalid: {}", signature);
-            markWebhookStatusAsError();
-            return;
+            throw ServiceException.with(MscWebhookErrorCode.WEBHOOK_SIGNATURE_INVALID).build();
         }
 
         webhookPayloads.forEach(webhookPayload -> {
@@ -132,9 +130,6 @@ public class MscWebhookService {
                 log.warn("Event type not found");
                 return;
             }
-
-            // webhook is ready
-            updateWebhookStatus(IntegrationStatus.READY);
 
             if ("device_data".equalsIgnoreCase(eventType)) {
                 try {
@@ -146,18 +141,6 @@ public class MscWebhookService {
                 log.debug("Ignored event type: {}", eventType);
             }
         });
-    }
-
-    /**
-     * mark as error when continuously failed to validate signature or timestamp
-     */
-    private void markWebhookStatusAsError() {
-        val tenantId = TenantContext.getTenantId();
-        val webhookContext = tenantIdToWebhookContext.get(tenantId);
-        if (webhookContext == null) {
-            return;
-        }
-        updateWebhookStatus(IntegrationStatus.ERROR);
     }
 
     private void updateWebhookStatus(@NonNull IntegrationStatus status) {
