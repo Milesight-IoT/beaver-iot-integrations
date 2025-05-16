@@ -7,6 +7,7 @@ import com.milesight.beaveriot.context.integration.model.event.ExchangeEvent;
 import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
 import com.milesight.beaveriot.eventbus.api.Event;
 import com.milesight.beaveriot.integrations.mqttdevice.entity.MqttDeviceIntegrationEntities;
+import com.milesight.beaveriot.integrations.mqttdevice.support.DataCenter;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
@@ -18,19 +19,18 @@ import java.util.Map;
 @Service
 public class MqttDeviceService {
     private final DeviceServiceProvider deviceServiceProvider;
-    public static final String INTEGRATION_ID = "mqtt-device";
 
     public MqttDeviceService(DeviceServiceProvider deviceServiceProvider) {
         this.deviceServiceProvider = deviceServiceProvider;
     }
 
-    @EventSubscribe(payloadKeyExpression = INTEGRATION_ID + ".integration." + MqttDeviceIntegrationEntities.ADD_DEVICE_IDENTIFIER + ".*", eventType = ExchangeEvent.EventType.CALL_SERVICE)
+    @EventSubscribe(payloadKeyExpression = DataCenter.INTEGRATION_ID + ".integration." + MqttDeviceIntegrationEntities.ADD_DEVICE_IDENTIFIER + ".*", eventType = ExchangeEvent.EventType.CALL_SERVICE)
     public void onAddDevice(Event<MqttDeviceIntegrationEntities.AddDevice> event) {
         MqttDeviceIntegrationEntities.AddDevice addDevice = event.getPayload();
         String deviceName = addDevice.getAddDeviceName();
         Long deviceTemplateId = addDevice.getAddDeviceTemplateId();
         String deviceId = event.getPayload().getDeviceId();
-        Device device = new DeviceBuilder(INTEGRATION_ID)
+        Device device = new DeviceBuilder(DataCenter.INTEGRATION_ID)
                 .name(deviceName)
                 .templateId(deviceTemplateId)
                 .identifier(deviceId)
@@ -40,7 +40,7 @@ public class MqttDeviceService {
         deviceServiceProvider.save(device);
     }
 
-    @EventSubscribe(payloadKeyExpression = INTEGRATION_ID + ".integration." + MqttDeviceIntegrationEntities.DELETE_DEVICE_IDENTIFIER, eventType = ExchangeEvent.EventType.CALL_SERVICE)
+    @EventSubscribe(payloadKeyExpression = DataCenter.INTEGRATION_ID + ".integration." + MqttDeviceIntegrationEntities.DELETE_DEVICE_IDENTIFIER, eventType = ExchangeEvent.EventType.CALL_SERVICE)
     public void onDeleteDevice(Event<MqttDeviceIntegrationEntities.DeleteDevice> event) {
         Device device = event.getPayload().getDeletedDevice();
         deviceServiceProvider.deleteById(device.getId());
