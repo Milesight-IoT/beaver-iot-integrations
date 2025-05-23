@@ -7,10 +7,12 @@ import com.milesight.beaveriot.base.annotations.shedlock.DistributedLock;
 import com.milesight.beaveriot.base.enums.ErrorCode;
 import com.milesight.beaveriot.base.exception.ServiceException;
 import com.milesight.beaveriot.context.api.DeviceServiceProvider;
+import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
 import com.milesight.beaveriot.context.integration.enums.EntityValueType;
 import com.milesight.beaveriot.context.integration.model.Device;
 import com.milesight.beaveriot.context.integration.model.DeviceBuilder;
 import com.milesight.beaveriot.context.integration.model.Entity;
+import com.milesight.beaveriot.context.integration.model.ExchangePayload;
 import com.milesight.beaveriot.context.integration.model.event.ExchangeEvent;
 import com.milesight.beaveriot.context.integration.wrapper.EntityWrapper;
 import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
@@ -56,6 +58,9 @@ public class DeviceService {
 
     @Autowired
     GatewayRequester gatewayRequester;
+
+    @Autowired
+    EntityValueServiceProvider entityValueServiceProvider;
 
     private final ObjectMapper json = GatewayString.jsonInstance();
 
@@ -143,8 +148,10 @@ public class DeviceService {
         }
 
         // save script
-        new EntityWrapper(updateResourceResult.getDecoderEntity()).saveValue(codecData.getDecoderStr());
-        new EntityWrapper(updateResourceResult.getEncoderEntity()).saveValue(codecData.getEncoderStr());
+        entityValueServiceProvider.saveLatestValues(ExchangePayload.create(Map.of(
+                updateResourceResult.getDecoderEntity().getKey(), codecData.getDecoderStr(),
+                updateResourceResult.getEncoderEntity().getKey(), codecData.getEncoderStr()
+        )));
     }
 
     public GatewayDeviceData getDeviceData(Device device) {

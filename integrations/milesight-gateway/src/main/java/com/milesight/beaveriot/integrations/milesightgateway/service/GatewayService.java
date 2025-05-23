@@ -123,7 +123,8 @@ public class GatewayService {
         }
     }
 
-    public ConnectionValidateResponse validateGatewayConnection(String eui, String credentialId) {
+    public ConnectionValidateResponse validateGatewayConnection(String inputEui, String credentialId) {
+        String eui = GatewayString.standardizeEUI(inputEui);
         validateGatewayInfo(eui);
         ConnectionValidateResponse result = new ConnectionValidateResponse();
         MqttResponse<DeviceListResponse> response = gatewayRequester.requestDeviceList(eui, 0, 1, null);
@@ -176,8 +177,9 @@ public class GatewayService {
     @DistributedLock(name = LockConstants.UPDATE_GATEWAY_DEVICE_ENUM_LOCK)
     private void putAddDeviceGatewayEui(List<Device> gateways) {
         Entity gatewayEuiEntity = getAddDeviceGatewayEntity();
-        Map<String, String> attrEnum = json.convertValue(gatewayEuiEntity.getAttributes().get(AttributeBuilder.ATTRIBUTE_ENUM), new TypeReference<>() {});
+        LinkedHashMap<String, String> attrEnum = json.convertValue(gatewayEuiEntity.getAttributes().get(AttributeBuilder.ATTRIBUTE_ENUM), new TypeReference<>() {});
         gateways.forEach(gateway -> attrEnum.put(getGatewayEui(gateway), gateway.getName()));
+        gatewayEuiEntity.getAttributes().put(AttributeBuilder.ATTRIBUTE_DEFAULT_VALUE, attrEnum.entrySet().iterator().next().getKey());
 
         gatewayEuiEntity.getAttributes().put(AttributeBuilder.ATTRIBUTE_ENUM, attrEnum);
         entityServiceProvider.save(gatewayEuiEntity);
@@ -186,9 +188,14 @@ public class GatewayService {
     @DistributedLock(name = LockConstants.UPDATE_GATEWAY_DEVICE_ENUM_LOCK)
     private void removeAddDeviceGatewayEui(List<String> gatewayEuiList) {
         Entity gatewayEuiEntity = getAddDeviceGatewayEntity();
-        Map<String, String> attrEnum = json.convertValue(gatewayEuiEntity.getAttributes().get(AttributeBuilder.ATTRIBUTE_ENUM), new TypeReference<>() {});
+        LinkedHashMap<String, String> attrEnum = json.convertValue(gatewayEuiEntity.getAttributes().get(AttributeBuilder.ATTRIBUTE_ENUM), new TypeReference<>() {});
         gatewayEuiList.forEach(eui -> attrEnum.remove(GatewayString.standardizeEUI(eui)));
         gatewayEuiEntity.getAttributes().put(AttributeBuilder.ATTRIBUTE_ENUM, attrEnum);
+        if (!attrEnum.isEmpty()) {
+            gatewayEuiEntity.getAttributes().put(AttributeBuilder.ATTRIBUTE_DEFAULT_VALUE, attrEnum.entrySet().iterator().next().getKey());
+        } else {
+            gatewayEuiEntity.getAttributes().remove(AttributeBuilder.ATTRIBUTE_DEFAULT_VALUE);
+        }
         entityServiceProvider.save(gatewayEuiEntity);
     }
 
@@ -197,11 +204,11 @@ public class GatewayService {
         GatewayData newGatewayData = new GatewayData();
 
         // validate connection again
-        newGatewayData.setEui(request.getEui());
+        newGatewayData.setEui(GatewayString.standardizeEUI(request.getEui()));
         newGatewayData.setCredentialId(request.getCredentialId());
 
         // check application
-        ConnectionValidateResponse validateResult = validateGatewayConnection(request.getEui(), request.getCredentialId());
+        ConnectionValidateResponse validateResult = validateGatewayConnection(newGatewayData.getEui(), request.getCredentialId());
         if (validateResult.getAppResult().stream().noneMatch(appItem -> appItem.getApplicationID().equals(request.getApplicationId()))) {
             throw ServiceException.with(ErrorCode.PARAMETER_VALIDATION_FAILED.getErrorCode(), "Unknown application: " + request.getApplicationId()).build();
         }
@@ -345,11 +352,16 @@ public class GatewayService {
     public void syncGatewayListToAddDeviceGatewayEuiList() {
         List<Device> gatwayList = getAllGateways();
         Entity addDeviceGatewayEuiEntity = getAddDeviceGatewayEntity();
-        Map<String, String> euiToNameMap = gatwayList.stream().collect(Collectors.toMap(
+        LinkedHashMap<String, String> euiToNameMap = gatwayList.stream().collect(Collectors.toMap(
                 this::getGatewayEui,
-                Device::getName
+                Device::getName,
+                (existing, replacement) -> existing,
+                LinkedHashMap::new
         ));
         addDeviceGatewayEuiEntity.getAttributes().put(AttributeBuilder.ATTRIBUTE_ENUM, euiToNameMap);
+        if (!gatwayList.isEmpty()) {
+            addDeviceGatewayEuiEntity.getAttributes().put(AttributeBuilder.ATTRIBUTE_DEFAULT_VALUE, euiToNameMap.entrySet().iterator().next().getKey());
+        }
         entityServiceProvider.save(addDeviceGatewayEuiEntity);
     }
 

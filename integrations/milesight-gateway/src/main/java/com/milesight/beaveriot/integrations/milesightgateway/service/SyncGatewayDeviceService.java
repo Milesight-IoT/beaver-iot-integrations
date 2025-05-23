@@ -31,7 +31,6 @@ import org.springframework.util.StringUtils;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
 /**
@@ -85,7 +84,7 @@ public class SyncGatewayDeviceService {
             existedDeviceEuiSet.addAll(existedDeviceEui);
         }
 
-        DeviceModelData deviceModelData =  msGwEntityService.getModelData();
+        DeviceModelData deviceModelData =  msGwEntityService.getDeviceModelData();
         if (deviceModelData.getVendorInfoList() == null) {
             throw ServiceException.with(ErrorCode.PARAMETER_VALIDATION_FAILED.getErrorCode(), "Please synchronize your codec repo first!").build();
         }
