@@ -32,18 +32,30 @@ public class MqttDeviceBootstrap implements IntegrationBootstrap {
 
     @Override
     public void onStarted(Integration integrationConfig) {
-        List<DeviceTemplate> list = deviceTemplateServiceProvider.findAll(DataCenter.INTEGRATION_ID);
-        if (!CollectionUtils.isEmpty(list)) {
-            list.forEach(deviceTemplate -> {
-                String topic = deviceTemplate.getAdditional().get(DataCenter.TOPIC_KEY).toString();
-                DataCenter.getTemplateIdTopicMap().put(deviceTemplate.getId(), topic);
-                mqttDeviceMqttService.subscribe(topic, deviceTemplate.getId(), deviceTemplate.getContent());
-            });
-        }
+
     }
 
     @Override
     public void onDestroy(Integration integrationConfig) {
 
+    }
+
+    @Override
+    public void onEnabled(String tenantId, Integration integrationConfig) {
+        List<Long> deviceTemplateIds = DataCenter.getDeviceTemplateIds();
+        if (CollectionUtils.isEmpty(deviceTemplateIds)) {
+            return;
+        }
+
+        List<DeviceTemplate> list = deviceTemplateServiceProvider.findByIds(deviceTemplateIds);
+        if (CollectionUtils.isEmpty(list)) {
+            return;
+        }
+
+        list.forEach(deviceTemplate -> {
+            String topic = DataCenter.getTopic(deviceTemplate.getId());
+            mqttDeviceMqttService.subscribe(topic, deviceTemplate.getId(), deviceTemplate.getContent());
+        });
+        IntegrationBootstrap.super.onEnabled(tenantId, integrationConfig);
     }
 }
