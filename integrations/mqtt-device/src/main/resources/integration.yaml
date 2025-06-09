@@ -3,5 +3,6 @@ integration:
     name: MQTT Device # integration name
     description: "This integration is used to enable MQTT devices to be automatically discovered and device data to be automatically ingested." # integration description
     enabled: true # whether enable this integration. Must be "true" for now
+    icon-url: "public/mqtt-device-logo.svg"
     entity-identifier-add-device: add-device
     entity-identifier-delete-device: delete-device
