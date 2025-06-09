@@ -8,14 +8,13 @@ import com.milesight.beaveriot.context.constants.IntegrationConstants;
 import com.milesight.beaveriot.context.integration.model.DeviceTemplate;
 import com.milesight.beaveriot.context.integration.model.DeviceTemplateBuilder;
 import com.milesight.beaveriot.context.model.request.SearchDeviceTemplateRequest;
-import com.milesight.beaveriot.context.model.response.DeviceTemplateDetailResponse;
 import com.milesight.beaveriot.context.model.response.DeviceTemplateDiscoverResponse;
 import com.milesight.beaveriot.context.model.response.DeviceTemplateResponseData;
 import com.milesight.beaveriot.integrations.mqttdevice.model.request.*;
 import com.milesight.beaveriot.integrations.mqttdevice.model.response.DeviceTemplateDefaultContent;
+import com.milesight.beaveriot.integrations.mqttdevice.model.response.DeviceTemplateInfoResponse;
 import com.milesight.beaveriot.integrations.mqttdevice.support.DataCenter;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -55,7 +54,8 @@ public class MqttDeviceTemplateService {
     }
 
     public Page<DeviceTemplateResponseData> searchDeviceTemplate(SearchDeviceTemplateRequest searchDeviceTemplateRequest) {
-        return deviceTemplateServiceProvider.search(searchDeviceTemplateRequest);
+        Page<DeviceTemplateResponseData> deviceTemplateResponseDataPage = deviceTemplateServiceProvider.search(searchDeviceTemplateRequest);
+        return deviceTemplateResponseDataPage.map(deviceTemplateResponseData -> new DeviceTemplateInfoResponse(deviceTemplateResponseData, DataCenter.getTopic(Long.parseLong(deviceTemplateResponseData.getId()))));
     }
 
     public DeviceTemplateDiscoverResponse testDeviceTemplate(Long deviceTemplateId, TestDeviceTemplateRequest testDeviceTemplateRequest) {
@@ -104,11 +104,9 @@ public class MqttDeviceTemplateService {
         }
     }
 
-    public DeviceTemplateDetailResponse getDeviceDetail(@PathVariable("deviceTemplateId") Long deviceTemplateId) {
-        DeviceTemplateDetailResponse deviceTemplateDetailResponse = new DeviceTemplateDetailResponse();
+    public DeviceTemplateInfoResponse getDeviceDetail(@PathVariable("deviceTemplateId") Long deviceTemplateId) {
         DeviceTemplate deviceTemplate = deviceTemplateServiceProvider.findById(deviceTemplateId);
-        BeanUtils.copyProperties(convertToResponseData(deviceTemplate), deviceTemplateDetailResponse);
-        return deviceTemplateDetailResponse;
+        return new DeviceTemplateInfoResponse(convertToResponseData(deviceTemplate), DataCenter.getTopic(deviceTemplateId));
     }
 
     public void validate(ValidateDeviceTemplateRequest validateDeviceTemplateRequest) {
