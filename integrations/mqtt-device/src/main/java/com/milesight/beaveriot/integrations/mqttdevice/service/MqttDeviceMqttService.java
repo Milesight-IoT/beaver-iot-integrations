@@ -24,7 +24,7 @@ public class MqttDeviceMqttService {
 
     public void subscribe(String subTopic, Long deviceTemplateId, String deviceTemplateContent) {
         String convertTopic = TopicConverter.convert(subTopic);
-        mqttPubSubServiceProvider.subscribe(convertTopic, message -> {
+        mqttPubSubServiceProvider.subscribe(DataCenter.getUserName(), convertTopic, message -> {
             String jsonStr = new String(message.getPayload(), StandardCharsets.UTF_8);
             deviceTemplateParserProvider.discover(DataCenter.INTEGRATION_ID, jsonStr, deviceTemplateId, deviceTemplateContent);
         });
@@ -32,6 +32,6 @@ public class MqttDeviceMqttService {
 
     public void unsubscribe(String subTopic) {
         String convertTopic = TopicConverter.convert(subTopic);
-        mqttPubSubServiceProvider.unsubscribe(convertTopic);
+        mqttPubSubServiceProvider.unsubscribe(DataCenter.getUserName(), convertTopic);
     }
 }

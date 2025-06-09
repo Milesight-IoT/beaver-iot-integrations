@@ -16,6 +16,7 @@ import com.milesight.beaveriot.integrations.mqttdevice.entity.MqttDeviceIntegrat
 import com.milesight.beaveriot.integrations.mqttdevice.service.MqttDeviceMqttService;
 import com.milesight.beaveriot.integrations.mqttdevice.support.DataCenter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 
@@ -83,13 +84,19 @@ public class MqttDeviceBootstrap implements IntegrationBootstrap {
             throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), "Mqtt broker host or port empty").build();
         }
         Credentials mqttCredentials = credentialsServiceProvider.getOrCreateCredentials(CredentialsType.MQTT);
+        if (StringUtils.isEmpty(mqttCredentials.getAccessKey())) {
+            throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), "Mqtt broker username empty").build();
+        }
+        String brokerTopicPrefix = mqttPubSubServiceProvider.getFullTopicName(mqttCredentials.getAccessKey(), "") + DataCenter.INTEGRATION_ID;
         wrapper.saveValues(Map.of(
                 MqttDeviceIntegrationEntities.MqttDeviceProperties::getBrokerServer, mqttBrokerInfo.getHost(),
                 MqttDeviceIntegrationEntities.MqttDeviceProperties::getBrokerPort, mqttBrokerInfo.getMqttPort(),
                 MqttDeviceIntegrationEntities.MqttDeviceProperties::getBrokerUsername, mqttCredentials.getAccessKey(),
                 MqttDeviceIntegrationEntities.MqttDeviceProperties::getBrokerPassword, mqttCredentials.getAccessSecret(),
+                MqttDeviceIntegrationEntities.MqttDeviceProperties::getBrokerTopicPrefix, brokerTopicPrefix,
                 MqttDeviceIntegrationEntities.MqttDeviceProperties::getIsInitialized, true
-        ));
+        )).publishSync();
+        DataCenter.setUserName(mqttCredentials.getAccessKey());
     }
 
     private String getLocalAddress() {

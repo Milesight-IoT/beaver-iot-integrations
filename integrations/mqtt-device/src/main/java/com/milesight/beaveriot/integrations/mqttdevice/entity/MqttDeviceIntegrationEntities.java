@@ -56,6 +56,9 @@ public class MqttDeviceIntegrationEntities extends ExchangePayload {
 
         @Entity(type = EntityType.PROPERTY, name = "Mqtt device broker password")
         private String brokerPassword;
+
+        @Entity(type = EntityType.PROPERTY, name = "Mqtt device broker topic prefix")
+        private String brokerTopicPrefix;
     }
 
     @Data

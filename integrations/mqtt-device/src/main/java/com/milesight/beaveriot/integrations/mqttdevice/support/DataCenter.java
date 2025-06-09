@@ -15,9 +15,9 @@ import java.util.Map;
  **/
 public class DataCenter {
     public static final String INTEGRATION_ID = "mqtt-device";
-    public static final String TOPIC_KEY = "topic";
     public static final String DEVICE_ID_PLACEHOLDER = "${device_id}";
     private static final Map<Long, String> templateIdTopicMap = loadTopicMap();
+    private static String userName;
 
     public static void putTopic(Long deviceTemplateId, String topic) {
         templateIdTopicMap.put(deviceTemplateId, topic);
@@ -51,5 +51,13 @@ public class DataCenter {
         String topicMapStr = JsonUtils.toJSON(templateIdTopicMap);
         AnnotatedEntityWrapper<MqttDeviceIntegrationEntities> entitiesWrapper = new AnnotatedEntityWrapper<>();
         entitiesWrapper.saveValue(MqttDeviceIntegrationEntities::getTopicMap, topicMapStr);
+    }
+
+    public static void setUserName(String userName) {
+        DataCenter.userName = userName;
+    }
+
+    public static String getUserName() {
+        return DataCenter.userName;
     }
 }
