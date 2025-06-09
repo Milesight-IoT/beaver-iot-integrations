@@ -9,6 +9,7 @@ import com.milesight.beaveriot.context.integration.model.DeviceTemplate;
 import com.milesight.beaveriot.context.integration.model.DeviceTemplateBuilder;
 import com.milesight.beaveriot.context.model.request.SearchDeviceTemplateRequest;
 import com.milesight.beaveriot.context.model.response.DeviceTemplateDetailResponse;
+import com.milesight.beaveriot.context.model.response.DeviceTemplateDiscoverResponse;
 import com.milesight.beaveriot.context.model.response.DeviceTemplateResponseData;
 import com.milesight.beaveriot.integrations.mqttdevice.model.request.*;
 import com.milesight.beaveriot.integrations.mqttdevice.model.response.DeviceTemplateDefaultContent;
@@ -57,9 +58,9 @@ public class MqttDeviceTemplateService {
         return deviceTemplateServiceProvider.search(searchDeviceTemplateRequest);
     }
 
-    public void testDeviceTemplate(Long deviceTemplateId, TestDeviceTemplateRequest testDeviceTemplateRequest) {
+    public DeviceTemplateDiscoverResponse testDeviceTemplate(Long deviceTemplateId, TestDeviceTemplateRequest testDeviceTemplateRequest) {
         String deviceTemplateContent = deviceTemplateServiceProvider.findById(deviceTemplateId).getContent();
-        deviceTemplateParserProvider.discover(DataCenter.INTEGRATION_ID, testDeviceTemplateRequest.getTestData(), deviceTemplateId, deviceTemplateContent);
+        return deviceTemplateParserProvider.discover(DataCenter.INTEGRATION_ID, testDeviceTemplateRequest.getTestData(), deviceTemplateId, deviceTemplateContent);
     }
 
     public void updateDeviceTemplate(Long deviceTemplateId, UpdateDeviceTemplateRequest updateDeviceTemplateRequest) {

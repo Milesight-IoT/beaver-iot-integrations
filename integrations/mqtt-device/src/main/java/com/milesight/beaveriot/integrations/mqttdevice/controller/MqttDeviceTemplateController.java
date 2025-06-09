@@ -4,6 +4,7 @@ import com.milesight.beaveriot.base.response.ResponseBody;
 import com.milesight.beaveriot.base.response.ResponseBuilder;
 import com.milesight.beaveriot.context.model.request.SearchDeviceTemplateRequest;
 import com.milesight.beaveriot.context.model.response.DeviceTemplateDetailResponse;
+import com.milesight.beaveriot.context.model.response.DeviceTemplateDiscoverResponse;
 import com.milesight.beaveriot.context.model.response.DeviceTemplateResponseData;
 import com.milesight.beaveriot.integrations.mqttdevice.model.request.*;
 import com.milesight.beaveriot.integrations.mqttdevice.model.response.DeviceTemplateDefaultContent;
@@ -37,9 +38,9 @@ public class MqttDeviceTemplateController {
     }
 
     @PostMapping("/{deviceTemplateId}/test")
-    public ResponseBody<Void> testDeviceTemplate(@PathVariable("deviceTemplateId") Long deviceTemplateId, @RequestBody TestDeviceTemplateRequest testDeviceTemplateRequest) {
-        mqttDeviceTemplateService.testDeviceTemplate(deviceTemplateId, testDeviceTemplateRequest);
-        return ResponseBuilder.success();
+    public ResponseBody<DeviceTemplateDiscoverResponse> testDeviceTemplate(@PathVariable("deviceTemplateId") Long deviceTemplateId, @RequestBody TestDeviceTemplateRequest testDeviceTemplateRequest) {
+        DeviceTemplateDiscoverResponse deviceTemplateDiscoverResponse = mqttDeviceTemplateService.testDeviceTemplate(deviceTemplateId, testDeviceTemplateRequest);
+        return ResponseBuilder.success(deviceTemplateDiscoverResponse);
     }
 
     @PutMapping("/{deviceTemplateId}")
