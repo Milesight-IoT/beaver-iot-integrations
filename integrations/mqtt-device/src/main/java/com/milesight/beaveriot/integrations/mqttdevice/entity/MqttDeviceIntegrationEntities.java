@@ -22,9 +22,6 @@ public class MqttDeviceIntegrationEntities extends ExchangePayload {
     public static final String TOPIC_MAP_IDENTIFIER = "topic-map";
     public static final String ADD_DEVICE_IDENTIFIER = "add-device";
     public static final String DELETE_DEVICE_IDENTIFIER = "delete-device";
-    public static final String ADD_DEVICE_TEMPLATE_IDENTIFIER = "add-device-template";
-    public static final String UPDATE_DEVICE_TEMPLATE_IDENTIFIER = "update-device-template";
-    public static final String DELETE_DEVICE_TEMPLATE_IDENTIFIER = "delete-device-template";
 
     @Entity(type = EntityType.PROPERTY, name = "Mqtt device properties", accessMod = AccessMod.R)
     private MqttDeviceProperties mqttDeviceProperties;
