@@ -1,0 +1,246 @@
+package com.milesight.beaveriot.integrations.aiinference.service;
+
+import com.milesight.beaveriot.base.exception.ServiceException;
+import com.milesight.beaveriot.base.utils.JsonUtils;
+import com.milesight.beaveriot.context.api.EntityServiceProvider;
+import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
+import com.milesight.beaveriot.context.integration.enums.AttachTargetType;
+import com.milesight.beaveriot.context.integration.enums.EntityValueType;
+import com.milesight.beaveriot.context.integration.model.Entity;
+import com.milesight.beaveriot.context.integration.wrapper.AnnotatedEntityWrapper;
+import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
+import com.milesight.beaveriot.eventbus.api.Event;
+import com.milesight.beaveriot.eventbus.api.EventResponse;
+import com.milesight.beaveriot.integrations.aiinference.api.client.AiInferenceClient;
+import com.milesight.beaveriot.integrations.aiinference.api.config.Config;
+import com.milesight.beaveriot.integrations.aiinference.api.enums.ServerErrorCode;
+import com.milesight.beaveriot.integrations.aiinference.api.model.request.ModelInferRequest;
+import com.milesight.beaveriot.integrations.aiinference.api.model.response.ModelDetailResponse;
+import com.milesight.beaveriot.integrations.aiinference.api.model.response.ModelInferResponse;
+import com.milesight.beaveriot.integrations.aiinference.api.model.response.ModelResponse;
+import com.milesight.beaveriot.integrations.aiinference.constant.Constants;
+import com.milesight.beaveriot.integrations.aiinference.entity.AiInferenceConnectionPropertiesEntities;
+import com.milesight.beaveriot.integrations.aiinference.entity.AiInferenceServiceEntities;
+import com.milesight.beaveriot.integrations.aiinference.entity.ModelServiceEntityTemplate;
+import com.milesight.beaveriot.integrations.aiinference.entity.ModelServiceInputEntityTemplate;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+/**
+ * author: Luxb
+ * create: 2025/5/30 16:26
+ **/
+@Slf4j
+@Service
+public class AiInferenceService {
+    private final EntityServiceProvider entityServiceProvider;
+    private final EntityValueServiceProvider entityValueServiceProvider;
+    private AiInferenceClient aiInferenceClient;
+
+    public AiInferenceService(EntityServiceProvider entityServiceProvider, EntityValueServiceProvider entityValueServiceProvider) {
+        this.entityServiceProvider = entityServiceProvider;
+        this.entityValueServiceProvider = entityValueServiceProvider;
+    }
+
+    public void init() {
+        AnnotatedEntityWrapper<AiInferenceConnectionPropertiesEntities> wrapper = new AnnotatedEntityWrapper<>();
+        try {
+            AiInferenceConnectionPropertiesEntities.AiInferenceProperties aiInferenceProperties = entityValueServiceProvider.findValuesByKey(
+                    AiInferenceConnectionPropertiesEntities.getKey(AiInferenceConnectionPropertiesEntities.Fields.aiInferenceProperties), AiInferenceConnectionPropertiesEntities.AiInferenceProperties.class);
+            if (!aiInferenceProperties.isEmpty()) {
+                initConnection(aiInferenceProperties);
+                initModels();
+            }
+        } catch (Exception e) {
+            log.error("Error occurs while initializing connection", e);
+            wrapper.saveValue(AiInferenceConnectionPropertiesEntities::getApiStatus, false).publishSync();
+        }
+    }
+
+    @EventSubscribe(payloadKeyExpression = Constants.INTEGRATION_ID + ".integration.refresh_models")
+    public void refreshModels(Event<AiInferenceServiceEntities.RefreshModels> event) {
+        initModels();
+    }
+
+    @EventSubscribe(payloadKeyExpression = Constants.INTEGRATION_ID + ".integration.model_*")
+    public EventResponse infer(Event<AiInferenceServiceEntities.ModelInput> event) {
+        AiInferenceServiceEntities.ModelInput modelInput = event.getPayload();
+        ModelInferResponse modelInferResponse = modelInfer(modelInput);
+        return getEventResponse(modelInferResponse);
+    }
+
+    private static EventResponse getEventResponse(ModelInferResponse modelInferResponse) {
+        Map<String, Object> response = JsonUtils.toMap(modelInferResponse);
+        EventResponse eventResponse = EventResponse.empty();
+        for (Map.Entry<String, Object> entry : response.entrySet()) {
+            String key = entry.getKey();
+            Object value = entry.getValue();
+            eventResponse.put(key, value);
+        }
+        return eventResponse;
+    }
+
+    private ModelInferResponse modelInfer(AiInferenceServiceEntities.ModelInput modelInput) {
+        String modelId = null;
+        ModelInferRequest modelInferRequest = new ModelInferRequest();
+        for (String key : modelInput.keySet()) {
+            Object value = modelInput.get(key);
+            if (modelId == null) {
+                modelId = ModelServiceEntityTemplate.getModelIdFromKey(key);
+            }
+            String modelInputName = ModelServiceInputEntityTemplate.getModelInputNameFromKey(key);
+            Entity modelInputEntity = entityServiceProvider.findByKey(key);
+            if (EntityValueType.LONG.equals(modelInputEntity.getValueType())) {
+                modelInferRequest.put(modelInputName, Long.parseLong(value.toString()));
+            } else if (EntityValueType.BOOLEAN.equals(modelInputEntity.getValueType())) {
+                modelInferRequest.put(modelInputName, Boolean.parseBoolean(value.toString()));
+            } else if (EntityValueType.DOUBLE.equals(modelInputEntity.getValueType())) {
+                modelInferRequest.put(modelInputName, Double.parseDouble(value.toString()));
+            } else {
+                modelInferRequest.put(modelInputName, value.toString());
+            }
+        }
+        return aiInferenceClient.modelInfer(modelId, modelInferRequest);
+    }
+
+    @EventSubscribe(payloadKeyExpression = Constants.INTEGRATION_ID + ".integration.ai_inference_properties.*")
+    public void onAiInferencePropertiesUpdate(Event<AiInferenceConnectionPropertiesEntities.AiInferenceProperties> event) {
+        if (isConfigChanged(event)) {
+            AiInferenceConnectionPropertiesEntities.AiInferenceProperties aiInferenceProperties = event.getPayload();
+            initConnection(aiInferenceProperties);
+            initModels();
+        }
+    }
+
+    private boolean isConfigChanged(Event<AiInferenceConnectionPropertiesEntities.AiInferenceProperties> event) {
+        // check if required fields are set
+        AiInferenceConnectionPropertiesEntities.AiInferenceProperties aiInferenceProperties = event.getPayload();
+        if (aiInferenceProperties.getBaseUrl() == null) {
+            return false;
+        }
+        if (aiInferenceProperties.getToken() == null) {
+            return false;
+        }
+        if (aiInferenceClient == null || aiInferenceClient.getConfig() == null) {
+            return true;
+        }
+        AnnotatedEntityWrapper<AiInferenceConnectionPropertiesEntities> wrapper = new AnnotatedEntityWrapper<>();
+        boolean apiStatus = (Boolean) wrapper.getValue(AiInferenceConnectionPropertiesEntities::getApiStatus).orElse(false);
+        return !apiStatus ||
+                !StringUtils.equals(aiInferenceClient.getConfig().getBaseUrl(), aiInferenceProperties.getBaseUrl()) ||
+                !StringUtils.equals(aiInferenceClient.getConfig().getToken(), aiInferenceProperties.getToken());
+    }
+
+    private boolean testConnection() {
+        boolean isConnection = false;
+        try {
+            if (aiInferenceClient != null && aiInferenceClient.getConfig() != null) {
+                isConnection = aiInferenceClient.testConnection();
+            }
+        } catch (Exception e) {
+            log.error("Error occurs while testing connection", e);
+        }
+        AnnotatedEntityWrapper<AiInferenceConnectionPropertiesEntities> wrapper = new AnnotatedEntityWrapper<>();
+        wrapper.saveValue(AiInferenceConnectionPropertiesEntities::getApiStatus, isConnection).publishSync();
+        if (!isConnection) {
+            throw ServiceException.with(ServerErrorCode.SERVER_NOT_REACHABLE.getErrorCode(), ServerErrorCode.SERVER_NOT_REACHABLE.getErrorMessage()).build();
+        }
+        return isConnection;
+    }
+
+    private void initModels() {
+        if (testConnection()) {
+            ModelResponse modelResponse = aiInferenceClient.getModels();
+            if (modelResponse == null) {
+                return;
+            }
+
+            if (CollectionUtils.isEmpty(modelResponse.getData())) {
+                return;
+            }
+
+            Set<String> newModelKeys = new HashSet<>();
+            for (ModelResponse.ModelData modelData : modelResponse.getData()) {
+                String modelKey = ModelServiceEntityTemplate.getModelKey(modelData.getModelId());
+                newModelKeys.add(modelKey);
+            }
+
+            Set<String> toDeleteModelKeys = new HashSet<>();
+            List<Entity> existEntities = entityServiceProvider.findByTargetId(AttachTargetType.INTEGRATION, Constants.INTEGRATION_ID);
+            if (!CollectionUtils.isEmpty(existEntities)) {
+                existEntities.stream().filter(
+                        existEntity -> existEntity.getKey().startsWith(ModelServiceEntityTemplate.getModelPrefixKey()) &&
+                                existEntity.getParentKey() == null &&
+                                !newModelKeys.contains(existEntity.getKey())
+                ).forEach(existEntity -> toDeleteModelKeys.add(existEntity.getKey()));
+            }
+
+            if (!toDeleteModelKeys.isEmpty()) {
+                toDeleteModelKeys.forEach(entityServiceProvider::deleteByKey);
+            }
+
+            for (ModelResponse.ModelData modelData : modelResponse.getData()) {
+                ModelServiceEntityTemplate modelServiceEntityTemplate = ModelServiceEntityTemplate.builder()
+                        .modelId(modelData.getModelId())
+                        .name(modelData.getName())
+                        .version(modelData.getVersion())
+                        .description(modelData.getDescription())
+                        .engineType(modelData.getEngineType())
+                        .build();
+                Entity modelServiceEntity = modelServiceEntityTemplate.toEntity();
+                entityServiceProvider.save(modelServiceEntity);
+            }
+        }
+    }
+
+    public ModelDetailResponse fetchModelDetail(String modelId) {
+        ModelDetailResponse modelDetailResponse = null;
+        if (testConnection()) {
+            modelDetailResponse = aiInferenceClient.getModelDetail(modelId);
+            if (modelDetailResponse == null) {
+                return null;
+            }
+            if (modelDetailResponse.getParameters() == null) {
+                return null;
+            }
+            if (CollectionUtils.isEmpty(modelDetailResponse.getParameters().getInput())) {
+                return null;
+            }
+            String modelKey = ModelServiceEntityTemplate.getModelKey(modelId);
+            Entity modelServiceEntity = entityServiceProvider.findByKey(modelKey);
+            String modelServiceIdentifier = modelServiceEntity.getIdentifier();
+            modelServiceEntity.getChildren().clear();
+            for (ModelDetailResponse.Input input : modelDetailResponse.getParameters().getInput()) {
+                ModelServiceInputEntityTemplate modelServiceInputEntityTemplate = ModelServiceInputEntityTemplate.builder()
+                        .parentIdentifier(modelServiceIdentifier)
+                        .name(input.getName())
+                        .type(input.getType())
+                        .description(input.getDescription())
+                        .required(input.getRequired())
+                        .build();
+                Entity modelServiceInputEntity = modelServiceInputEntityTemplate.toEntity();
+                modelServiceEntity.getChildren().add(modelServiceInputEntity);
+            }
+            entityServiceProvider.save(modelServiceEntity);
+        }
+        return modelDetailResponse;
+    }
+
+    public void initConnection(AiInferenceConnectionPropertiesEntities.AiInferenceProperties aiInferenceProperties) {
+        Config config = Config.builder()
+                .baseUrl(aiInferenceProperties.getBaseUrl())
+                .token(aiInferenceProperties.getToken())
+                .build();
+        aiInferenceClient = AiInferenceClient.builder()
+                .config(config)
+                .build();
+        aiInferenceClient.init();
+    }
+}
