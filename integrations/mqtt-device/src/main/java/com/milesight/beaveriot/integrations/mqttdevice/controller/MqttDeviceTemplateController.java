@@ -37,15 +37,15 @@ public class MqttDeviceTemplateController {
         return ResponseBuilder.success(mqttDeviceTemplateService.searchDeviceTemplate(searchDeviceTemplateRequest));
     }
 
-    @PostMapping("/{deviceTemplateId}/test")
-    public ResponseBody<DeviceTemplateDiscoverResponse> testDeviceTemplate(@PathVariable("deviceTemplateId") Long deviceTemplateId, @RequestBody TestDeviceTemplateRequest testDeviceTemplateRequest) {
-        DeviceTemplateDiscoverResponse deviceTemplateDiscoverResponse = mqttDeviceTemplateService.testDeviceTemplate(deviceTemplateId, testDeviceTemplateRequest);
+    @PostMapping("/{deviceTemplateKey}/test")
+    public ResponseBody<DeviceTemplateDiscoverResponse> testDeviceTemplate(@PathVariable("deviceTemplateKey") String deviceTemplateKey, @RequestBody TestDeviceTemplateRequest testDeviceTemplateRequest) {
+        DeviceTemplateDiscoverResponse deviceTemplateDiscoverResponse = mqttDeviceTemplateService.testDeviceTemplate(deviceTemplateKey, testDeviceTemplateRequest);
         return ResponseBuilder.success(deviceTemplateDiscoverResponse);
     }
 
-    @PutMapping("/{deviceTemplateId}")
-    public ResponseBody<Void> updateDeviceTemplate(@PathVariable("deviceTemplateId") Long deviceTemplateId, @RequestBody UpdateDeviceTemplateRequest updateDeviceTemplateRequest) {
-        mqttDeviceTemplateService.updateDeviceTemplate(deviceTemplateId, updateDeviceTemplateRequest);
+    @PutMapping("/{deviceTemplateKey}")
+    public ResponseBody<Void> updateDeviceTemplate(@PathVariable("deviceTemplateKey") String deviceTemplateKey, @RequestBody UpdateDeviceTemplateRequest updateDeviceTemplateRequest) {
+        mqttDeviceTemplateService.updateDeviceTemplate(deviceTemplateKey, updateDeviceTemplateRequest);
         return ResponseBuilder.success();
     }
 
@@ -55,9 +55,9 @@ public class MqttDeviceTemplateController {
         return ResponseBuilder.success();
     }
 
-    @GetMapping("/{deviceTemplateId}")
-    public ResponseBody<DeviceTemplateInfoResponse> getDeviceDetail(@PathVariable("deviceTemplateId") Long deviceTemplateId) {
-        return ResponseBuilder.success(mqttDeviceTemplateService.getDeviceDetail(deviceTemplateId));
+    @GetMapping("/{deviceTemplateKey}")
+    public ResponseBody<DeviceTemplateInfoResponse> getDeviceDetail(@PathVariable("deviceTemplateKey") String deviceTemplateKey) {
+        return ResponseBuilder.success(mqttDeviceTemplateService.getDeviceDetail(deviceTemplateKey));
     }
 
     @PostMapping("/validate")

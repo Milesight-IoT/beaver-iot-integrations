@@ -28,11 +28,11 @@ public class MqttDeviceService {
     public void onAddDevice(Event<MqttDeviceIntegrationEntities.AddDevice> event) {
         MqttDeviceIntegrationEntities.AddDevice addDevice = event.getPayload();
         String deviceName = addDevice.getAddDeviceName();
-        Long deviceTemplateId = addDevice.getAddDeviceTemplateId();
+        String deviceTemplateKey = addDevice.getAddDeviceTemplateKey();
         String deviceId = event.getPayload().getDeviceId();
         Device device = new DeviceBuilder(DataCenter.INTEGRATION_ID)
                 .name(deviceName)
-                .templateId(deviceTemplateId)
+                .template(deviceTemplateKey)
                 .identifier(deviceId)
                 .additional(Map.of("deviceId", deviceId))
                 .build();

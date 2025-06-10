@@ -22,11 +22,11 @@ public class MqttDeviceMqttService {
         this.deviceTemplateParserProvider = deviceTemplateParserProvider;
     }
 
-    public void subscribe(String subTopic, Long deviceTemplateId, String deviceTemplateContent) {
+    public void subscribe(String subTopic, String deviceTemplateKey, String deviceTemplateContent) {
         String convertTopic = TopicConverter.convert(subTopic);
         mqttPubSubServiceProvider.subscribe(DataCenter.getUserName(), convertTopic, message -> {
             String jsonStr = new String(message.getPayload(), StandardCharsets.UTF_8);
-            deviceTemplateParserProvider.discover(DataCenter.INTEGRATION_ID, jsonStr, deviceTemplateId, deviceTemplateContent);
+            deviceTemplateParserProvider.discover(DataCenter.INTEGRATION_ID, jsonStr, deviceTemplateKey, deviceTemplateContent);
         });
     }
 
