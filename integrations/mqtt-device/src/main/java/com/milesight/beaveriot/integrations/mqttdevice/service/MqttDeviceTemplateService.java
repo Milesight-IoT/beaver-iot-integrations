@@ -2,23 +2,29 @@ package com.milesight.beaveriot.integrations.mqttdevice.service;
 
 import com.milesight.beaveriot.base.enums.ErrorCode;
 import com.milesight.beaveriot.base.exception.ServiceException;
+import com.milesight.beaveriot.context.api.DeviceServiceProvider;
 import com.milesight.beaveriot.context.api.DeviceTemplateParserProvider;
 import com.milesight.beaveriot.context.api.DeviceTemplateServiceProvider;
+import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
 import com.milesight.beaveriot.context.constants.IntegrationConstants;
-import com.milesight.beaveriot.context.integration.model.DeviceTemplate;
-import com.milesight.beaveriot.context.integration.model.DeviceTemplateBuilder;
+import com.milesight.beaveriot.context.integration.model.*;
 import com.milesight.beaveriot.context.model.request.SearchDeviceTemplateRequest;
 import com.milesight.beaveriot.context.model.response.DeviceTemplateDiscoverResponse;
 import com.milesight.beaveriot.context.model.response.DeviceTemplateResponseData;
 import com.milesight.beaveriot.integrations.mqttdevice.model.request.*;
 import com.milesight.beaveriot.integrations.mqttdevice.model.response.DeviceTemplateDefaultContent;
 import com.milesight.beaveriot.integrations.mqttdevice.model.response.DeviceTemplateInfoResponse;
+import com.milesight.beaveriot.integrations.mqttdevice.model.response.DeviceTemplateTestResponse;
 import com.milesight.beaveriot.integrations.mqttdevice.support.DataCenter;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.PathVariable;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * author: Luxb
@@ -29,11 +35,15 @@ public class MqttDeviceTemplateService {
     private final DeviceTemplateServiceProvider deviceTemplateServiceProvider;
     private final DeviceTemplateParserProvider deviceTemplateParserProvider;
     private final MqttDeviceMqttService mqttDeviceMqttService;
+    private final DeviceServiceProvider deviceServiceProvider;
+    private final EntityValueServiceProvider entityValueServiceProvider;
 
-    public MqttDeviceTemplateService(DeviceTemplateServiceProvider deviceTemplateServiceProvider, DeviceTemplateParserProvider deviceTemplateParserProvider, MqttDeviceMqttService mqttDeviceMqttService) {
+    public MqttDeviceTemplateService(DeviceTemplateServiceProvider deviceTemplateServiceProvider, DeviceTemplateParserProvider deviceTemplateParserProvider, MqttDeviceMqttService mqttDeviceMqttService, DeviceServiceProvider deviceServiceProvider, EntityValueServiceProvider entityValueServiceProvider) {
         this.deviceTemplateServiceProvider = deviceTemplateServiceProvider;
         this.deviceTemplateParserProvider = deviceTemplateParserProvider;
         this.mqttDeviceMqttService = mqttDeviceMqttService;
+        this.deviceServiceProvider = deviceServiceProvider;
+        this.entityValueServiceProvider = entityValueServiceProvider;
     }
 
     public void createDeviceTemplate(CreateDeviceTemplateRequest createDeviceTemplateRequest) {
@@ -58,9 +68,35 @@ public class MqttDeviceTemplateService {
         return deviceTemplateResponseDataPage.map(deviceTemplateResponseData -> new DeviceTemplateInfoResponse(deviceTemplateResponseData, DataCenter.getTopic(deviceTemplateResponseData.getKey())));
     }
 
-    public DeviceTemplateDiscoverResponse testDeviceTemplate(String deviceTemplateKey, TestDeviceTemplateRequest testDeviceTemplateRequest) {
+    public DeviceTemplateTestResponse testDeviceTemplate(String deviceTemplateKey, TestDeviceTemplateRequest testDeviceTemplateRequest) {
+        DeviceTemplateTestResponse testResponse = new DeviceTemplateTestResponse();
         String deviceTemplateContent = deviceTemplateServiceProvider.findByKey(deviceTemplateKey).getContent();
-        return deviceTemplateParserProvider.discover(DataCenter.INTEGRATION_ID, testDeviceTemplateRequest.getTestData(), deviceTemplateKey, deviceTemplateContent);
+        DeviceTemplateDiscoverResponse discoverResponse = deviceTemplateParserProvider.discover(DataCenter.INTEGRATION_ID, testDeviceTemplateRequest.getTestData(), deviceTemplateKey, deviceTemplateContent);
+        Device device = discoverResponse.getDevice();
+        ExchangePayload payload = discoverResponse.getPayload();
+        if (device != null) {
+            deviceServiceProvider.save(device);
+            if (payload != null) {
+                entityValueServiceProvider.saveValuesAndPublishSync(payload);
+                Map<String, Entity> flatDeviceEntityMap = new HashMap<>();
+                flattenDeviceEntities(device.getEntities(), flatDeviceEntityMap);
+                flatDeviceEntityMap.forEach((key, value) -> {
+                    if (payload.containsKey(key)) {
+                        testResponse.addEntityData(value.getName(), payload.get(key));
+                    }
+                });
+            }
+        }
+        return testResponse;
+    }
+
+    private void flattenDeviceEntities(List<Entity> deviceEntities, Map<String, Entity> flatDeviceEntityMap) {
+        for (Entity entity : deviceEntities) {
+            flatDeviceEntityMap.put(entity.getKey(), entity);
+            if (!CollectionUtils.isEmpty(entity.getChildren())) {
+                flattenDeviceEntities(entity.getChildren(), flatDeviceEntityMap);
+            }
+        }
     }
 
     public void updateDeviceTemplate(String deviceTemplateKey, UpdateDeviceTemplateRequest updateDeviceTemplateRequest) {

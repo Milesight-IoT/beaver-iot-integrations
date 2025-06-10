@@ -3,11 +3,11 @@ package com.milesight.beaveriot.integrations.mqttdevice.controller;
 import com.milesight.beaveriot.base.response.ResponseBody;
 import com.milesight.beaveriot.base.response.ResponseBuilder;
 import com.milesight.beaveriot.context.model.request.SearchDeviceTemplateRequest;
-import com.milesight.beaveriot.context.model.response.DeviceTemplateDiscoverResponse;
 import com.milesight.beaveriot.context.model.response.DeviceTemplateResponseData;
 import com.milesight.beaveriot.integrations.mqttdevice.model.request.*;
 import com.milesight.beaveriot.integrations.mqttdevice.model.response.DeviceTemplateDefaultContent;
 import com.milesight.beaveriot.integrations.mqttdevice.model.response.DeviceTemplateInfoResponse;
+import com.milesight.beaveriot.integrations.mqttdevice.model.response.DeviceTemplateTestResponse;
 import com.milesight.beaveriot.integrations.mqttdevice.service.MqttDeviceTemplateService;
 import com.milesight.beaveriot.integrations.mqttdevice.support.DataCenter;
 import org.springframework.data.domain.Page;
@@ -38,9 +38,9 @@ public class MqttDeviceTemplateController {
     }
 
     @PostMapping("/{deviceTemplateKey}/test")
-    public ResponseBody<DeviceTemplateDiscoverResponse> testDeviceTemplate(@PathVariable("deviceTemplateKey") String deviceTemplateKey, @RequestBody TestDeviceTemplateRequest testDeviceTemplateRequest) {
-        DeviceTemplateDiscoverResponse deviceTemplateDiscoverResponse = mqttDeviceTemplateService.testDeviceTemplate(deviceTemplateKey, testDeviceTemplateRequest);
-        return ResponseBuilder.success(deviceTemplateDiscoverResponse);
+    public ResponseBody<DeviceTemplateTestResponse> testDeviceTemplate(@PathVariable("deviceTemplateKey") String deviceTemplateKey, @RequestBody TestDeviceTemplateRequest testDeviceTemplateRequest) {
+        DeviceTemplateTestResponse deviceTemplateTestResponse = mqttDeviceTemplateService.testDeviceTemplate(deviceTemplateKey, testDeviceTemplateRequest);
+        return ResponseBuilder.success(deviceTemplateTestResponse);
     }
 
     @PutMapping("/{deviceTemplateKey}")
