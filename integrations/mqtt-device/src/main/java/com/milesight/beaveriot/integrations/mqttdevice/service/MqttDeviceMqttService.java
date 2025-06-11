@@ -26,11 +26,11 @@ public class MqttDeviceMqttService {
         this.entityValueServiceProvider = entityValueServiceProvider;
     }
 
-    public void subscribe(String subTopic, String deviceTemplateKey, String deviceTemplateContent) {
+    public void subscribe(String subTopic, Long deviceTemplateId, String deviceTemplateContent) {
         String convertTopic = TopicConverter.convert(subTopic);
         mqttPubSubServiceProvider.subscribe(DataCenter.getUserName(), convertTopic, message -> {
             String jsonStr = new String(message.getPayload(), StandardCharsets.UTF_8);
-            DeviceTemplateDiscoverResponse response = deviceTemplateParserProvider.discover(DataCenter.INTEGRATION_ID, jsonStr, deviceTemplateKey, deviceTemplateContent);
+            DeviceTemplateDiscoverResponse response = deviceTemplateParserProvider.discover(DataCenter.INTEGRATION_ID, jsonStr, deviceTemplateId, deviceTemplateContent);
             if (response.getDevice() != null) {
                 deviceServiceProvider.save(response.getDevice());
                 if (response.getPayload() != null) {

@@ -6,5 +6,5 @@ import java.util.List;
 
 @Data
 public class BatchDeleteDeviceTemplateRequest {
-    private List<String> keyList;
+    private List<String> idList;
 }

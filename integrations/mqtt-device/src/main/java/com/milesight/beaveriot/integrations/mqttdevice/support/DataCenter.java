@@ -16,39 +16,39 @@ import java.util.Map;
 public class DataCenter {
     public static final String INTEGRATION_ID = "mqtt-device";
     public static final String DEVICE_ID_PLACEHOLDER = "${device_id}";
-    private static final Map<String, String> templateKeyTopicMap = loadTopicMap();
+    private static final Map<Long, String> templateIdTopicMap = loadTopicMap();
     private static String userName;
 
-    public static void putTopic(String deviceTemplateKey, String topic) {
-        templateKeyTopicMap.put(deviceTemplateKey, topic);
+    public static void putTopic(Long deviceTemplateId, String topic) {
+        templateIdTopicMap.put(deviceTemplateId, topic);
         saveTopicMap();
     }
 
-    public static String getTopic(String deviceTemplateKey) {
-        return templateKeyTopicMap.get(deviceTemplateKey);
+    public static String getTopic(Long deviceTemplateId) {
+        return templateIdTopicMap.get(deviceTemplateId);
     }
 
-    public static void removeTopic(String deviceTemplateKey) {
-        templateKeyTopicMap.remove(deviceTemplateKey);
+    public static void removeTopic(Long deviceTemplateId) {
+        templateIdTopicMap.remove(deviceTemplateId);
         saveTopicMap();
     }
 
     public static boolean isTopicExist(String topic) {
-        return templateKeyTopicMap.containsValue(topic);
+        return templateIdTopicMap.containsValue(topic);
     }
 
-    public static List<String> getDeviceTemplateKeys() {
-        return new ArrayList<>(templateKeyTopicMap.keySet());
+    public static List<Long> getDeviceTemplateIds() {
+        return new ArrayList<>(templateIdTopicMap.keySet());
     }
 
-    private static Map<String, String> loadTopicMap() {
+    private static Map<Long, String> loadTopicMap() {
         AnnotatedEntityWrapper<MqttDeviceIntegrationEntities> entitiesWrapper = new AnnotatedEntityWrapper<>();
         String topicMapStr = (String) entitiesWrapper.getValue(MqttDeviceIntegrationEntities::getTopicMap).orElse("{}");
         return JsonUtils.fromJSON(topicMapStr, new TypeReference<>() {});
     }
 
     private static void saveTopicMap() {
-        String topicMapStr = JsonUtils.toJSON(templateKeyTopicMap);
+        String topicMapStr = JsonUtils.toJSON(templateIdTopicMap);
         AnnotatedEntityWrapper<MqttDeviceIntegrationEntities> entitiesWrapper = new AnnotatedEntityWrapper<>();
         entitiesWrapper.saveValue(MqttDeviceIntegrationEntities::getTopicMap, topicMapStr);
     }

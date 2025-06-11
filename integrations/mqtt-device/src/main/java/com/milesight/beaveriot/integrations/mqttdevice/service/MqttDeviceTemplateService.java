@@ -59,19 +59,19 @@ public class MqttDeviceTemplateService {
             throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), "topic exists").build();
         }
         deviceTemplateServiceProvider.save(deviceTemplate);
-        DataCenter.putTopic(deviceTemplate.getKey(), topic);
-        mqttDeviceMqttService.subscribe(topic, deviceTemplate.getKey(), deviceTemplate.getContent());
+        DataCenter.putTopic(deviceTemplate.getId(), topic);
+        mqttDeviceMqttService.subscribe(topic, deviceTemplate.getId(), deviceTemplate.getContent());
     }
 
     public Page<DeviceTemplateResponseData> searchDeviceTemplate(SearchDeviceTemplateRequest searchDeviceTemplateRequest) {
         Page<DeviceTemplateResponseData> deviceTemplateResponseDataPage = deviceTemplateServiceProvider.search(searchDeviceTemplateRequest);
-        return deviceTemplateResponseDataPage.map(deviceTemplateResponseData -> new DeviceTemplateInfoResponse(deviceTemplateResponseData, DataCenter.getTopic(deviceTemplateResponseData.getKey())));
+        return deviceTemplateResponseDataPage.map(deviceTemplateResponseData -> new DeviceTemplateInfoResponse(deviceTemplateResponseData, DataCenter.getTopic(deviceTemplateResponseData.getId())));
     }
 
-    public DeviceTemplateTestResponse testDeviceTemplate(String deviceTemplateKey, TestDeviceTemplateRequest testDeviceTemplateRequest) {
+    public DeviceTemplateTestResponse testDeviceTemplate(Long id, TestDeviceTemplateRequest testDeviceTemplateRequest) {
         DeviceTemplateTestResponse testResponse = new DeviceTemplateTestResponse();
-        String deviceTemplateContent = deviceTemplateServiceProvider.findByKey(deviceTemplateKey).getContent();
-        DeviceTemplateDiscoverResponse discoverResponse = deviceTemplateParserProvider.discover(DataCenter.INTEGRATION_ID, testDeviceTemplateRequest.getTestData(), deviceTemplateKey, deviceTemplateContent);
+        String deviceTemplateContent = deviceTemplateServiceProvider.findById(id).getContent();
+        DeviceTemplateDiscoverResponse discoverResponse = deviceTemplateParserProvider.discover(DataCenter.INTEGRATION_ID, testDeviceTemplateRequest.getTestData(), id, deviceTemplateContent);
         Device device = discoverResponse.getDevice();
         ExchangePayload payload = discoverResponse.getPayload();
         if (device != null) {
@@ -99,8 +99,8 @@ public class MqttDeviceTemplateService {
         }
     }
 
-    public void updateDeviceTemplate(String deviceTemplateKey, UpdateDeviceTemplateRequest updateDeviceTemplateRequest) {
-        DeviceTemplate deviceTemplate = deviceTemplateServiceProvider.findByKey(deviceTemplateKey);
+    public void updateDeviceTemplate(Long id, UpdateDeviceTemplateRequest updateDeviceTemplateRequest) {
+        DeviceTemplate deviceTemplate = deviceTemplateServiceProvider.findById(id);
         if (deviceTemplate == null) {
             throw ServiceException.with(ErrorCode.DATA_NO_FOUND).build();
         }
@@ -112,37 +112,37 @@ public class MqttDeviceTemplateService {
         deviceTemplate.setContent(updateDeviceTemplateRequest.getContent());
         deviceTemplate.setDescription(updateDeviceTemplateRequest.getDescription());
 
-        String oldTopic = DataCenter.getTopic(deviceTemplateKey);
-        DataCenter.putTopic(deviceTemplate.getKey(), topic);
+        String oldTopic = DataCenter.getTopic(id);
+        DataCenter.putTopic(id, topic);
 
         deviceTemplateServiceProvider.save(deviceTemplate);
         if (oldTopic.equals(topic)) {
             if (!oldDeviceTemplateContent.equals(deviceTemplateContent)) {
                 mqttDeviceMqttService.unsubscribe(oldTopic);
-                mqttDeviceMqttService.subscribe(topic, deviceTemplate.getKey(), deviceTemplateContent);
+                mqttDeviceMqttService.subscribe(topic, id, deviceTemplateContent);
             }
         } else {
             mqttDeviceMqttService.unsubscribe(oldTopic);
-            mqttDeviceMqttService.subscribe(topic, deviceTemplate.getKey(), deviceTemplateContent);
+            mqttDeviceMqttService.subscribe(topic, id, deviceTemplateContent);
         }
     }
 
     public void batchDeleteDeviceTemplates(BatchDeleteDeviceTemplateRequest batchDeleteDeviceTemplateRequest) {
-        if (!CollectionUtils.isEmpty(batchDeleteDeviceTemplateRequest.getKeyList())) {
-            batchDeleteDeviceTemplateRequest.getKeyList().forEach(deviceTemplateKey -> {
-                String topic = DataCenter.getTopic(deviceTemplateKey);
+        if (!CollectionUtils.isEmpty(batchDeleteDeviceTemplateRequest.getIdList())) {
+            batchDeleteDeviceTemplateRequest.getIdList().stream().map(Long::parseLong).toList().forEach(id -> {
+                String topic = DataCenter.getTopic(id);
                 if (StringUtils.isNotEmpty(topic)) {
-                    DataCenter.removeTopic(deviceTemplateKey);
+                    DataCenter.removeTopic(id);
                     mqttDeviceMqttService.unsubscribe(topic);
                 }
-                deviceTemplateServiceProvider.deleteByKey(deviceTemplateKey);
+                deviceTemplateServiceProvider.deleteById(id);
             });
         }
     }
 
-    public DeviceTemplateInfoResponse getDeviceDetail(@PathVariable("deviceTemplateKey") String deviceTemplateKey) {
-        DeviceTemplate deviceTemplate = deviceTemplateServiceProvider.findByKey(deviceTemplateKey);
-        return new DeviceTemplateInfoResponse(convertToResponseData(deviceTemplate), DataCenter.getTopic(deviceTemplateKey));
+    public DeviceTemplateInfoResponse getDeviceDetail(@PathVariable("id") Long id) {
+        DeviceTemplate deviceTemplate = deviceTemplateServiceProvider.findById(id);
+        return new DeviceTemplateInfoResponse(convertToResponseData(deviceTemplate), DataCenter.getTopic(id));
     }
 
     public void validate(ValidateDeviceTemplateRequest validateDeviceTemplateRequest) {
@@ -155,7 +155,7 @@ public class MqttDeviceTemplateService {
 
     private DeviceTemplateResponseData convertToResponseData(DeviceTemplate deviceTemplate) {
         DeviceTemplateResponseData deviceTemplateResponseData = new DeviceTemplateResponseData();
-        deviceTemplateResponseData.setId(deviceTemplate.getId().toString());
+        deviceTemplateResponseData.setId(deviceTemplate.getId());
         deviceTemplateResponseData.setKey(deviceTemplate.getKey());
         deviceTemplateResponseData.setName(deviceTemplate.getName());
         deviceTemplateResponseData.setContent(deviceTemplate.getContent());

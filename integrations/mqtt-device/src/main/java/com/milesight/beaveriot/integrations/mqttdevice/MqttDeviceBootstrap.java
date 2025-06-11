@@ -109,19 +109,19 @@ public class MqttDeviceBootstrap implements IntegrationBootstrap {
     }
 
     private void subscribeTopics() {
-        List<String> deviceTemplateKeys = DataCenter.getDeviceTemplateKeys();
-        if (CollectionUtils.isEmpty(deviceTemplateKeys)) {
+        List<Long> deviceTemplateIds = DataCenter.getDeviceTemplateIds();
+        if (CollectionUtils.isEmpty(deviceTemplateIds)) {
             return;
         }
 
-        List<DeviceTemplate> list = deviceTemplateServiceProvider.findByKeys(deviceTemplateKeys);
+        List<DeviceTemplate> list = deviceTemplateServiceProvider.findByIds(deviceTemplateIds);
         if (CollectionUtils.isEmpty(list)) {
             return;
         }
 
         list.forEach(deviceTemplate -> {
-            String topic = DataCenter.getTopic(deviceTemplate.getKey());
-            mqttDeviceMqttService.subscribe(topic, deviceTemplate.getKey(), deviceTemplate.getContent());
+            String topic = DataCenter.getTopic(deviceTemplate.getId());
+            mqttDeviceMqttService.subscribe(topic, deviceTemplate.getId(), deviceTemplate.getContent());
         });
     }
 }
