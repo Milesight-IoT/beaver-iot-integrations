@@ -65,7 +65,7 @@ public class MqttDeviceTemplateService {
 
     public Page<DeviceTemplateResponseData> searchDeviceTemplate(SearchDeviceTemplateRequest searchDeviceTemplateRequest) {
         Page<DeviceTemplateResponseData> deviceTemplateResponseDataPage = deviceTemplateServiceProvider.search(searchDeviceTemplateRequest);
-        return deviceTemplateResponseDataPage.map(deviceTemplateResponseData -> new DeviceTemplateInfoResponse(deviceTemplateResponseData, DataCenter.getTopic(deviceTemplateResponseData.getId())));
+        return deviceTemplateResponseDataPage.map(deviceTemplateResponseData -> new DeviceTemplateInfoResponse(deviceTemplateResponseData, DataCenter.getTopic(Long.parseLong(deviceTemplateResponseData.getId()))));
     }
 
     public DeviceTemplateTestResponse testDeviceTemplate(Long id, TestDeviceTemplateRequest testDeviceTemplateRequest) {
@@ -155,7 +155,7 @@ public class MqttDeviceTemplateService {
 
     private DeviceTemplateResponseData convertToResponseData(DeviceTemplate deviceTemplate) {
         DeviceTemplateResponseData deviceTemplateResponseData = new DeviceTemplateResponseData();
-        deviceTemplateResponseData.setId(deviceTemplate.getId());
+        deviceTemplateResponseData.setId(deviceTemplate.getId().toString());
         deviceTemplateResponseData.setKey(deviceTemplate.getKey());
         deviceTemplateResponseData.setName(deviceTemplate.getName());
         deviceTemplateResponseData.setContent(deviceTemplate.getContent());
