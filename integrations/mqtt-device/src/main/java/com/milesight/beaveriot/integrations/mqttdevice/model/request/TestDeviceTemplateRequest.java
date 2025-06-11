@@ -8,5 +8,5 @@ import lombok.Data;
  **/
 @Data
 public class TestDeviceTemplateRequest {
-    Object testData;
+    String testData;
 }

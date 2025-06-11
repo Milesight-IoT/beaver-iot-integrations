@@ -90,6 +90,10 @@ public class MqttDeviceTemplateService {
         return testResponse;
     }
 
+    public String output(String deviceKey, ExchangePayload payload) {
+        return deviceTemplateParserProvider.output(deviceKey, payload);
+    }
+
     private void flattenDeviceEntities(List<Entity> deviceEntities, Map<String, Entity> flatDeviceEntityMap) {
         for (Entity entity : deviceEntities) {
             flatDeviceEntityMap.put(entity.getKey(), entity);
@@ -150,7 +154,7 @@ public class MqttDeviceTemplateService {
     }
 
     public DeviceTemplateDefaultContent getDefaultDeviceTemplateContent() {
-        return DeviceTemplateDefaultContent.build(deviceTemplateParserProvider.getDefaultDeviceTemplateContent());
+        return DeviceTemplateDefaultContent.build(deviceTemplateParserProvider.defaultContent());
     }
 
     private DeviceTemplateResponseData convertToResponseData(DeviceTemplate deviceTemplate) {
