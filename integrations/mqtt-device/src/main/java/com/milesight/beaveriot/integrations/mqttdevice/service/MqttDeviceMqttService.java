@@ -1,7 +1,10 @@
 package com.milesight.beaveriot.integrations.mqttdevice.service;
 
-import com.milesight.beaveriot.context.api.*;
-import com.milesight.beaveriot.context.model.response.DeviceTemplateDiscoverResponse;
+import com.milesight.beaveriot.context.api.DeviceServiceProvider;
+import com.milesight.beaveriot.context.api.DeviceTemplateParserProvider;
+import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
+import com.milesight.beaveriot.context.api.MqttPubSubServiceProvider;
+import com.milesight.beaveriot.context.model.response.DeviceTemplateInputResult;
 import com.milesight.beaveriot.integrations.mqttdevice.support.DataCenter;
 import com.milesight.beaveriot.integrations.mqttdevice.support.TopicConverter;
 import org.springframework.stereotype.Service;
@@ -26,15 +29,15 @@ public class MqttDeviceMqttService {
         this.entityValueServiceProvider = entityValueServiceProvider;
     }
 
-    public void subscribe(String subTopic, Long deviceTemplateId, String deviceTemplateContent) {
+    public void subscribe(String subTopic, Long deviceTemplateId) {
         String convertTopic = TopicConverter.convert(subTopic);
         mqttPubSubServiceProvider.subscribe(DataCenter.getUserName(), convertTopic, message -> {
-            String jsonStr = new String(message.getPayload(), StandardCharsets.UTF_8);
-            DeviceTemplateDiscoverResponse response = deviceTemplateParserProvider.discover(DataCenter.INTEGRATION_ID, jsonStr, deviceTemplateId, deviceTemplateContent);
-            if (response.getDevice() != null) {
-                deviceServiceProvider.save(response.getDevice());
-                if (response.getPayload() != null) {
-                    entityValueServiceProvider.saveValuesAndPublishSync(response.getPayload());
+            String jsonData = new String(message.getPayload(), StandardCharsets.UTF_8);
+            DeviceTemplateInputResult result = deviceTemplateParserProvider.input(DataCenter.INTEGRATION_ID, deviceTemplateId, jsonData);
+            if (result.getDevice() != null) {
+                deviceServiceProvider.save(result.getDevice());
+                if (result.getPayload() != null) {
+                    entityValueServiceProvider.saveValuesAndPublishSync(result.getPayload());
                 }
             }
         });

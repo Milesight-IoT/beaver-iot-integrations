@@ -2,7 +2,6 @@ package com.milesight.beaveriot.integrations.mqttdevice.model.response;
 
 import lombok.Data;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -11,5 +10,5 @@ import java.util.Map;
  **/
 @Data
 public class DeviceTemplateOutputResponse {
-    private List<Map<String, Object>> outputs;
+    private Map<String, Object> output;
 }

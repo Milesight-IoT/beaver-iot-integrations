@@ -5,6 +5,7 @@ import com.milesight.beaveriot.base.response.ResponseBody;
 import com.milesight.beaveriot.base.response.ResponseBuilder;
 import com.milesight.beaveriot.base.utils.JsonUtils;
 import com.milesight.beaveriot.context.model.request.SearchDeviceTemplateRequest;
+import com.milesight.beaveriot.context.model.response.DeviceTemplateOutputResult;
 import com.milesight.beaveriot.context.model.response.DeviceTemplateResponseData;
 import com.milesight.beaveriot.integrations.mqttdevice.model.request.*;
 import com.milesight.beaveriot.integrations.mqttdevice.model.response.DeviceTemplateDefaultContent;
@@ -16,7 +17,6 @@ import com.milesight.beaveriot.integrations.mqttdevice.support.DataCenter;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -79,10 +79,10 @@ public class MqttDeviceTemplateController {
 
     @PostMapping("/output/{deviceKey}")
     public ResponseBody<DeviceTemplateOutputResponse> output(@PathVariable("deviceKey") String deviceKey, @RequestBody DeviceTemplateOutputRequest deviceTemplateOutputRequest) {
-        String jsonData = mqttDeviceTemplateService.output(deviceKey, deviceTemplateOutputRequest.getExchange());
-        List<Map<String, Object>> outputs = JsonUtils.fromJSON(jsonData, new TypeReference<>() {});
+        DeviceTemplateOutputResult result = mqttDeviceTemplateService.output(deviceKey, deviceTemplateOutputRequest.getExchange());
+        Map<String, Object> output = JsonUtils.fromJSON(result.getOutput(), new TypeReference<>() {});
         DeviceTemplateOutputResponse deviceTemplateOutputResponse = new DeviceTemplateOutputResponse();
-        deviceTemplateOutputResponse.setOutputs(outputs);
+        deviceTemplateOutputResponse.setOutput(output);
         return ResponseBuilder.success(deviceTemplateOutputResponse);
     }
 }

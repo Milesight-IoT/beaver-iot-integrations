@@ -9,7 +9,8 @@ import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
 import com.milesight.beaveriot.context.constants.IntegrationConstants;
 import com.milesight.beaveriot.context.integration.model.*;
 import com.milesight.beaveriot.context.model.request.SearchDeviceTemplateRequest;
-import com.milesight.beaveriot.context.model.response.DeviceTemplateDiscoverResponse;
+import com.milesight.beaveriot.context.model.response.DeviceTemplateInputResult;
+import com.milesight.beaveriot.context.model.response.DeviceTemplateOutputResult;
 import com.milesight.beaveriot.context.model.response.DeviceTemplateResponseData;
 import com.milesight.beaveriot.integrations.mqttdevice.model.request.*;
 import com.milesight.beaveriot.integrations.mqttdevice.model.response.DeviceTemplateDefaultContent;
@@ -60,7 +61,7 @@ public class MqttDeviceTemplateService {
         }
         deviceTemplateServiceProvider.save(deviceTemplate);
         DataCenter.putTopic(deviceTemplate.getId(), topic);
-        mqttDeviceMqttService.subscribe(topic, deviceTemplate.getId(), deviceTemplate.getContent());
+        mqttDeviceMqttService.subscribe(topic, deviceTemplate.getId());
     }
 
     public Page<DeviceTemplateResponseData> searchDeviceTemplate(SearchDeviceTemplateRequest searchDeviceTemplateRequest) {
@@ -70,10 +71,9 @@ public class MqttDeviceTemplateService {
 
     public DeviceTemplateTestResponse testDeviceTemplate(Long id, TestDeviceTemplateRequest testDeviceTemplateRequest) {
         DeviceTemplateTestResponse testResponse = new DeviceTemplateTestResponse();
-        String deviceTemplateContent = deviceTemplateServiceProvider.findById(id).getContent();
-        DeviceTemplateDiscoverResponse discoverResponse = deviceTemplateParserProvider.discover(DataCenter.INTEGRATION_ID, testDeviceTemplateRequest.getTestData(), id, deviceTemplateContent);
-        Device device = discoverResponse.getDevice();
-        ExchangePayload payload = discoverResponse.getPayload();
+        DeviceTemplateInputResult result = deviceTemplateParserProvider.input(DataCenter.INTEGRATION_ID, id, testDeviceTemplateRequest.getTestData());
+        Device device = result.getDevice();
+        ExchangePayload payload = result.getPayload();
         if (device != null) {
             deviceServiceProvider.save(device);
             if (payload != null) {
@@ -90,7 +90,7 @@ public class MqttDeviceTemplateService {
         return testResponse;
     }
 
-    public String output(String deviceKey, ExchangePayload payload) {
+    public DeviceTemplateOutputResult output(String deviceKey, ExchangePayload payload) {
         return deviceTemplateParserProvider.output(deviceKey, payload);
     }
 
@@ -123,11 +123,11 @@ public class MqttDeviceTemplateService {
         if (oldTopic.equals(topic)) {
             if (!oldDeviceTemplateContent.equals(deviceTemplateContent)) {
                 mqttDeviceMqttService.unsubscribe(oldTopic);
-                mqttDeviceMqttService.subscribe(topic, id, deviceTemplateContent);
+                mqttDeviceMqttService.subscribe(topic, id);
             }
         } else {
             mqttDeviceMqttService.unsubscribe(oldTopic);
-            mqttDeviceMqttService.subscribe(topic, id, deviceTemplateContent);
+            mqttDeviceMqttService.subscribe(topic, id);
         }
     }
 
