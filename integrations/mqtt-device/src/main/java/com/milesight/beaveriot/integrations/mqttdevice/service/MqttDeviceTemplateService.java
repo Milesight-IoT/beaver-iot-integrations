@@ -13,11 +13,10 @@ import com.milesight.beaveriot.context.model.response.DeviceTemplateInputResult;
 import com.milesight.beaveriot.context.model.response.DeviceTemplateOutputResult;
 import com.milesight.beaveriot.context.model.response.DeviceTemplateResponseData;
 import com.milesight.beaveriot.integrations.mqttdevice.model.request.*;
-import com.milesight.beaveriot.integrations.mqttdevice.model.response.DeviceTemplateDefaultContent;
+import com.milesight.beaveriot.integrations.mqttdevice.model.response.DeviceTemplateDefaultContentResponse;
 import com.milesight.beaveriot.integrations.mqttdevice.model.response.DeviceTemplateInfoResponse;
 import com.milesight.beaveriot.integrations.mqttdevice.model.response.DeviceTemplateTestResponse;
 import com.milesight.beaveriot.integrations.mqttdevice.support.DataCenter;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -35,14 +34,12 @@ import java.util.Map;
 public class MqttDeviceTemplateService {
     private final DeviceTemplateServiceProvider deviceTemplateServiceProvider;
     private final DeviceTemplateParserProvider deviceTemplateParserProvider;
-    private final MqttDeviceMqttService mqttDeviceMqttService;
     private final DeviceServiceProvider deviceServiceProvider;
     private final EntityValueServiceProvider entityValueServiceProvider;
 
-    public MqttDeviceTemplateService(DeviceTemplateServiceProvider deviceTemplateServiceProvider, DeviceTemplateParserProvider deviceTemplateParserProvider, MqttDeviceMqttService mqttDeviceMqttService, DeviceServiceProvider deviceServiceProvider, EntityValueServiceProvider entityValueServiceProvider) {
+    public MqttDeviceTemplateService(DeviceTemplateServiceProvider deviceTemplateServiceProvider, DeviceTemplateParserProvider deviceTemplateParserProvider, DeviceServiceProvider deviceServiceProvider, EntityValueServiceProvider entityValueServiceProvider) {
         this.deviceTemplateServiceProvider = deviceTemplateServiceProvider;
         this.deviceTemplateParserProvider = deviceTemplateParserProvider;
-        this.mqttDeviceMqttService = mqttDeviceMqttService;
         this.deviceServiceProvider = deviceServiceProvider;
         this.entityValueServiceProvider = entityValueServiceProvider;
     }
@@ -60,8 +57,7 @@ public class MqttDeviceTemplateService {
             throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), "topic exists").build();
         }
         deviceTemplateServiceProvider.save(deviceTemplate);
-        DataCenter.putTopic(deviceTemplate.getId(), topic);
-        mqttDeviceMqttService.subscribe(topic, deviceTemplate.getId());
+        DataCenter.putTopic(topic, deviceTemplate.getId());
     }
 
     public Page<DeviceTemplateResponseData> searchDeviceTemplate(SearchDeviceTemplateRequest searchDeviceTemplateRequest) {
@@ -109,37 +105,23 @@ public class MqttDeviceTemplateService {
             throw ServiceException.with(ErrorCode.DATA_NO_FOUND).build();
         }
         String topic = updateDeviceTemplateRequest.getTopic();
-        String deviceTemplateContent = updateDeviceTemplateRequest.getContent();
-
         deviceTemplate.setName(updateDeviceTemplateRequest.getName());
-        String oldDeviceTemplateContent = deviceTemplate.getContent();
         deviceTemplate.setContent(updateDeviceTemplateRequest.getContent());
         deviceTemplate.setDescription(updateDeviceTemplateRequest.getDescription());
 
-        String oldTopic = DataCenter.getTopic(id);
-        DataCenter.putTopic(id, topic);
-
         deviceTemplateServiceProvider.save(deviceTemplate);
-        if (oldTopic.equals(topic)) {
-            if (!oldDeviceTemplateContent.equals(deviceTemplateContent)) {
-                mqttDeviceMqttService.unsubscribe(oldTopic);
-                mqttDeviceMqttService.subscribe(topic, id);
-            }
-        } else {
-            mqttDeviceMqttService.unsubscribe(oldTopic);
-            mqttDeviceMqttService.subscribe(topic, id);
+        String oldTopic = DataCenter.getTopic(id);
+        if (!oldTopic.equals(topic)) {
+            DataCenter.removeTopic(oldTopic);
+            DataCenter.putTopic(topic, id);
         }
     }
 
     public void batchDeleteDeviceTemplates(BatchDeleteDeviceTemplateRequest batchDeleteDeviceTemplateRequest) {
         if (!CollectionUtils.isEmpty(batchDeleteDeviceTemplateRequest.getIdList())) {
             batchDeleteDeviceTemplateRequest.getIdList().stream().map(Long::parseLong).toList().forEach(id -> {
-                String topic = DataCenter.getTopic(id);
-                if (StringUtils.isNotEmpty(topic)) {
-                    DataCenter.removeTopic(id);
-                    mqttDeviceMqttService.unsubscribe(topic);
-                }
                 deviceTemplateServiceProvider.deleteById(id);
+                DataCenter.removeTopicByTemplateId(id);
             });
         }
     }
@@ -153,8 +135,8 @@ public class MqttDeviceTemplateService {
         deviceTemplateParserProvider.validate(validateDeviceTemplateRequest.getContent());
     }
 
-    public DeviceTemplateDefaultContent getDefaultDeviceTemplateContent() {
-        return DeviceTemplateDefaultContent.build(deviceTemplateParserProvider.defaultContent());
+    public DeviceTemplateDefaultContentResponse getDefaultDeviceTemplateContent() {
+        return DeviceTemplateDefaultContentResponse.build(deviceTemplateParserProvider.defaultContent());
     }
 
     private DeviceTemplateResponseData convertToResponseData(DeviceTemplate deviceTemplate) {
