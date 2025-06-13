@@ -7,9 +7,9 @@ import com.milesight.beaveriot.integrations.aiinference.api.config.Config;
 import com.milesight.beaveriot.integrations.aiinference.api.enums.ServerErrorCode;
 import com.milesight.beaveriot.integrations.aiinference.api.model.request.ModelInferRequest;
 import com.milesight.beaveriot.integrations.aiinference.api.model.response.ClientResponse;
-import com.milesight.beaveriot.integrations.aiinference.api.model.response.ModelDetailResponse;
+import com.milesight.beaveriot.integrations.aiinference.api.model.response.CamThinkModelDetailResponse;
 import com.milesight.beaveriot.integrations.aiinference.api.model.response.ModelInferResponse;
-import com.milesight.beaveriot.integrations.aiinference.api.model.response.ModelResponse;
+import com.milesight.beaveriot.integrations.aiinference.api.model.response.CamThinkModelListResponse;
 import com.milesight.beaveriot.integrations.aiinference.api.utils.OkHttpUtil;
 import com.milesight.beaveriot.integrations.aiinference.entity.AiInferenceConnectionPropertiesEntities;
 import lombok.Builder;
@@ -34,27 +34,27 @@ public class AiInferenceClient {
         OkHttpUtil.setCommonHeaders(Map.of("X-Access-Token", config.getToken()));
     }
 
-    public ModelResponse getModels() {
+    public CamThinkModelListResponse getModels() {
         String url = config.getModelsUrl();
         String params = "page=1&page_size=9999";
         url = url + "?" + params;
         ClientResponse clientResponse = OkHttpUtil.get(url);
         validateResponse(clientResponse);
         try {
-            return JsonUtils.fromJSON(clientResponse.getData(), ModelResponse.class);
+            return JsonUtils.fromJSON(clientResponse.getData(), CamThinkModelListResponse.class);
         } catch (Exception e) {
             log.error("Error: ", e);
             return null;
         }
     }
 
-    public ModelDetailResponse getModelDetail(String modelId) {
+    public CamThinkModelDetailResponse getModelDetail(String modelId) {
         String url = config.getModelDetailUrl();
         url = MessageFormat.format(url, modelId);
         ClientResponse clientResponse = OkHttpUtil.get(url);
         validateResponse(clientResponse);
         try {
-            return JsonUtils.fromJSON(clientResponse.getData(), ModelDetailResponse.class);
+            return JsonUtils.fromJSON(clientResponse.getData(), CamThinkModelDetailResponse.class);
         } catch (Exception e) {
             log.error("Error: ", e);
             return null;

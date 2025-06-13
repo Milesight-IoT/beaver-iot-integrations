@@ -15,9 +15,9 @@ import com.milesight.beaveriot.integrations.aiinference.api.client.AiInferenceCl
 import com.milesight.beaveriot.integrations.aiinference.api.config.Config;
 import com.milesight.beaveriot.integrations.aiinference.api.enums.ServerErrorCode;
 import com.milesight.beaveriot.integrations.aiinference.api.model.request.ModelInferRequest;
-import com.milesight.beaveriot.integrations.aiinference.api.model.response.ModelDetailResponse;
+import com.milesight.beaveriot.integrations.aiinference.api.model.response.CamThinkModelDetailResponse;
+import com.milesight.beaveriot.integrations.aiinference.api.model.response.CamThinkModelListResponse;
 import com.milesight.beaveriot.integrations.aiinference.api.model.response.ModelInferResponse;
-import com.milesight.beaveriot.integrations.aiinference.api.model.response.ModelResponse;
 import com.milesight.beaveriot.integrations.aiinference.constant.Constants;
 import com.milesight.beaveriot.integrations.aiinference.entity.AiInferenceConnectionPropertiesEntities;
 import com.milesight.beaveriot.integrations.aiinference.entity.AiInferenceServiceEntities;
@@ -157,17 +157,17 @@ public class AiInferenceService {
 
     private void initModels() {
         if (testConnection()) {
-            ModelResponse modelResponse = aiInferenceClient.getModels();
-            if (modelResponse == null) {
+            CamThinkModelListResponse camThinkModelListResponse = aiInferenceClient.getModels();
+            if (camThinkModelListResponse == null) {
                 return;
             }
 
-            if (CollectionUtils.isEmpty(modelResponse.getData())) {
+            if (CollectionUtils.isEmpty(camThinkModelListResponse.getData())) {
                 return;
             }
 
             Set<String> newModelKeys = new HashSet<>();
-            for (ModelResponse.ModelData modelData : modelResponse.getData()) {
+            for (CamThinkModelListResponse.ModelData modelData : camThinkModelListResponse.getData()) {
                 String modelKey = ModelServiceEntityTemplate.getModelKey(modelData.getModelId());
                 newModelKeys.add(modelKey);
             }
@@ -186,7 +186,7 @@ public class AiInferenceService {
                 toDeleteModelKeys.forEach(entityServiceProvider::deleteByKey);
             }
 
-            for (ModelResponse.ModelData modelData : modelResponse.getData()) {
+            for (CamThinkModelListResponse.ModelData modelData : camThinkModelListResponse.getData()) {
                 ModelServiceEntityTemplate modelServiceEntityTemplate = ModelServiceEntityTemplate.builder()
                         .modelId(modelData.getModelId())
                         .name(modelData.getName())
@@ -200,37 +200,44 @@ public class AiInferenceService {
         }
     }
 
-    public ModelDetailResponse fetchModelDetail(String modelId) {
-        ModelDetailResponse modelDetailResponse = null;
+    public CamThinkModelDetailResponse fetchModelDetail(String modelId) {
+        CamThinkModelDetailResponse camThinkModelDetailResponse = null;
         if (testConnection()) {
-            modelDetailResponse = aiInferenceClient.getModelDetail(modelId);
-            if (modelDetailResponse == null) {
+            camThinkModelDetailResponse = aiInferenceClient.getModelDetail(modelId);
+            if (camThinkModelDetailResponse == null) {
                 return null;
             }
-            if (modelDetailResponse.getParameters() == null) {
+            if (camThinkModelDetailResponse.getData() == null) {
                 return null;
             }
-            if (CollectionUtils.isEmpty(modelDetailResponse.getParameters().getInput())) {
+            if (CollectionUtils.isEmpty(camThinkModelDetailResponse.getData().getInputSchema())) {
                 return null;
             }
+            /*if (CollectionUtils.isEmpty(camThinkModelDetailResponse.getData().getOutputSchema())) {
+                return null;
+            }*/
             String modelKey = ModelServiceEntityTemplate.getModelKey(modelId);
             Entity modelServiceEntity = entityServiceProvider.findByKey(modelKey);
             String modelServiceIdentifier = modelServiceEntity.getIdentifier();
             modelServiceEntity.getChildren().clear();
-            for (ModelDetailResponse.Input input : modelDetailResponse.getParameters().getInput()) {
+            for (CamThinkModelDetailResponse.InputSchema inputSchema : camThinkModelDetailResponse.getData().getInputSchema()) {
                 ModelServiceInputEntityTemplate modelServiceInputEntityTemplate = ModelServiceInputEntityTemplate.builder()
                         .parentIdentifier(modelServiceIdentifier)
-                        .name(input.getName())
-                        .type(input.getType())
-                        .description(input.getDescription())
-                        .required(input.getRequired())
+                        .name(inputSchema.getName())
+                        .type(inputSchema.getType())
+                        .description(inputSchema.getDescription())
+                        .required(inputSchema.isRequired())
+                        .format(inputSchema.getFormat())
+                        .defaultValue(inputSchema.getDefaultValue())
+                        .minimum(inputSchema.getMinimum())
+                        .maximum(inputSchema.getMaximum())
                         .build();
                 Entity modelServiceInputEntity = modelServiceInputEntityTemplate.toEntity();
                 modelServiceEntity.getChildren().add(modelServiceInputEntity);
             }
             entityServiceProvider.save(modelServiceEntity);
         }
-        return modelDetailResponse;
+        return camThinkModelDetailResponse;
     }
 
     public void initConnection(AiInferenceConnectionPropertiesEntities.AiInferenceProperties aiInferenceProperties) {

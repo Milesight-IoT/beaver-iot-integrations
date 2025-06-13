@@ -1,6 +1,7 @@
 package com.milesight.beaveriot.integrations.aiinference.api.model.response;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.util.List;
 
@@ -8,11 +9,9 @@ import java.util.List;
  * author: Luxb
  * create: 2025/6/5 14:18
  **/
+@EqualsAndHashCode(callSuper = true)
 @Data
-public class ModelResponse {
-    private List<ModelData> data;
-    private Pagination pagination;
-
+public class CamThinkModelListResponse extends CamThinkResponse<List<CamThinkModelListResponse.ModelData>>{
     @Data
     public static class ModelData {
         private String modelId;

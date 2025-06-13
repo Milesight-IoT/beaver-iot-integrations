@@ -4,7 +4,7 @@ import com.milesight.beaveriot.base.exception.ServiceException;
 import com.milesight.beaveriot.base.response.ResponseBody;
 import com.milesight.beaveriot.base.response.ResponseBuilder;
 import com.milesight.beaveriot.integrations.aiinference.api.enums.ServerErrorCode;
-import com.milesight.beaveriot.integrations.aiinference.api.model.response.ModelDetailResponse;
+import com.milesight.beaveriot.integrations.aiinference.api.model.response.CamThinkModelDetailResponse;
 import com.milesight.beaveriot.integrations.aiinference.api.model.response.ModelOutputResponse;
 import com.milesight.beaveriot.integrations.aiinference.constant.Constants;
 import com.milesight.beaveriot.integrations.aiinference.service.AiInferenceService;
@@ -25,11 +25,11 @@ public class AiInferenceController {
 
     @PostMapping("/model/{modelId}/sync-detail")
     public ResponseBody<ModelOutputResponse> fetchModelDetail(@PathVariable("modelId") String modelId) {
-        ModelDetailResponse modelDetailResponse = service.fetchModelDetail(modelId);
-        if (modelDetailResponse == null) {
+        CamThinkModelDetailResponse camThinkModelDetailResponse = service.fetchModelDetail(modelId);
+        if (camThinkModelDetailResponse == null) {
             throw ServiceException.with(ServerErrorCode.SERVER_DATA_NOT_FOUND.getErrorCode(), ServerErrorCode.SERVER_DATA_NOT_FOUND.getErrorMessage()).build();
         }
-        ModelOutputResponse outputResponse = new ModelOutputResponse(modelDetailResponse);
+        ModelOutputResponse outputResponse = new ModelOutputResponse(camThinkModelDetailResponse);
         return ResponseBuilder.success(outputResponse);
     }
 }

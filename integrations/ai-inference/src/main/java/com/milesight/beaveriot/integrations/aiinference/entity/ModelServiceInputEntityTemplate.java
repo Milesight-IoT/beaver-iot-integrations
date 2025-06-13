@@ -3,10 +3,10 @@ package com.milesight.beaveriot.integrations.aiinference.entity;
 import com.milesight.beaveriot.context.integration.enums.EntityValueType;
 import com.milesight.beaveriot.context.integration.model.Entity;
 import com.milesight.beaveriot.context.integration.model.EntityBuilder;
-import com.milesight.beaveriot.context.integration.model.ExchangePayload;
 import com.milesight.beaveriot.integrations.aiinference.constant.Constants;
 import lombok.Builder;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -20,28 +20,63 @@ public class ModelServiceInputEntityTemplate {
     private String type;
     private String description;
     private boolean required;
+    private String format;
+    private String defaultValue;
+    private Double minimum;
+    private Double maximum;
 
     public Entity toEntity() {
-        EntityValueType valueType = EntityValueType.STRING;
-        String formatValue = "";
-        if ("image_base64".equals(type)) {
-            formatValue = "IMAGE:BASE64";
-        } else if ("image_url".equals(type)) {
-            formatValue = "IMAGE:URL";
-        } else if ("float".equals(type)) {
-            valueType = EntityValueType.DOUBLE;
-        }
+        EntityValueType valueType = convertType();
+        Map<String, Object> attributes = buildAttributes();
+
         return new EntityBuilder(Constants.INTEGRATION_ID)
                 .identifier(name)
                 .parentIdentifier(parentIdentifier)
                 .service(name)
                 .description(description)
                 .valueType(valueType)
-                .attributes(Map.of(
-                        "optional", !required,
-                        "format", formatValue
-                ))
+                .attributes(attributes)
                 .build();
+    }
+
+    private EntityValueType convertType() {
+        EntityValueType valueType;
+        if ("float".equals(type)) {
+            valueType = EntityValueType.DOUBLE;
+        } else if ("integer".equals(type)) {
+            valueType = EntityValueType.LONG;
+        } else if ("boolean".equals(type)) {
+            valueType = EntityValueType.BOOLEAN;
+        } else {
+            valueType = EntityValueType.STRING;
+        }
+        return valueType;
+    }
+
+    private String convertFormat() {
+        if ("uri".equals(format)) {
+            return "IMAGE:URL";
+        } else {
+            return "IMAGE:BASE64";
+        }
+    }
+
+    private Map<String, Object> buildAttributes() {
+        Map<String, Object> attributes = new HashMap<>();
+        attributes.put("optional", !required);
+        if (format != null) {
+            attributes.put("format", convertFormat());
+        }
+        if (defaultValue != null) {
+            attributes.put("default_value", defaultValue);
+        }
+        if (minimum != null) {
+            attributes.put("min", minimum);
+        }
+        if (maximum != null) {
+            attributes.put("max", maximum);
+        }
+        return attributes;
     }
 
     public static String getModelInputNameFromKey(String key) {

@@ -10,9 +10,9 @@ import java.util.List;
  **/
 @Data
 public class ModelOutputResponse {
-    private List<ModelDetailResponse.Output> output;
+    private List<CamThinkModelDetailResponse.OutputSchema> outputSchema;
 
-    public ModelOutputResponse(ModelDetailResponse modelDetailResponse) {
-        this.output = modelDetailResponse.getParameters().getOutput();
+    public ModelOutputResponse(CamThinkModelDetailResponse camThinkModelDetailResponse) {
+        this.outputSchema = camThinkModelDetailResponse.getData().getOutputSchema();
     }
 }
