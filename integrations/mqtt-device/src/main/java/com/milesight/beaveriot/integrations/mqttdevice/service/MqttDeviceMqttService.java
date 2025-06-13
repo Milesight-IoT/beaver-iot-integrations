@@ -6,6 +6,8 @@ import com.milesight.beaveriot.context.api.DeviceServiceProvider;
 import com.milesight.beaveriot.context.api.DeviceTemplateParserProvider;
 import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
 import com.milesight.beaveriot.context.api.MqttPubSubServiceProvider;
+import com.milesight.beaveriot.context.integration.model.Device;
+import com.milesight.beaveriot.context.integration.model.ExchangePayload;
 import com.milesight.beaveriot.context.model.response.DeviceTemplateInputResult;
 import com.milesight.beaveriot.integrations.mqttdevice.support.DataCenter;
 import lombok.extern.slf4j.Slf4j;
@@ -43,10 +45,12 @@ public class MqttDeviceMqttService {
                 }
                 String jsonData = new String(message.getPayload(), StandardCharsets.UTF_8);
                 DeviceTemplateInputResult result = deviceTemplateParserProvider.input(DataCenter.INTEGRATION_ID, deviceTemplateId, jsonData);
-                if (result.getDevice() != null) {
-                    deviceServiceProvider.save(result.getDevice());
-                    if (result.getPayload() != null) {
-                        entityValueServiceProvider.saveValuesAndPublishSync(result.getPayload());
+                Device device = result.getDevice();
+                ExchangePayload payload = result.getPayload();
+                if (device != null) {
+                    deviceServiceProvider.save(device);
+                    if (payload != null) {
+                        entityValueServiceProvider.saveValuesAndPublishSync(payload);
                     }
                 }
             } catch (Exception e) {

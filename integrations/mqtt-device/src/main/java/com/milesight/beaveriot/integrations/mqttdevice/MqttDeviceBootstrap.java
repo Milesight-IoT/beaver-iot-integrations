@@ -3,6 +3,7 @@ package com.milesight.beaveriot.integrations.mqttdevice;
 import com.milesight.beaveriot.context.integration.bootstrap.IntegrationBootstrap;
 import com.milesight.beaveriot.context.integration.model.Integration;
 import com.milesight.beaveriot.integrations.mqttdevice.service.MqttDeviceMqttService;
+import com.milesight.beaveriot.integrations.mqttdevice.service.MqttDeviceService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -14,9 +15,11 @@ import org.springframework.stereotype.Component;
 @Component
 public class MqttDeviceBootstrap implements IntegrationBootstrap {
     private final MqttDeviceMqttService mqttDeviceMqttService;
+    private final MqttDeviceService mqttDeviceService;
 
-    public MqttDeviceBootstrap(MqttDeviceMqttService mqttDeviceMqttService) {
+    public MqttDeviceBootstrap(MqttDeviceMqttService mqttDeviceMqttService, MqttDeviceService mqttDeviceService) {
         this.mqttDeviceMqttService = mqttDeviceMqttService;
+        this.mqttDeviceService = mqttDeviceService;
     }
 
     @Override
@@ -38,5 +41,11 @@ public class MqttDeviceBootstrap implements IntegrationBootstrap {
 
     private void subscribeTopic() {
         mqttDeviceMqttService.subscribe();
+    }
+
+    @Override
+    public void onEnabled(String tenantId, Integration integrationConfig) {
+        mqttDeviceService.syncAddDeviceTemplates();
+        IntegrationBootstrap.super.onEnabled(tenantId, integrationConfig);
     }
 }

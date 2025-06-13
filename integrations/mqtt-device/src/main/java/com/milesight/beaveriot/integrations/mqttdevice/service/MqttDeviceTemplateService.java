@@ -34,12 +34,14 @@ import java.util.Map;
 public class MqttDeviceTemplateService {
     private final DeviceTemplateServiceProvider deviceTemplateServiceProvider;
     private final DeviceTemplateParserProvider deviceTemplateParserProvider;
+    private final MqttDeviceService mqttDeviceService;
     private final DeviceServiceProvider deviceServiceProvider;
     private final EntityValueServiceProvider entityValueServiceProvider;
 
-    public MqttDeviceTemplateService(DeviceTemplateServiceProvider deviceTemplateServiceProvider, DeviceTemplateParserProvider deviceTemplateParserProvider, DeviceServiceProvider deviceServiceProvider, EntityValueServiceProvider entityValueServiceProvider) {
+    public MqttDeviceTemplateService(DeviceTemplateServiceProvider deviceTemplateServiceProvider, DeviceTemplateParserProvider deviceTemplateParserProvider, MqttDeviceService mqttDeviceService, DeviceServiceProvider deviceServiceProvider, EntityValueServiceProvider entityValueServiceProvider) {
         this.deviceTemplateServiceProvider = deviceTemplateServiceProvider;
         this.deviceTemplateParserProvider = deviceTemplateParserProvider;
+        this.mqttDeviceService = mqttDeviceService;
         this.deviceServiceProvider = deviceServiceProvider;
         this.entityValueServiceProvider = entityValueServiceProvider;
     }
@@ -58,6 +60,7 @@ public class MqttDeviceTemplateService {
         }
         deviceTemplateServiceProvider.save(deviceTemplate);
         DataCenter.putTopic(topic, deviceTemplate.getId());
+        mqttDeviceService.syncAddDeviceTemplates();
     }
 
     public Page<DeviceTemplateResponseData> searchDeviceTemplate(SearchDeviceTemplateRequest searchDeviceTemplateRequest) {
@@ -115,6 +118,7 @@ public class MqttDeviceTemplateService {
             DataCenter.removeTopic(oldTopic);
             DataCenter.putTopic(topic, id);
         }
+        mqttDeviceService.syncAddDeviceTemplates();
     }
 
     public void batchDeleteDeviceTemplates(BatchDeleteDeviceTemplateRequest batchDeleteDeviceTemplateRequest) {
@@ -123,6 +127,7 @@ public class MqttDeviceTemplateService {
                 deviceTemplateServiceProvider.deleteById(id);
                 DataCenter.removeTopicByTemplateId(id);
             });
+            mqttDeviceService.syncAddDeviceTemplates();
         }
     }
 
