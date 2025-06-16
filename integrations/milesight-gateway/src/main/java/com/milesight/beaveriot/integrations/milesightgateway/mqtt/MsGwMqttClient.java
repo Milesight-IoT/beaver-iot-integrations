@@ -2,7 +2,6 @@ package com.milesight.beaveriot.integrations.milesightgateway.mqtt;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.milesight.beaveriot.base.annotations.shedlock.LockScope;
 import com.milesight.beaveriot.base.enums.ErrorCode;
 import com.milesight.beaveriot.base.exception.ServiceException;
 import com.milesight.beaveriot.context.api.DeviceServiceProvider;
@@ -22,19 +21,17 @@ import com.milesight.beaveriot.integrations.milesightgateway.model.DeviceConnect
 import com.milesight.beaveriot.integrations.milesightgateway.service.MsGwEntityService;
 import com.milesight.beaveriot.integrations.milesightgateway.util.Constants;
 import com.milesight.beaveriot.integrations.milesightgateway.mqtt.model.*;
-import com.milesight.beaveriot.integrations.milesightgateway.util.LockConstants;
 import lombok.extern.slf4j.Slf4j;
-import net.javacrumbs.shedlock.core.LockProvider;
-import net.javacrumbs.shedlock.core.SimpleLock;
-import net.javacrumbs.shedlock.spring.aop.ScopedLockConfiguration;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -72,9 +69,6 @@ public class MsGwMqttClient {
 
     @Autowired
     TaskExecutor taskExecutor;
-
-    @Autowired
-    LockProvider lockProvider;
 
     private final Map<String, CompletableFuture<MqttRawResponse>> pendingRequests = new ConcurrentHashMap<>();
 
@@ -131,8 +125,6 @@ public class MsGwMqttClient {
         } catch (JsonProcessingException e) {
             log.error(e.getMessage());
         }
-
-        updateGatewayStatus(gatewayEui, DeviceConnectStatus.ONLINE, System.currentTimeMillis());
     }
 
     private void onResponse(String gatewayEui, String message, MqttMessage mqttMessage) {
@@ -150,66 +142,46 @@ public class MsGwMqttClient {
         } catch (Exception e) {
             log.error("read response error", e);
         }
-
-        updateGatewayStatus(gatewayEui, DeviceConnectStatus.ONLINE, System.currentTimeMillis());
     }
 
     private void onGatewayConnect(MqttConnectEvent event) {
-        updateGatewayStatusFromClientId(event.getClientId(), DeviceConnectStatus.ONLINE, event.getTs());
+        updateGatewayStatus(event.getClientId(), DeviceConnectStatus.ONLINE, event.getTs());
     }
 
     private void onGatewayDisconnect(MqttDisconnectEvent event) {
-        updateGatewayStatusFromClientId(event.getClientId(), DeviceConnectStatus.OFFLINE, event.getTs());
+        updateGatewayStatus(event.getClientId(), DeviceConnectStatus.OFFLINE, event.getTs());
     }
 
-    private void updateGatewayStatusFromClientId(String clientId, DeviceConnectStatus status, Long ts) {
-        String eui = GatewayString.parseGatewayEuiFromClientId(clientId);
+    private void updateGatewayStatus(String gatewayClientId, DeviceConnectStatus status, Long ts) {
+        String eui = GatewayString.parseGatewayEuiFromClientId(gatewayClientId);
         if (eui == null) {
             return;
         }
 
-        updateGatewayStatus(eui, status, ts);
-    }
+        String identifier = GatewayString.getGatewayIdentifier(eui);
+        DeviceConnectStatus curStatus = msGwEntityService.getGatewayStatus(List.of(identifier)).get(identifier);
+        if (curStatus == null) {
+            curStatus = DeviceConnectStatus.ONLINE;
+        }
 
-    private void updateGatewayStatus(String eui, DeviceConnectStatus status, Long ts) {
-        SimpleLock lock = lockProvider.lock(ScopedLockConfiguration.builder(LockScope.TENANT)
-                .name(LockConstants.UPDATE_GATEWAY_STATUS_LOCK_PREFIX + ":" + eui)
-                .throwOnLockFailure(false)
-                .lockAtLeastFor(Duration.ZERO)
-                .lockAtMostFor(Duration.ofMinutes(1))
-                .build()).orElse(null);
-        if (lock == null) {
+        if (status.equals(curStatus)) {
             return;
         }
 
-        try {
-            String identifier = GatewayString.getGatewayIdentifier(eui);
-            DeviceConnectStatus curStatus = msGwEntityService.getGatewayStatus(List.of(identifier)).get(identifier);
-            if (curStatus == null) {
-                curStatus = DeviceConnectStatus.ONLINE;
-            }
-
-            if (status.equals(curStatus)) {
-                return;
-            }
-
-            Device gateway = deviceServiceProvider.findByIdentifier(identifier, Constants.INTEGRATION_ID);
-            if (gateway == null) {
-                return;
-            }
-
-            entityValueServiceProvider.saveValuesAndPublishAsync(ExchangePayload.create(Map.of(
-                    GatewayString.getGatewayStatusKey(identifier), status.name()
-            )));
-            new AnnotatedEntityWrapper<MsGwIntegrationEntities.GatewayStatusEvent>().saveValues(Map.of(
-                    MsGwIntegrationEntities.GatewayStatusEvent::getStatus, status.name(),
-                    MsGwIntegrationEntities.GatewayStatusEvent::getGatewayName, gateway.getName(),
-                    MsGwIntegrationEntities.GatewayStatusEvent::getEui, eui,
-                    MsGwIntegrationEntities.GatewayStatusEvent::getStatusTimestamp, ts
-            )).publishAsync();
-        } finally {
-            lock.unlock();
+        Device gateway = deviceServiceProvider.findByIdentifier(identifier, Constants.INTEGRATION_ID);
+        if (gateway == null) {
+            return;
         }
+
+        entityValueServiceProvider.saveValuesAndPublishAsync(ExchangePayload.create(Map.of(
+                GatewayString.getGatewayStatusKey(identifier), status.name()
+        )));
+        new AnnotatedEntityWrapper<MsGwIntegrationEntities.GatewayStatusEvent>().saveValues(Map.of(
+                MsGwIntegrationEntities.GatewayStatusEvent::getStatus, status.name(),
+                MsGwIntegrationEntities.GatewayStatusEvent::getGatewayName, gateway.getName(),
+                MsGwIntegrationEntities.GatewayStatusEvent::getEui, eui,
+                MsGwIntegrationEntities.GatewayStatusEvent::getStatusTimestamp, ts
+        )).publishAsync();
     }
 
     private void mqttPublish(String topic, byte[] data) {

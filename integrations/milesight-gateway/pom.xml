@@ -100,12 +100,6 @@
             <artifactId>mockito-inline</artifactId>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>com.milesight.beaveriot</groupId>
-            <artifactId>scheduler</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
     </dependencies>
 
     <build>

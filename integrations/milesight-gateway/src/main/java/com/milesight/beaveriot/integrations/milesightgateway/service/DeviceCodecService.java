@@ -18,7 +18,6 @@ import com.milesight.beaveriot.integrations.milesightgateway.codec.ResourceReque
 import com.milesight.beaveriot.integrations.milesightgateway.codec.ResourceString;
 import com.milesight.beaveriot.integrations.milesightgateway.util.LockConstants;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.aop.framework.AopContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ObjectUtils;
@@ -52,11 +51,11 @@ public class DeviceCodecService {
 
     @EventSubscribe(payloadKeyExpression = MsGwIntegrationEntities.MODEL_REPO_URL_KEY, eventType = ExchangeEvent.EventType.UPDATE_PROPERTY)
     public void onUpdateRepoUrl(Event<MsGwIntegrationEntities> event) throws ExecutionException, InterruptedException {
-        self().syncDeviceCodec(event.getPayload().getModelRepoUrl());
+        syncDeviceCodec(event.getPayload().getModelRepoUrl());
     }
 
     public void syncDeviceCodec() throws ExecutionException, InterruptedException {
-        self().syncDeviceCodec(msGwEntityService.getDeviceModelRepoUrl());
+        syncDeviceCodec(msGwEntityService.getDeviceModelRepoUrl());
     }
 
     @DistributedLock(name = LockConstants.DEVICE_CODEC_INDEX_UPDATE_LOCK)
@@ -200,9 +199,5 @@ public class DeviceCodecService {
                 .join()
                 .stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-    }
-
-    private DeviceCodecService self() {
-        return (DeviceCodecService) AopContext.currentProxy();
     }
 }

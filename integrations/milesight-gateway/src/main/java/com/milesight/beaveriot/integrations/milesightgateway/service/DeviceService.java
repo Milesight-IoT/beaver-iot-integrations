@@ -14,6 +14,7 @@ import com.milesight.beaveriot.context.integration.model.DeviceBuilder;
 import com.milesight.beaveriot.context.integration.model.Entity;
 import com.milesight.beaveriot.context.integration.model.ExchangePayload;
 import com.milesight.beaveriot.context.integration.model.event.ExchangeEvent;
+import com.milesight.beaveriot.context.integration.wrapper.EntityWrapper;
 import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
 import com.milesight.beaveriot.eventbus.api.Event;
 import com.milesight.beaveriot.integrations.milesightgateway.codec.CodecExecutor;
@@ -31,7 +32,6 @@ import com.milesight.beaveriot.integrations.milesightgateway.util.GatewayString;
 import com.milesight.beaveriot.integrations.milesightgateway.util.LockConstants;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.aop.framework.AopContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -138,12 +138,12 @@ public class DeviceService {
         }
         addDeviceRequest.setProfileID(profileItem.get().getProfileID());
 
-        self().manageGatewayDevices(gatewayEUI, deviceEUI, GatewayDeviceOperation.ADD);
+        manageGatewayDevices(gatewayEUI, deviceEUI, GatewayDeviceOperation.ADD);
         try {
             gatewayRequester.requestAddDevice(gatewayEUI, addDeviceRequest);
             deviceServiceProvider.save(device);
         } catch (Exception e) {
-            self().manageGatewayDevices(gatewayEUI, deviceEUI, GatewayDeviceOperation.DELETE);
+            manageGatewayDevices(gatewayEUI, deviceEUI, GatewayDeviceOperation.DELETE);
             throw e;
         }
 
@@ -263,9 +263,5 @@ public class DeviceService {
             devicePayload.getPayload().put(entityKey, value);
         });
         return devicePayloadMap;
-    }
-
-    private DeviceService self() {
-        return (DeviceService) AopContext.currentProxy();
     }
 }
