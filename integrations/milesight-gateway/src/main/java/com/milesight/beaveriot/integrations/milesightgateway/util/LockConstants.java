@@ -16,4 +16,6 @@ public class LockConstants {
     public static final String UPDATE_GATEWAY_DEVICE_RELATION_LOCK = "update-gateway-device-relation-lock";
 
     public static final String SYNC_GATEWAY_DEVICE_LOCK = "sync-gateway-device-lock";
+
+    public static final String UPDATE_GATEWAY_STATUS_LOCK_PREFIX = "update-gateway-status-lock-prefix";
 }
