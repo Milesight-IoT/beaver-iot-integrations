@@ -9,10 +9,10 @@ import java.util.List;
  * create: 2025/6/9 8:42
  **/
 @Data
-public class ModelOutputResponse {
+public class ModelOutputSchemaResponse {
     private List<CamThinkModelDetailResponse.OutputSchema> outputSchema;
 
-    public ModelOutputResponse(CamThinkModelDetailResponse camThinkModelDetailResponse) {
+    public ModelOutputSchemaResponse(CamThinkModelDetailResponse camThinkModelDetailResponse) {
         this.outputSchema = camThinkModelDetailResponse.getData().getOutputSchema();
     }
 }

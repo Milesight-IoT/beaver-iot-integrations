@@ -14,8 +14,9 @@ import com.milesight.beaveriot.eventbus.api.EventResponse;
 import com.milesight.beaveriot.integrations.aiinference.api.client.AiInferenceClient;
 import com.milesight.beaveriot.integrations.aiinference.api.config.Config;
 import com.milesight.beaveriot.integrations.aiinference.api.enums.ServerErrorCode;
-import com.milesight.beaveriot.integrations.aiinference.api.model.request.ModelInferRequest;
+import com.milesight.beaveriot.integrations.aiinference.api.model.request.CamThinkModelInferRequest;
 import com.milesight.beaveriot.integrations.aiinference.api.model.response.CamThinkModelDetailResponse;
+import com.milesight.beaveriot.integrations.aiinference.api.model.response.CamThinkModelInferResponse;
 import com.milesight.beaveriot.integrations.aiinference.api.model.response.CamThinkModelListResponse;
 import com.milesight.beaveriot.integrations.aiinference.api.model.response.ModelInferResponse;
 import com.milesight.beaveriot.integrations.aiinference.constant.Constants;
@@ -72,8 +73,8 @@ public class AiInferenceService {
     @EventSubscribe(payloadKeyExpression = Constants.INTEGRATION_ID + ".integration.model_*")
     public EventResponse infer(Event<AiInferenceServiceEntities.ModelInput> event) {
         AiInferenceServiceEntities.ModelInput modelInput = event.getPayload();
-        ModelInferResponse modelInferResponse = modelInfer(modelInput);
-        return getEventResponse(modelInferResponse);
+        CamThinkModelInferResponse camThinkModelInferResponse = modelInfer(modelInput);
+        return getEventResponse(new ModelInferResponse(camThinkModelInferResponse));
     }
 
     private static EventResponse getEventResponse(ModelInferResponse modelInferResponse) {
@@ -87,9 +88,10 @@ public class AiInferenceService {
         return eventResponse;
     }
 
-    private ModelInferResponse modelInfer(AiInferenceServiceEntities.ModelInput modelInput) {
+    private CamThinkModelInferResponse modelInfer(AiInferenceServiceEntities.ModelInput modelInput) {
         String modelId = null;
-        ModelInferRequest modelInferRequest = new ModelInferRequest();
+        CamThinkModelInferRequest camThinkModelInferRequest = new CamThinkModelInferRequest();
+        Map<String, Object> inputs = camThinkModelInferRequest.getInputs();
         for (String key : modelInput.keySet()) {
             Object value = modelInput.get(key);
             if (modelId == null) {
@@ -98,16 +100,16 @@ public class AiInferenceService {
             String modelInputName = ModelServiceInputEntityTemplate.getModelInputNameFromKey(key);
             Entity modelInputEntity = entityServiceProvider.findByKey(key);
             if (EntityValueType.LONG.equals(modelInputEntity.getValueType())) {
-                modelInferRequest.put(modelInputName, Long.parseLong(value.toString()));
+                inputs.put(modelInputName, Long.parseLong(value.toString()));
             } else if (EntityValueType.BOOLEAN.equals(modelInputEntity.getValueType())) {
-                modelInferRequest.put(modelInputName, Boolean.parseBoolean(value.toString()));
+                inputs.put(modelInputName, Boolean.parseBoolean(value.toString()));
             } else if (EntityValueType.DOUBLE.equals(modelInputEntity.getValueType())) {
-                modelInferRequest.put(modelInputName, Double.parseDouble(value.toString()));
+                inputs.put(modelInputName, Double.parseDouble(value.toString()));
             } else {
-                modelInferRequest.put(modelInputName, value.toString());
+                inputs.put(modelInputName, value.toString());
             }
         }
-        return aiInferenceClient.modelInfer(modelId, modelInferRequest);
+        return aiInferenceClient.modelInfer(modelId, camThinkModelInferRequest);
     }
 
     @EventSubscribe(payloadKeyExpression = Constants.INTEGRATION_ID + ".integration.ai_inference_properties.*")
@@ -213,9 +215,9 @@ public class AiInferenceService {
             if (CollectionUtils.isEmpty(camThinkModelDetailResponse.getData().getInputSchema())) {
                 return null;
             }
-            /*if (CollectionUtils.isEmpty(camThinkModelDetailResponse.getData().getOutputSchema())) {
+            if (CollectionUtils.isEmpty(camThinkModelDetailResponse.getData().getOutputSchema())) {
                 return null;
-            }*/
+            }
             String modelKey = ModelServiceEntityTemplate.getModelKey(modelId);
             Entity modelServiceEntity = entityServiceProvider.findByKey(modelKey);
             String modelServiceIdentifier = modelServiceEntity.getIdentifier();

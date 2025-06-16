@@ -5,10 +5,10 @@ import com.milesight.beaveriot.base.utils.JsonUtils;
 import com.milesight.beaveriot.context.integration.wrapper.AnnotatedEntityWrapper;
 import com.milesight.beaveriot.integrations.aiinference.api.config.Config;
 import com.milesight.beaveriot.integrations.aiinference.api.enums.ServerErrorCode;
-import com.milesight.beaveriot.integrations.aiinference.api.model.request.ModelInferRequest;
+import com.milesight.beaveriot.integrations.aiinference.api.model.request.CamThinkModelInferRequest;
 import com.milesight.beaveriot.integrations.aiinference.api.model.response.ClientResponse;
 import com.milesight.beaveriot.integrations.aiinference.api.model.response.CamThinkModelDetailResponse;
-import com.milesight.beaveriot.integrations.aiinference.api.model.response.ModelInferResponse;
+import com.milesight.beaveriot.integrations.aiinference.api.model.response.CamThinkModelInferResponse;
 import com.milesight.beaveriot.integrations.aiinference.api.model.response.CamThinkModelListResponse;
 import com.milesight.beaveriot.integrations.aiinference.api.utils.OkHttpUtil;
 import com.milesight.beaveriot.integrations.aiinference.entity.AiInferenceConnectionPropertiesEntities;
@@ -61,12 +61,12 @@ public class AiInferenceClient {
         }
     }
 
-    public ModelInferResponse modelInfer(String modelId, ModelInferRequest modelInferRequest) {
+    public CamThinkModelInferResponse modelInfer(String modelId, CamThinkModelInferRequest camThinkModelInferRequest) {
         String url = config.getModelInferUrl();
         url = MessageFormat.format(url, modelId);
-        ClientResponse clientResponse = OkHttpUtil.post(url, JsonUtils.toJSON(modelInferRequest));
+        ClientResponse clientResponse = OkHttpUtil.post(url, JsonUtils.toJSON(camThinkModelInferRequest));
         try {
-            return JsonUtils.fromJSON(clientResponse.getData(), ModelInferResponse.class);
+            return JsonUtils.fromJSON(clientResponse.getData(), CamThinkModelInferResponse.class);
         } catch (Exception e) {
             log.error("Error: ", e);
             return null;

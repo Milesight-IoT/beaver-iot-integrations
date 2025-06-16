@@ -1,10 +1,18 @@
 package com.milesight.beaveriot.integrations.aiinference.api.model.response;
 
-import java.util.HashMap;
+import lombok.Data;
+
+import java.util.Map;
 
 /**
  * author: Luxb
- * create: 2025/6/6 16:31
+ * create: 2025/6/9 8:42
  **/
-public class ModelInferResponse extends HashMap<String, Object> {
+@Data
+public class ModelInferResponse {
+    private Map<String, Object> outputs;
+
+    public ModelInferResponse(CamThinkModelInferResponse camThinkModelInferResponse) {
+        this.outputs = camThinkModelInferResponse.getData().getOutputs();
+    }
 }
