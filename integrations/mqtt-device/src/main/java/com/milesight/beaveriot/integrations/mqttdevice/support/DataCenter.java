@@ -65,6 +65,6 @@ public class DataCenter {
     private static void saveTopicMap() {
         String topicMapStr = JsonUtils.toJSON(topicMap);
         AnnotatedEntityWrapper<MqttDeviceIntegrationEntities> entitiesWrapper = new AnnotatedEntityWrapper<>();
-        entitiesWrapper.saveValue(MqttDeviceIntegrationEntities::getTopicMap, topicMapStr);
+        entitiesWrapper.saveValue(MqttDeviceIntegrationEntities::getTopicMap, topicMapStr).publishSync();
     }
 }

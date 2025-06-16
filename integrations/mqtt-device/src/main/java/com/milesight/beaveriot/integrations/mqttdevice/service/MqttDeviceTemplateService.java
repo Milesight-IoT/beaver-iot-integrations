@@ -13,6 +13,7 @@ import com.milesight.beaveriot.context.model.request.SearchDeviceTemplateRequest
 import com.milesight.beaveriot.context.model.response.DeviceTemplateInputResult;
 import com.milesight.beaveriot.context.model.response.DeviceTemplateOutputResult;
 import com.milesight.beaveriot.context.model.response.DeviceTemplateResponseData;
+import com.milesight.beaveriot.integrations.mqttdevice.enums.ServerErrorCode;
 import com.milesight.beaveriot.integrations.mqttdevice.model.request.*;
 import com.milesight.beaveriot.integrations.mqttdevice.model.response.DeviceTemplateDefaultContentResponse;
 import com.milesight.beaveriot.integrations.mqttdevice.model.response.DeviceTemplateDetailResponse;
@@ -58,7 +59,7 @@ public class MqttDeviceTemplateService {
 
         String topic = createDeviceTemplateRequest.getTopic();
         if (DataCenter.isTopicExist(topic)) {
-            throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), "topic exists").build();
+            throw ServiceException.with(ServerErrorCode.TOPIC_EXISTS.getErrorCode(), ServerErrorCode.TOPIC_EXISTS.getErrorMessage()).build();
         }
         deviceTemplateServiceProvider.save(deviceTemplate);
         DataCenter.putTopic(topic, deviceTemplate.getId());
