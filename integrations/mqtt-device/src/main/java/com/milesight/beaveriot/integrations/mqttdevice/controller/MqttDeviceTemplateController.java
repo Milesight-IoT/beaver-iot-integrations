@@ -8,10 +8,7 @@ import com.milesight.beaveriot.context.model.request.SearchDeviceTemplateRequest
 import com.milesight.beaveriot.context.model.response.DeviceTemplateOutputResult;
 import com.milesight.beaveriot.context.model.response.DeviceTemplateResponseData;
 import com.milesight.beaveriot.integrations.mqttdevice.model.request.*;
-import com.milesight.beaveriot.integrations.mqttdevice.model.response.DeviceTemplateDefaultContentResponse;
-import com.milesight.beaveriot.integrations.mqttdevice.model.response.DeviceTemplateInfoResponse;
-import com.milesight.beaveriot.integrations.mqttdevice.model.response.DeviceTemplateOutputResponse;
-import com.milesight.beaveriot.integrations.mqttdevice.model.response.DeviceTemplateTestResponse;
+import com.milesight.beaveriot.integrations.mqttdevice.model.response.*;
 import com.milesight.beaveriot.integrations.mqttdevice.service.MqttDeviceTemplateService;
 import com.milesight.beaveriot.integrations.mqttdevice.support.DataCenter;
 import org.springframework.data.domain.Page;
@@ -67,7 +64,7 @@ public class MqttDeviceTemplateController {
     }
 
     @GetMapping("/{id}")
-    public ResponseBody<DeviceTemplateInfoResponse> getDeviceDetail(@PathVariable("id") Long id) {
+    public ResponseBody<DeviceTemplateDetailResponse> getDeviceDetail(@PathVariable("id") Long id) {
         return ResponseBuilder.success(mqttDeviceTemplateService.getDeviceDetail(id));
     }
 

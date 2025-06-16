@@ -14,8 +14,12 @@ import org.springframework.beans.BeanUtils;
 public class DeviceTemplateInfoResponse extends DeviceTemplateResponseData {
     private String topic;
 
-    public DeviceTemplateInfoResponse(DeviceTemplateResponseData deviceTemplateResponseData, String topic) {
+    protected DeviceTemplateInfoResponse(DeviceTemplateResponseData deviceTemplateResponseData, String topic) {
         BeanUtils.copyProperties(deviceTemplateResponseData, this);
         this.topic = topic;
+    }
+
+    public static DeviceTemplateInfoResponse build(DeviceTemplateResponseData deviceTemplateResponseData, String topic) {
+        return new DeviceTemplateInfoResponse(deviceTemplateResponseData, topic);
     }
 }

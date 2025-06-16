@@ -8,12 +8,14 @@ import com.milesight.beaveriot.context.api.DeviceTemplateServiceProvider;
 import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
 import com.milesight.beaveriot.context.constants.IntegrationConstants;
 import com.milesight.beaveriot.context.integration.model.*;
+import com.milesight.beaveriot.context.model.DeviceTemplateModel;
 import com.milesight.beaveriot.context.model.request.SearchDeviceTemplateRequest;
 import com.milesight.beaveriot.context.model.response.DeviceTemplateInputResult;
 import com.milesight.beaveriot.context.model.response.DeviceTemplateOutputResult;
 import com.milesight.beaveriot.context.model.response.DeviceTemplateResponseData;
 import com.milesight.beaveriot.integrations.mqttdevice.model.request.*;
 import com.milesight.beaveriot.integrations.mqttdevice.model.response.DeviceTemplateDefaultContentResponse;
+import com.milesight.beaveriot.integrations.mqttdevice.model.response.DeviceTemplateDetailResponse;
 import com.milesight.beaveriot.integrations.mqttdevice.model.response.DeviceTemplateInfoResponse;
 import com.milesight.beaveriot.integrations.mqttdevice.model.response.DeviceTemplateTestResponse;
 import com.milesight.beaveriot.integrations.mqttdevice.support.DataCenter;
@@ -65,7 +67,7 @@ public class MqttDeviceTemplateService {
 
     public Page<DeviceTemplateResponseData> searchDeviceTemplate(SearchDeviceTemplateRequest searchDeviceTemplateRequest) {
         Page<DeviceTemplateResponseData> deviceTemplateResponseDataPage = deviceTemplateServiceProvider.search(searchDeviceTemplateRequest);
-        return deviceTemplateResponseDataPage.map(deviceTemplateResponseData -> new DeviceTemplateInfoResponse(deviceTemplateResponseData, DataCenter.getTopic(Long.parseLong(deviceTemplateResponseData.getId()))));
+        return deviceTemplateResponseDataPage.map(deviceTemplateResponseData -> DeviceTemplateInfoResponse.build(deviceTemplateResponseData, DataCenter.getTopic(Long.parseLong(deviceTemplateResponseData.getId()))));
     }
 
     public DeviceTemplateTestResponse testDeviceTemplate(Long id, TestDeviceTemplateRequest testDeviceTemplateRequest) {
@@ -131,9 +133,12 @@ public class MqttDeviceTemplateService {
         }
     }
 
-    public DeviceTemplateInfoResponse getDeviceDetail(@PathVariable("id") Long id) {
+    public DeviceTemplateDetailResponse getDeviceDetail(@PathVariable("id") Long id) {
         DeviceTemplate deviceTemplate = deviceTemplateServiceProvider.findById(id);
-        return new DeviceTemplateInfoResponse(convertToResponseData(deviceTemplate), DataCenter.getTopic(id));
+        DeviceTemplateModel deviceTemplateModel = deviceTemplateParserProvider.parse(deviceTemplate.getContent());
+        return DeviceTemplateDetailResponse.build(convertToResponseData(deviceTemplate), DataCenter.getTopic(id),
+                deviceTemplateModel.getDefinition() == null ? null : deviceTemplateModel.getDefinition().getInput(),
+                deviceTemplateModel.getDefinition() ==  null ? null : deviceTemplateModel.getDefinition().getOutput());
     }
 
     public void validate(ValidateDeviceTemplateRequest validateDeviceTemplateRequest) {
