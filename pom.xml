@@ -39,6 +39,8 @@
     <properties>
         <beaver-iot.version>1.2.1</beaver-iot.version>
         <revision>${beaver-iot.version}-SNAPSHOT</revision>
+        <snapshot-repository-id>central-portal-snapshots</snapshot-repository-id>
+        <snapshot-repository-url>https://central.sonatype.com/repository/maven-snapshots/</snapshot-repository-url>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -190,8 +192,8 @@
 
             <distributionManagement>
                 <snapshotRepository>
-                    <id>central-portal-snapshots</id>
-                    <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+                    <id>${snapshot-repository-id}</id>
+                    <url>${snapshot-repository-url}</url>
                     <uniqueVersion>false</uniqueVersion>
                 </snapshotRepository>
             </distributionManagement>
@@ -203,8 +205,8 @@
                 </repository>
                 <repository>
                     <name>Central Portal Snapshots</name>
-                    <id>central-portal-snapshots</id>
-                    <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+                    <id>${snapshot-repository-id}</id>
+                    <url>${snapshot-repository-url}</url>
                     <releases>
                         <enabled>false</enabled>
                     </releases>
