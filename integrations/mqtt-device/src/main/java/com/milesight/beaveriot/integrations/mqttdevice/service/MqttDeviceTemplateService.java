@@ -139,7 +139,8 @@ public class MqttDeviceTemplateService {
         DeviceTemplateModel deviceTemplateModel = deviceTemplateParserProvider.parse(deviceTemplate.getContent());
         return DeviceTemplateDetailResponse.build(convertToResponseData(deviceTemplate), DataCenter.getTopic(id),
                 deviceTemplateModel.getDefinition() == null ? null : deviceTemplateModel.getDefinition().getInput(),
-                deviceTemplateModel.getDefinition() ==  null ? null : deviceTemplateModel.getDefinition().getOutput());
+                deviceTemplateModel.getDefinition() ==  null ? null : deviceTemplateModel.getDefinition().getOutput(),
+                deviceTemplateModel.getInitialEntities());
     }
 
     public void validate(ValidateDeviceTemplateRequest validateDeviceTemplateRequest) {
