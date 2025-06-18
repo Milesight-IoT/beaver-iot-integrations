@@ -45,7 +45,7 @@ public class MqttDeviceBootstrap implements IntegrationBootstrap {
 
     @Override
     public void onEnabled(String tenantId, Integration integrationConfig) {
-        mqttDeviceService.syncAddDeviceTemplates();
+        mqttDeviceService.syncTemplates();
         IntegrationBootstrap.super.onEnabled(tenantId, integrationConfig);
     }
 }

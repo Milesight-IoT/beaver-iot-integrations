@@ -12,6 +12,7 @@ import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
 import com.milesight.beaveriot.eventbus.api.Event;
 import com.milesight.beaveriot.integrations.mqttdevice.constants.LockConstants;
 import com.milesight.beaveriot.integrations.mqttdevice.entity.MqttDeviceIntegrationEntities;
+import com.milesight.beaveriot.integrations.mqttdevice.entity.MqttDeviceServiceEntities;
 import com.milesight.beaveriot.integrations.mqttdevice.support.DataCenter;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -62,18 +63,29 @@ public class MqttDeviceService {
 
     private Entity getAddDeviceTemplateEntity() {
         Entity deviceTemplateEntity = entityServiceProvider.findByKey(MqttDeviceIntegrationEntities.ADD_DEVICE_TEMPLATE_KEY);
-        Map<String, Object> attributes = deviceTemplateEntity.getAttributes();
-        if (attributes == null) {
-            attributes = new HashMap<>();
-            deviceTemplateEntity.setAttributes(attributes);
-            attributes.put(AttributeBuilder.ATTRIBUTE_ENUM, new HashMap<>());
-        }
+        initAttributes(deviceTemplateEntity);
 
         return deviceTemplateEntity;
     }
 
+    private Entity getDataInputTemplateEntity() {
+        Entity deviceTemplateEntity = entityServiceProvider.findByKey(MqttDeviceServiceEntities.DATA_INPUT_TEMPLATE_KEY);
+        initAttributes(deviceTemplateEntity);
+
+        return deviceTemplateEntity;
+    }
+
+    private void initAttributes(Entity entity) {
+        Map<String, Object> attributes = entity.getAttributes();
+        if (attributes == null) {
+            attributes = new HashMap<>();
+            entity.setAttributes(attributes);
+            attributes.put(AttributeBuilder.ATTRIBUTE_ENUM, new HashMap<>());
+        }
+    }
+
     @DistributedLock(name = LockConstants.SYNC_DEVICE_TEMPLATE_LOCK)
-    public void syncAddDeviceTemplates() {
+    public void syncTemplates() {
         List<DeviceTemplate> deviceTemplates = deviceTemplateServiceProvider.findAll(IntegrationConstants.SYSTEM_INTEGRATION_ID);
         Map<String, String> templates;
         if (CollectionUtils.isEmpty(deviceTemplates)) {
@@ -90,5 +102,9 @@ public class MqttDeviceService {
         Entity addDeviceTemplateEntity = getAddDeviceTemplateEntity();
         addDeviceTemplateEntity.getAttributes().put(AttributeBuilder.ATTRIBUTE_ENUM, templates);
         entityServiceProvider.save(addDeviceTemplateEntity);
+
+        Entity dataInputTemplateEntity = getDataInputTemplateEntity();
+        dataInputTemplateEntity.getAttributes().put(AttributeBuilder.ATTRIBUTE_ENUM, templates);
+        entityServiceProvider.save(dataInputTemplateEntity);
     }
 }

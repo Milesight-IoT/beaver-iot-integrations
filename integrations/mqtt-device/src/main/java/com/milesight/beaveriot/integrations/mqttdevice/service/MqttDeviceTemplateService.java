@@ -2,17 +2,20 @@ package com.milesight.beaveriot.integrations.mqttdevice.service;
 
 import com.milesight.beaveriot.base.enums.ErrorCode;
 import com.milesight.beaveriot.base.exception.ServiceException;
-import com.milesight.beaveriot.context.api.DeviceServiceProvider;
-import com.milesight.beaveriot.context.api.DeviceTemplateParserProvider;
-import com.milesight.beaveriot.context.api.DeviceTemplateServiceProvider;
-import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
+import com.milesight.beaveriot.base.utils.JsonUtils;
+import com.milesight.beaveriot.context.api.*;
 import com.milesight.beaveriot.context.constants.IntegrationConstants;
 import com.milesight.beaveriot.context.integration.model.*;
+import com.milesight.beaveriot.context.integration.model.event.ExchangeEvent;
 import com.milesight.beaveriot.context.model.DeviceTemplateModel;
 import com.milesight.beaveriot.context.model.request.SearchDeviceTemplateRequest;
 import com.milesight.beaveriot.context.model.response.DeviceTemplateInputResult;
 import com.milesight.beaveriot.context.model.response.DeviceTemplateOutputResult;
 import com.milesight.beaveriot.context.model.response.DeviceTemplateResponseData;
+import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
+import com.milesight.beaveriot.eventbus.api.Event;
+import com.milesight.beaveriot.eventbus.api.EventResponse;
+import com.milesight.beaveriot.integrations.mqttdevice.entity.MqttDeviceServiceEntities;
 import com.milesight.beaveriot.integrations.mqttdevice.enums.ServerErrorCode;
 import com.milesight.beaveriot.integrations.mqttdevice.model.request.*;
 import com.milesight.beaveriot.integrations.mqttdevice.model.response.DeviceTemplateDefaultContentResponse;
@@ -20,6 +23,7 @@ import com.milesight.beaveriot.integrations.mqttdevice.model.response.DeviceTemp
 import com.milesight.beaveriot.integrations.mqttdevice.model.response.DeviceTemplateInfoResponse;
 import com.milesight.beaveriot.integrations.mqttdevice.model.response.DeviceTemplateTestResponse;
 import com.milesight.beaveriot.integrations.mqttdevice.support.DataCenter;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -35,13 +39,15 @@ import java.util.Map;
  **/
 @Service
 public class MqttDeviceTemplateService {
+    private final IntegrationServiceProvider integrationServiceProvider;
     private final DeviceTemplateServiceProvider deviceTemplateServiceProvider;
     private final DeviceTemplateParserProvider deviceTemplateParserProvider;
     private final MqttDeviceService mqttDeviceService;
     private final DeviceServiceProvider deviceServiceProvider;
     private final EntityValueServiceProvider entityValueServiceProvider;
 
-    public MqttDeviceTemplateService(DeviceTemplateServiceProvider deviceTemplateServiceProvider, DeviceTemplateParserProvider deviceTemplateParserProvider, MqttDeviceService mqttDeviceService, DeviceServiceProvider deviceServiceProvider, EntityValueServiceProvider entityValueServiceProvider) {
+    public MqttDeviceTemplateService(IntegrationServiceProvider integrationServiceProvider, DeviceTemplateServiceProvider deviceTemplateServiceProvider, DeviceTemplateParserProvider deviceTemplateParserProvider, MqttDeviceService mqttDeviceService, DeviceServiceProvider deviceServiceProvider, EntityValueServiceProvider entityValueServiceProvider) {
+        this.integrationServiceProvider = integrationServiceProvider;
         this.deviceTemplateServiceProvider = deviceTemplateServiceProvider;
         this.deviceTemplateParserProvider = deviceTemplateParserProvider;
         this.mqttDeviceService = mqttDeviceService;
@@ -63,7 +69,7 @@ public class MqttDeviceTemplateService {
         }
         deviceTemplateServiceProvider.save(deviceTemplate);
         DataCenter.putTopic(topic, deviceTemplate.getId());
-        mqttDeviceService.syncAddDeviceTemplates();
+        mqttDeviceService.syncTemplates();
     }
 
     public Page<DeviceTemplateResponseData> searchDeviceTemplate(SearchDeviceTemplateRequest searchDeviceTemplateRequest) {
@@ -72,24 +78,7 @@ public class MqttDeviceTemplateService {
     }
 
     public DeviceTemplateTestResponse testDeviceTemplate(Long id, TestDeviceTemplateRequest testDeviceTemplateRequest) {
-        DeviceTemplateTestResponse testResponse = new DeviceTemplateTestResponse();
-        DeviceTemplateInputResult result = deviceTemplateParserProvider.input(DataCenter.INTEGRATION_ID, id, testDeviceTemplateRequest.getTestData());
-        Device device = result.getDevice();
-        ExchangePayload payload = result.getPayload();
-        if (device != null) {
-            deviceServiceProvider.save(device);
-            if (payload != null) {
-                entityValueServiceProvider.saveValuesAndPublishSync(payload);
-                Map<String, Entity> flatDeviceEntityMap = new HashMap<>();
-                flattenDeviceEntities(device.getEntities(), flatDeviceEntityMap);
-                flatDeviceEntityMap.forEach((key, value) -> {
-                    if (payload.containsKey(key)) {
-                        testResponse.addEntityData(value.getName(), payload.get(key));
-                    }
-                });
-            }
-        }
-        return testResponse;
+        return inputAndGetTestResponse(DataCenter.INTEGRATION_ID, id, testDeviceTemplateRequest.getTestData());
     }
 
     public DeviceTemplateOutputResult output(String deviceKey, ExchangePayload payload) {
@@ -117,11 +106,11 @@ public class MqttDeviceTemplateService {
 
         deviceTemplateServiceProvider.save(deviceTemplate);
         String oldTopic = DataCenter.getTopic(id);
-        if (!oldTopic.equals(topic)) {
+        if (oldTopic != null && !oldTopic.equals(topic)) {
             DataCenter.removeTopic(oldTopic);
-            DataCenter.putTopic(topic, id);
         }
-        mqttDeviceService.syncAddDeviceTemplates();
+        DataCenter.putTopic(topic, id);
+        mqttDeviceService.syncTemplates();
     }
 
     public void batchDeleteDeviceTemplates(BatchDeleteDeviceTemplateRequest batchDeleteDeviceTemplateRequest) {
@@ -130,7 +119,7 @@ public class MqttDeviceTemplateService {
                 deviceTemplateServiceProvider.deleteById(id);
                 DataCenter.removeTopicByTemplateId(id);
             });
-            mqttDeviceService.syncAddDeviceTemplates();
+            mqttDeviceService.syncTemplates();
         }
     }
 
@@ -164,5 +153,61 @@ public class MqttDeviceTemplateService {
         deviceTemplateResponseData.setUpdatedAt(deviceTemplate.getUpdatedAt());
 
         return deviceTemplateResponseData;
+    }
+
+    @EventSubscribe(payloadKeyExpression = DataCenter.INTEGRATION_ID + ".integration." + MqttDeviceServiceEntities.DATA_INPUT_IDENTIFIER + ".*", eventType = ExchangeEvent.EventType.CALL_SERVICE)
+    public EventResponse onDataInput(Event<MqttDeviceServiceEntities.DataInput> event) {
+        MqttDeviceServiceEntities.DataInput dataInput = event.getPayload();
+        String integrationId = dataInput.getIntegration();
+        String jsonData = dataInput.getJsonData();
+        String template = dataInput.getTemplate();
+
+        if (StringUtils.isEmpty(integrationId)) {
+            integrationId = DataCenter.INTEGRATION_ID;
+        }
+        Integration integration = integrationServiceProvider.getIntegration(integrationId);
+        if (integration == null) {
+            throw ServiceException.with(ServerErrorCode.INTEGRATION_NOT_FOUND.getErrorCode(), ServerErrorCode.INTEGRATION_NOT_FOUND.getErrorMessage()).build();
+        }
+
+        DeviceTemplate deviceTemplate = deviceTemplateServiceProvider.findByKey(template);
+        if (deviceTemplate == null) {
+            throw ServiceException.with(ServerErrorCode.TEMPLATE_NOT_FOUND.getErrorCode(), ServerErrorCode.TEMPLATE_NOT_FOUND.getErrorMessage()).build();
+        }
+
+        DeviceTemplateTestResponse deviceTemplateTestResponse = inputAndGetTestResponse(integrationId, deviceTemplate.getId(), jsonData);
+        return getEventResponse(deviceTemplateTestResponse);
+    }
+
+    private static EventResponse getEventResponse(Object responseObj) {
+        Map<String, Object> response = JsonUtils.toMap(responseObj);
+        EventResponse eventResponse = EventResponse.empty();
+        for (Map.Entry<String, Object> entry : response.entrySet()) {
+            String key = entry.getKey();
+            Object value = entry.getValue();
+            eventResponse.put(key, value);
+        }
+        return eventResponse;
+    }
+
+    private DeviceTemplateTestResponse inputAndGetTestResponse(String integrationId, Long deviceTemplateId, String jsonData) {
+        DeviceTemplateTestResponse testResponse = new DeviceTemplateTestResponse();
+        DeviceTemplateInputResult result = deviceTemplateParserProvider.input(integrationId, deviceTemplateId, jsonData);
+        Device device = result.getDevice();
+        ExchangePayload payload = result.getPayload();
+        if (device != null) {
+            deviceServiceProvider.save(device);
+            if (payload != null) {
+                entityValueServiceProvider.saveValuesAndPublishSync(payload);
+                Map<String, Entity> flatDeviceEntityMap = new HashMap<>();
+                flattenDeviceEntities(device.getEntities(), flatDeviceEntityMap);
+                flatDeviceEntityMap.forEach((key, value) -> {
+                    if (payload.containsKey(key)) {
+                        testResponse.addEntityData(value.getName(), payload.get(key));
+                    }
+                });
+            }
+        }
+        return testResponse;
     }
 }
