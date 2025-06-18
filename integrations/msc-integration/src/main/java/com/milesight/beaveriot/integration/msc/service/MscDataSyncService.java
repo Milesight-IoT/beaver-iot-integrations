@@ -96,9 +96,7 @@ public class MscDataSyncService {
         val user = SecurityUserContext.getSecurityUser();
         return executor.submit(() -> {
             TenantContext.setTenantId(tenantId);
-            if (user != null) {
-                SecurityUserContext.setSecurityUser(user);
-            }
+            SecurityUserContext.setSecurityUser(user);
 
             val lockConfiguration = ScopedLockConfiguration.builder(LockScope.TENANT)
                     .name("msc-integration:sync-all")
@@ -150,12 +148,7 @@ public class MscDataSyncService {
     )
     public void scheduledSync() {
         // ensure user context is empty
-        String tenantId = TenantContext.tryGetTenantId().orElse(null);
-        SecurityUserContext.clear();
-        if (tenantId != null) {
-            TenantContext.setTenantId(tenantId);
-        }
-
+        SecurityUserContext.clear(false);
         runSyncTask(true);
     }
 
@@ -257,9 +250,7 @@ public class MscDataSyncService {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 TenantContext.setTenantId(tenantId);
-                if (user != null) {
-                    SecurityUserContext.setSecurityUser(user);
-                }
+                SecurityUserContext.setSecurityUser(user);
 
                 Device device = null;
                 switch (task.type) {
