@@ -176,7 +176,7 @@ public class GatewayService {
     }
 
     @DistributedLock(name = LockConstants.UPDATE_GATEWAY_DEVICE_ENUM_LOCK)
-    private void putAddDeviceGatewayEui(List<Device> gateways) {
+    public void putAddDeviceGatewayEui(List<Device> gateways) {
         Entity gatewayEuiEntity = getAddDeviceGatewayEntity();
         LinkedHashMap<String, String> attrEnum = json.convertValue(gatewayEuiEntity.getAttributes().get(AttributeBuilder.ATTRIBUTE_ENUM), new TypeReference<>() {});
         gateways.forEach(gateway -> attrEnum.put(getGatewayEui(gateway), gateway.getName()));
@@ -187,7 +187,7 @@ public class GatewayService {
     }
 
     @DistributedLock(name = LockConstants.UPDATE_GATEWAY_DEVICE_ENUM_LOCK)
-    private void removeAddDeviceGatewayEui(List<String> gatewayEuiList) {
+    public void removeAddDeviceGatewayEui(List<String> gatewayEuiList) {
         Entity gatewayEuiEntity = getAddDeviceGatewayEntity();
         LinkedHashMap<String, String> attrEnum = json.convertValue(gatewayEuiEntity.getAttributes().get(AttributeBuilder.ATTRIBUTE_ENUM), new TypeReference<>() {});
         gatewayEuiList.forEach(eui -> attrEnum.remove(GatewayString.standardizeEUI(eui)));
