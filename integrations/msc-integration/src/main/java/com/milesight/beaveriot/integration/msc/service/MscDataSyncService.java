@@ -98,8 +98,6 @@ public class MscDataSyncService {
             TenantContext.setTenantId(tenantId);
             if (user != null) {
                 SecurityUserContext.setSecurityUser(user);
-            } else {
-                SecurityUserContext.clear();
             }
 
             val lockConfiguration = ScopedLockConfiguration.builder(LockScope.TENANT)
@@ -151,7 +149,13 @@ public class MscDataSyncService {
             enabledEntity = "msc-integration.integration.scheduled_data_fetch.enabled"
     )
     public void scheduledSync() {
+        // ensure user context is empty
+        String tenantId = TenantContext.tryGetTenantId().orElse(null);
         SecurityUserContext.clear();
+        if (tenantId != null) {
+            TenantContext.setTenantId(tenantId);
+        }
+
         runSyncTask(true);
     }
 
@@ -255,8 +259,6 @@ public class MscDataSyncService {
                 TenantContext.setTenantId(tenantId);
                 if (user != null) {
                     SecurityUserContext.setSecurityUser(user);
-                } else {
-                    SecurityUserContext.clear();
                 }
 
                 Device device = null;
