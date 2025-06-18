@@ -3,6 +3,7 @@ package com.milesight.beaveriot.integrations.mqttdevice.service;
 import com.google.common.collect.Maps;
 import com.milesight.beaveriot.base.annotations.shedlock.DistributedLock;
 import com.milesight.beaveriot.context.api.DeviceServiceProvider;
+import com.milesight.beaveriot.context.api.DeviceTemplateParserProvider;
 import com.milesight.beaveriot.context.api.DeviceTemplateServiceProvider;
 import com.milesight.beaveriot.context.api.EntityServiceProvider;
 import com.milesight.beaveriot.context.constants.IntegrationConstants;
@@ -31,11 +32,13 @@ import java.util.stream.Collectors;
 public class MqttDeviceService {
     private final DeviceServiceProvider deviceServiceProvider;
     private final DeviceTemplateServiceProvider deviceTemplateServiceProvider;
+    private final DeviceTemplateParserProvider deviceTemplateParserProvider;
     private final EntityServiceProvider entityServiceProvider;
 
-    public MqttDeviceService(DeviceServiceProvider deviceServiceProvider, DeviceTemplateServiceProvider deviceTemplateServiceProvider, EntityServiceProvider entityServiceProvider) {
+    public MqttDeviceService(DeviceServiceProvider deviceServiceProvider, DeviceTemplateServiceProvider deviceTemplateServiceProvider, DeviceTemplateParserProvider deviceTemplateParserProvider, EntityServiceProvider entityServiceProvider) {
         this.deviceServiceProvider = deviceServiceProvider;
         this.deviceTemplateServiceProvider = deviceTemplateServiceProvider;
+        this.deviceTemplateParserProvider = deviceTemplateParserProvider;
         this.entityServiceProvider = entityServiceProvider;
     }
 
@@ -45,13 +48,9 @@ public class MqttDeviceService {
         String deviceName = addDevice.getAddDeviceName();
         String deviceTemplateKey = addDevice.getTemplate();
         String deviceId = addDevice.getDeviceId();
-        Device device = new DeviceBuilder(DataCenter.INTEGRATION_ID)
-                .name(deviceName)
-                .template(deviceTemplateKey)
-                .identifier(deviceId)
-                .additional(Map.of("deviceId", deviceId))
-                .build();
 
+        DeviceTemplate deviceTemplate = deviceTemplateServiceProvider.findByKey(deviceTemplateKey);
+        Device device = deviceTemplateParserProvider.createDevice(DataCenter.INTEGRATION_ID, deviceTemplate.getId(), deviceId, deviceName);
         deviceServiceProvider.save(device);
     }
 
