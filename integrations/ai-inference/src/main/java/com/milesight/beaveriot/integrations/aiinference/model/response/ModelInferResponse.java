@@ -1,5 +1,6 @@
-package com.milesight.beaveriot.integrations.aiinference.api.model.response;
+package com.milesight.beaveriot.integrations.aiinference.model.response;
 
+import com.milesight.beaveriot.integrations.aiinference.api.model.response.CamThinkModelInferResponse;
 import lombok.Data;
 
 import java.util.Map;

@@ -18,7 +18,7 @@ import com.milesight.beaveriot.integrations.aiinference.api.model.request.CamThi
 import com.milesight.beaveriot.integrations.aiinference.api.model.response.CamThinkModelDetailResponse;
 import com.milesight.beaveriot.integrations.aiinference.api.model.response.CamThinkModelInferResponse;
 import com.milesight.beaveriot.integrations.aiinference.api.model.response.CamThinkModelListResponse;
-import com.milesight.beaveriot.integrations.aiinference.api.model.response.ModelInferResponse;
+import com.milesight.beaveriot.integrations.aiinference.model.response.ModelInferResponse;
 import com.milesight.beaveriot.integrations.aiinference.constant.Constants;
 import com.milesight.beaveriot.integrations.aiinference.entity.AiInferenceConnectionPropertiesEntities;
 import com.milesight.beaveriot.integrations.aiinference.entity.AiInferenceServiceEntities;
