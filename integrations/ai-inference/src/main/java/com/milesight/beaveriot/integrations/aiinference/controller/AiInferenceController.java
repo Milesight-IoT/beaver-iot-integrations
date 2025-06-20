@@ -3,27 +3,37 @@ package com.milesight.beaveriot.integrations.aiinference.controller;
 import com.milesight.beaveriot.base.exception.ServiceException;
 import com.milesight.beaveriot.base.response.ResponseBody;
 import com.milesight.beaveriot.base.response.ResponseBuilder;
+import com.milesight.beaveriot.base.utils.JsonUtils;
 import com.milesight.beaveriot.context.api.DeviceServiceProvider;
+import com.milesight.beaveriot.context.api.EntityServiceProvider;
 import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
 import com.milesight.beaveriot.context.api.IntegrationServiceProvider;
-import com.milesight.beaveriot.context.integration.model.Device;
-import com.milesight.beaveriot.context.integration.model.Entity;
-import com.milesight.beaveriot.context.integration.model.Integration;
+import com.milesight.beaveriot.context.integration.enums.AccessMod;
+import com.milesight.beaveriot.context.integration.enums.AttachTargetType;
+import com.milesight.beaveriot.context.integration.enums.EntityValueType;
+import com.milesight.beaveriot.context.integration.model.*;
 import com.milesight.beaveriot.integrations.aiinference.api.enums.ServerErrorCode;
 import com.milesight.beaveriot.integrations.aiinference.api.model.response.CamThinkModelDetailResponse;
 import com.milesight.beaveriot.integrations.aiinference.constant.Constants;
+import com.milesight.beaveriot.integrations.aiinference.model.InferHistory;
+import com.milesight.beaveriot.integrations.aiinference.model.request.BoundDeviceSearchRequest;
+import com.milesight.beaveriot.integrations.aiinference.model.request.DeviceBindRequest;
 import com.milesight.beaveriot.integrations.aiinference.model.request.DeviceSearchRequest;
-import com.milesight.beaveriot.integrations.aiinference.model.response.DeviceImageEntityResponse;
-import com.milesight.beaveriot.integrations.aiinference.model.response.DeviceResponse;
-import com.milesight.beaveriot.integrations.aiinference.model.response.ModelOutputSchemaResponse;
+import com.milesight.beaveriot.integrations.aiinference.model.response.*;
 import com.milesight.beaveriot.integrations.aiinference.service.AiInferenceService;
 import com.milesight.beaveriot.integrations.aiinference.support.DataCenter;
+import com.milesight.beaveriot.integrations.aiinference.support.PageSupport;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.data.domain.Page;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.*;
 
+import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * author: Luxb
@@ -34,12 +44,14 @@ import java.util.List;
 public class AiInferenceController {
     private final IntegrationServiceProvider integrationServiceProvider;
     private final DeviceServiceProvider deviceServiceProvider;
+    private final EntityServiceProvider entityServiceProvider;
     private final EntityValueServiceProvider entityValueServiceProvider;
     private final AiInferenceService service;
 
-    public AiInferenceController(IntegrationServiceProvider integrationServiceProvider, DeviceServiceProvider deviceServiceProvider, EntityValueServiceProvider entityValueServiceProvider, AiInferenceService service) {
+    public AiInferenceController(IntegrationServiceProvider integrationServiceProvider, DeviceServiceProvider deviceServiceProvider, EntityServiceProvider entityServiceProvider, EntityValueServiceProvider entityValueServiceProvider, AiInferenceService service) {
         this.integrationServiceProvider = integrationServiceProvider;
         this.deviceServiceProvider = deviceServiceProvider;
+        this.entityServiceProvider = entityServiceProvider;
         this.entityValueServiceProvider = entityValueServiceProvider;
         this.service = service;
     }
@@ -59,7 +71,9 @@ public class AiInferenceController {
         String searchName = deviceSearchRequest.getName();
         List<Integration> integrations = integrationServiceProvider.findIntegrations().stream().toList();
         List<Device> devices = new ArrayList<>();
+        Map<String, String> integrationMap = new HashMap<>();
         integrations.forEach(integration -> {
+            integrationMap.put(integration.getId(), integration.getName());
             List<Device> integrationDevices = deviceServiceProvider.findAll(integration.getId());
             if (!CollectionUtils.isEmpty(integrationDevices)) {
                 List<Device> filteredDevices = integrationDevices.stream().filter(device -> filterDevice(device, searchName)).toList();
@@ -68,7 +82,8 @@ public class AiInferenceController {
                 }
             }
         });
-        return ResponseBuilder.success(DeviceResponse.build(devices));
+        List<DeviceData> deviceData = devices.stream().map(device -> new DeviceData(device.getId().toString(), device.getName(), device.getIntegrationId(), integrationMap.get(device.getIntegrationId()))).toList();
+        return ResponseBuilder.success(DeviceResponse.build(deviceData));
     }
 
     @GetMapping("/device/{deviceId}/image-entities")
@@ -98,6 +113,167 @@ public class AiInferenceController {
         }
 
         return ResponseBuilder.success(DeviceImageEntityResponse.build(imageEntityDataList));
+    }
+
+    @PostMapping("/device/{deviceId}/bind")
+    public ResponseBody<Void> deviceBind(@PathVariable("deviceId") String deviceId, @RequestBody DeviceBindRequest deviceBindRequest) {
+        Device device = deviceServiceProvider.findById(Long.parseLong(deviceId));
+        if (device == null) {
+            throw ServiceException.with(ServerErrorCode.DEVICE_NOT_FOUND.getErrorCode(), ServerErrorCode.DEVICE_NOT_FOUND.getErrorMessage()).build();
+        }
+
+        String integrationId = device.getIntegrationId();
+        String deviceKey = device.getKey();
+        String modelId = deviceBindRequest.getModelId();
+
+        Entity modelIdEntity = buildStringEntity(integrationId, deviceKey, Constants.IDENTIFIER_MODEL_ID, "Model ID");
+        entityServiceProvider.save(modelIdEntity);
+        saveEntityValue(modelIdEntity.getKey(), modelId);
+
+        List<Entity> modelEntityChildren = new ArrayList<>();
+        Entity modelInferInputsEntity = buildStringEntity(integrationId, deviceKey, Constants.IDENTIFIER_MODEL_INFER_INPUTS, "Model Infer Inputs");
+        modelEntityChildren.add(modelInferInputsEntity);
+
+        Entity inferHistoryEntity = buildStringEntity(integrationId, deviceKey, Constants.IDENTIFIER_INFER_HISTORY, "Model Infer History");
+        entityServiceProvider.save(inferHistoryEntity);
+
+        if (CollectionUtils.isEmpty(deviceBindRequest.getInferOutputs())) {
+            throw ServiceException.with(ServerErrorCode.DEVICE_BIND_ERROR.getErrorCode(), "Model infer outputs not found").build();
+        }
+
+        for (DeviceBindRequest.OutputItem outputItem : deviceBindRequest.getInferOutputs()) {
+            Entity outputItemEntity = buildStringEntity(integrationId, deviceKey, outputItem.getFieldName(), outputItem.getEntityName());
+            modelEntityChildren.add(outputItemEntity);
+        }
+        Entity modelEntity = buildStringEntity(integrationId, deviceKey, MessageFormat.format(Constants.IDENTIFIER_MODEL_FORMAT, modelId), "Model " + modelId);
+        modelEntity.setChildren(modelEntityChildren);
+        entityServiceProvider.save(modelEntity);
+        saveEntityValue(modelInferInputsEntity.getKey(), JsonUtils.toJSON(deviceBindRequest.getInferInputs()));
+
+        Entity bindAtEntity = buildStringEntity(integrationId, deviceKey, Constants.IDENTIFIER_BIND_AT, "Bind At");
+        entityServiceProvider.save(bindAtEntity);
+        saveEntityValue(bindAtEntity.getKey(), System.currentTimeMillis() / 1000);
+
+        DataCenter.putDeviceImageEntity(device.getId(), deviceBindRequest.getImageEntityKey());
+
+        return ResponseBuilder.success();
+    }
+
+    @GetMapping("/device/{deviceId}/binding-detail")
+    public ResponseBody<DeviceBindingDetailResponse> deviceBindingDetail(@PathVariable("deviceId") String deviceId) {
+        Device device = deviceServiceProvider.findById(Long.parseLong(deviceId));
+        if (device == null) {
+            throw ServiceException.with(ServerErrorCode.DEVICE_NOT_FOUND.getErrorCode(), ServerErrorCode.DEVICE_NOT_FOUND.getErrorMessage()).build();
+        }
+
+        String deviceKey = device.getKey();
+        DeviceBindingDetailResponse response = new DeviceBindingDetailResponse();
+        String modelId = (String) entityValueServiceProvider.findValueByKey(getDeviceEntityKey(deviceKey, Constants.IDENTIFIER_MODEL_ID));
+        response.setModelId(modelId);
+
+        String imageEntityKey = DataCenter.getImageEntityKeyByDeviceId(device.getId());
+        response.setImageEntityKey(imageEntityKey);
+
+        if (modelId != null) {
+            String modelIdentifier = MessageFormat.format(Constants.IDENTIFIER_MODEL_FORMAT, modelId);
+            String inferInputs = (String) entityValueServiceProvider.findValueByKey(getDeviceEntityChildrenKey(deviceKey, modelIdentifier, Constants.IDENTIFIER_MODEL_INFER_INPUTS));
+            if (inferInputs != null) {
+                response.setInferInputs(JsonUtils.toMap(inferInputs));
+            }
+            Entity modelEntity = entityServiceProvider.findByKey(getDeviceEntityKey(deviceKey, modelIdentifier));
+            if (modelEntity != null && modelEntity.getChildren() != null) {
+                response.setInferOutputs(modelEntity.getChildren().stream().map(entity -> {
+                    DeviceBindingDetailResponse.OutputItem outputItem = new DeviceBindingDetailResponse.OutputItem();
+                    outputItem.setFieldName(entity.getIdentifier());
+                    outputItem.setEntityName(entity.getName());
+                    return outputItem;
+                }).filter(outputItem -> !Constants.IDENTIFIER_MODEL_INFER_INPUTS.equals(outputItem.getFieldName())).collect(Collectors.toList()));
+            }
+        }
+
+        return ResponseBuilder.success(response);
+    }
+
+    @PostMapping("/bound-device/search")
+    public ResponseBody<Page<BoundDeviceData>> boundDeviceSearch(@RequestBody BoundDeviceSearchRequest boundDeviceSearchRequest) {
+        String searchName = boundDeviceSearchRequest.getName();
+        List<Integration> integrations = integrationServiceProvider.findIntegrations().stream().toList();
+        List<Device> devices = new ArrayList<>();
+        integrations.forEach(integration -> {
+            List<Device> integrationDevices = deviceServiceProvider.findAll(integration.getId());
+            if (!CollectionUtils.isEmpty(integrationDevices)) {
+                List<Device> filteredDevices = integrationDevices.stream().filter(
+                        device -> (StringUtils.isEmpty(searchName) || device.getName().contains(searchName)) && DataCenter.isDeviceInDeviceImageEntityMap(device.getId())
+                ).toList();
+                if (!CollectionUtils.isEmpty(filteredDevices)) {
+                    devices.addAll(filteredDevices);
+                }
+            }
+        });
+        Map<String, String> modelMap = getModelMap();
+        List<BoundDeviceData> boundDeviceData = devices.stream().map(device -> convertToBoundDeviceData(device, modelMap)).toList();
+        Page<BoundDeviceData> pageData = PageSupport.fromAllList(boundDeviceData, boundDeviceSearchRequest.getPageNumber(), boundDeviceSearchRequest.getPageSize());
+        return ResponseBuilder.success(pageData);
+    }
+
+    private BoundDeviceData convertToBoundDeviceData(Device device, Map<String, String> modelMap) {
+        BoundDeviceData boundDeviceData = new BoundDeviceData();
+        boundDeviceData.setDeviceId(device.getId().toString());
+        boundDeviceData.setDeviceName(device.getName());
+
+        String modelId = (String) entityValueServiceProvider.findValueByKey(getDeviceEntityKey(device.getKey(), Constants.IDENTIFIER_MODEL_ID));
+        boundDeviceData.setModelName(modelMap.get(modelId));
+
+        String imageEntityKey = DataCenter.getImageEntityKeyByDeviceId(device.getId());
+        String originImage = (String) entityValueServiceProvider.findValueByKey(imageEntityKey);
+        boundDeviceData.setOriginImage(originImage);
+
+        String inferHistoryKey = getDeviceEntityChildrenKey(device.getKey(), modelId, Constants.IDENTIFIER_INFER_HISTORY);
+        String inferHistoryJson = (String) entityValueServiceProvider.findValueByKey(inferHistoryKey);
+        if (!StringUtils.isEmpty(inferHistoryJson)) {
+            InferHistory inferHistory = JsonUtils.fromJSON(inferHistoryJson, InferHistory.class);
+            boundDeviceData.fillInferHistory(inferHistory);
+        }
+
+        String bindAt = (String) entityValueServiceProvider.findValueByKey(getDeviceEntityKey(device.getKey(), Constants.IDENTIFIER_BIND_AT));
+        boundDeviceData.setCreateAt(bindAt == null ? null : Long.parseLong(bindAt));
+
+        boundDeviceData.setInferHistoryKey(inferHistoryKey);
+        return boundDeviceData;
+    }
+
+    private Map<String, String> getModelMap() {
+        List<Entity> entities = entityServiceProvider.findByTargetId(AttachTargetType.INTEGRATION, Constants.INTEGRATION_ID);
+        return entities.stream().filter(entity -> entity.getIdentifier().startsWith(Constants.IDENTIFIER_MODEL_PREFIX)).collect(Collectors.toMap(
+                entity -> {
+                    String identifier = entity.getIdentifier();
+                    return identifier.substring(Constants.IDENTIFIER_MODEL_PREFIX.length());
+                },
+                Entity::getName
+        ));
+    }
+
+    private String getDeviceEntityKey(String deviceKey, String identifier) {
+        return MessageFormat.format(Constants.ENTITY_KEY_FORMAT, deviceKey, identifier);
+    }
+
+    private String getDeviceEntityChildrenKey(String deviceKey, String parentIdentifier, String identifier) {
+        return MessageFormat.format(Constants.CHILDREN_ENTITY_KEY_FORMAT, deviceKey, parentIdentifier, identifier);
+    }
+
+    private Entity buildStringEntity(String integrationId, String deviceKey, String identifier, String name) {
+        return new EntityBuilder(integrationId, deviceKey)
+                .identifier(identifier)
+                .property(name, AccessMod.R)
+                .valueType(EntityValueType.STRING)
+                .build();
+    }
+
+    private void saveEntityValue(String entityKey, Object value) {
+        ExchangePayload exchangePayload = ExchangePayload.create(Map.of(
+                entityKey, value
+        ));
+        entityValueServiceProvider.saveValuesAndPublishSync(exchangePayload);
     }
 
     private boolean filterDevice(Device device, String searchName) {

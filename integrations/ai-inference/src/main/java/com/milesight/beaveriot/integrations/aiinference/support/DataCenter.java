@@ -29,6 +29,11 @@ public class DataCenter {
         return deviceImageEntityMap.containsKey(deviceId);
     }
 
+    public static String getImageEntityKeyByDeviceId(Long deviceId) {
+        Map<Long, String> deviceImageEntityMap = loadDeviceImageEntityMap();
+        return deviceImageEntityMap.get(deviceId);
+    }
+
     public static Long getDeviceIdByImageEntityKey(String imageEntityKey) {
         Map<Long, String> deviceImageEntityMap = loadDeviceImageEntityMap();
         for (Map.Entry<Long, String> entry : deviceImageEntityMap.entrySet()) {
@@ -39,7 +44,7 @@ public class DataCenter {
         return null;
     }
 
-    public static void saveDeviceImageEntityMap(Map<Long, String> deviceImageEntityMap) {
+    private static void saveDeviceImageEntityMap(Map<Long, String> deviceImageEntityMap) {
         AnnotatedEntityWrapper<AiInferenceIntegrationEntities> wrapper = new AnnotatedEntityWrapper<>();
         wrapper.saveValue(AiInferenceIntegrationEntities::getDeviceImageEntityMap, JsonUtils.toJSON(deviceImageEntityMap));
     }

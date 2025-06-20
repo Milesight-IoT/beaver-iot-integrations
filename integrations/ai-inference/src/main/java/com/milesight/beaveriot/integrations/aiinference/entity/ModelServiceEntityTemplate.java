@@ -6,6 +6,8 @@ import com.milesight.beaveriot.context.integration.model.EntityBuilder;
 import com.milesight.beaveriot.integrations.aiinference.constant.Constants;
 import lombok.Builder;
 
+import java.text.MessageFormat;
+
 /**
  * author: Luxb
  * create: 2025/6/5 15:01
@@ -20,7 +22,7 @@ public class ModelServiceEntityTemplate {
 
     public Entity toEntity() {
         return new EntityBuilder(Constants.INTEGRATION_ID)
-                .identifier("model_" + modelId)
+                .identifier(MessageFormat.format(Constants.IDENTIFIER_MODEL_FORMAT, modelId))
                 .service(name)
                 .description(description)
                 .valueType(EntityValueType.OBJECT)

@@ -1,6 +1,5 @@
 package com.milesight.beaveriot.integrations.aiinference.model.response;
 
-import com.milesight.beaveriot.context.integration.model.Device;
 import lombok.Data;
 
 import java.util.List;
@@ -11,13 +10,13 @@ import java.util.List;
  **/
 @Data
 public class DeviceResponse {
-    private List<Device> content;
+    private List<DeviceData> content;
 
-    private DeviceResponse(List<Device> devices) {
+    private DeviceResponse(List<DeviceData> devices) {
         this.content = devices;
     }
 
-    public static DeviceResponse build(List<Device> devices) {
+    public static DeviceResponse build(List<DeviceData> devices) {
         return new DeviceResponse(devices);
     }
 }

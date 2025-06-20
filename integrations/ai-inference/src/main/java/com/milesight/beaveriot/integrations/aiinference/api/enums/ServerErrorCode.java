@@ -17,6 +17,8 @@ public enum ServerErrorCode implements ErrorCodeSpec {
     SERVER_INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR.value(), "server_internal_server_error", "Server internal server error"),
     SERVER_MODEL_WORKER_BUSY(HttpStatus.SERVICE_UNAVAILABLE.value(), "server_model_worker_busy", "Server model worker busy"),
     SERVER_OTHER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR.value(), "server_other_error", "Server error code:"),
+    DEVICE_NOT_FOUND(HttpStatus.NOT_FOUND.value(), "device_not_found", "Device not found"),
+    DEVICE_BIND_ERROR(HttpStatus.BAD_REQUEST.value(), "device_bind_error", "Device bind error"),
     ;
 
     private final String errorCode;
