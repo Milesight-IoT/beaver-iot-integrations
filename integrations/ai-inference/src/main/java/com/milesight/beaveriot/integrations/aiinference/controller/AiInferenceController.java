@@ -8,10 +8,11 @@ import com.milesight.beaveriot.context.api.DeviceServiceProvider;
 import com.milesight.beaveriot.context.api.EntityServiceProvider;
 import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
 import com.milesight.beaveriot.context.api.IntegrationServiceProvider;
-import com.milesight.beaveriot.context.integration.enums.AccessMod;
 import com.milesight.beaveriot.context.integration.enums.AttachTargetType;
-import com.milesight.beaveriot.context.integration.enums.EntityValueType;
-import com.milesight.beaveriot.context.integration.model.*;
+import com.milesight.beaveriot.context.integration.model.Device;
+import com.milesight.beaveriot.context.integration.model.Entity;
+import com.milesight.beaveriot.context.integration.model.ExchangePayload;
+import com.milesight.beaveriot.context.integration.model.Integration;
 import com.milesight.beaveriot.integrations.aiinference.api.enums.ServerErrorCode;
 import com.milesight.beaveriot.integrations.aiinference.api.model.response.CamThinkModelDetailResponse;
 import com.milesight.beaveriot.integrations.aiinference.constant.Constants;
@@ -22,6 +23,7 @@ import com.milesight.beaveriot.integrations.aiinference.model.request.DeviceSear
 import com.milesight.beaveriot.integrations.aiinference.model.response.*;
 import com.milesight.beaveriot.integrations.aiinference.service.AiInferenceService;
 import com.milesight.beaveriot.integrations.aiinference.support.DataCenter;
+import com.milesight.beaveriot.integrations.aiinference.support.EntitySupport;
 import com.milesight.beaveriot.integrations.aiinference.support.PageSupport;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
@@ -126,15 +128,15 @@ public class AiInferenceController {
         String deviceKey = device.getKey();
         String modelId = deviceBindRequest.getModelId();
 
-        Entity modelIdEntity = buildStringEntity(integrationId, deviceKey, Constants.IDENTIFIER_MODEL_ID, "Model ID");
+        Entity modelIdEntity = EntitySupport.buildStringEntity(integrationId, deviceKey, Constants.IDENTIFIER_MODEL_ID, "Model ID");
         entityServiceProvider.save(modelIdEntity);
         saveEntityValue(modelIdEntity.getKey(), modelId);
 
         List<Entity> modelEntityChildren = new ArrayList<>();
-        Entity modelInferInputsEntity = buildStringEntity(integrationId, deviceKey, Constants.IDENTIFIER_MODEL_INFER_INPUTS, "Model Infer Inputs");
+        Entity modelInferInputsEntity = EntitySupport.buildStringEntity(integrationId, deviceKey, Constants.IDENTIFIER_MODEL_INFER_INPUTS, "Model Infer Inputs");
         modelEntityChildren.add(modelInferInputsEntity);
 
-        Entity inferHistoryEntity = buildStringEntity(integrationId, deviceKey, Constants.IDENTIFIER_INFER_HISTORY, "Model Infer History");
+        Entity inferHistoryEntity = EntitySupport.buildStringEntity(integrationId, deviceKey, Constants.IDENTIFIER_INFER_HISTORY, "Model Infer History");
         entityServiceProvider.save(inferHistoryEntity);
 
         if (CollectionUtils.isEmpty(deviceBindRequest.getInferOutputs())) {
@@ -142,15 +144,15 @@ public class AiInferenceController {
         }
 
         for (DeviceBindRequest.OutputItem outputItem : deviceBindRequest.getInferOutputs()) {
-            Entity outputItemEntity = buildStringEntity(integrationId, deviceKey, outputItem.getFieldName(), outputItem.getEntityName());
+            Entity outputItemEntity = EntitySupport.buildStringEntity(integrationId, deviceKey, outputItem.getFieldName(), outputItem.getEntityName());
             modelEntityChildren.add(outputItemEntity);
         }
-        Entity modelEntity = buildStringEntity(integrationId, deviceKey, MessageFormat.format(Constants.IDENTIFIER_MODEL_FORMAT, modelId), "Model " + modelId);
+        Entity modelEntity = EntitySupport.buildStringEntity(integrationId, deviceKey, MessageFormat.format(Constants.IDENTIFIER_MODEL_FORMAT, modelId), "Model " + modelId);
         modelEntity.setChildren(modelEntityChildren);
         entityServiceProvider.save(modelEntity);
         saveEntityValue(modelInferInputsEntity.getKey(), JsonUtils.toJSON(deviceBindRequest.getInferInputs()));
 
-        Entity bindAtEntity = buildStringEntity(integrationId, deviceKey, Constants.IDENTIFIER_BIND_AT, "Bind At");
+        Entity bindAtEntity = EntitySupport.buildStringEntity(integrationId, deviceKey, Constants.IDENTIFIER_BIND_AT, "Bind At");
         entityServiceProvider.save(bindAtEntity);
         saveEntityValue(bindAtEntity.getKey(), System.currentTimeMillis() / 1000);
 
@@ -168,7 +170,7 @@ public class AiInferenceController {
 
         String deviceKey = device.getKey();
         DeviceBindingDetailResponse response = new DeviceBindingDetailResponse();
-        String modelId = (String) entityValueServiceProvider.findValueByKey(getDeviceEntityKey(deviceKey, Constants.IDENTIFIER_MODEL_ID));
+        String modelId = (String) entityValueServiceProvider.findValueByKey(EntitySupport.getDeviceEntityKey(deviceKey, Constants.IDENTIFIER_MODEL_ID));
         response.setModelId(modelId);
 
         String imageEntityKey = DataCenter.getImageEntityKeyByDeviceId(device.getId());
@@ -176,11 +178,11 @@ public class AiInferenceController {
 
         if (modelId != null) {
             String modelIdentifier = MessageFormat.format(Constants.IDENTIFIER_MODEL_FORMAT, modelId);
-            String inferInputs = (String) entityValueServiceProvider.findValueByKey(getDeviceEntityChildrenKey(deviceKey, modelIdentifier, Constants.IDENTIFIER_MODEL_INFER_INPUTS));
+            String inferInputs = (String) entityValueServiceProvider.findValueByKey(EntitySupport.getDeviceEntityChildrenKey(deviceKey, modelIdentifier, Constants.IDENTIFIER_MODEL_INFER_INPUTS));
             if (inferInputs != null) {
                 response.setInferInputs(JsonUtils.toMap(inferInputs));
             }
-            Entity modelEntity = entityServiceProvider.findByKey(getDeviceEntityKey(deviceKey, modelIdentifier));
+            Entity modelEntity = entityServiceProvider.findByKey(EntitySupport.getDeviceEntityKey(deviceKey, modelIdentifier));
             if (modelEntity != null && modelEntity.getChildren() != null) {
                 response.setInferOutputs(modelEntity.getChildren().stream().map(entity -> {
                     DeviceBindingDetailResponse.OutputItem outputItem = new DeviceBindingDetailResponse.OutputItem();
@@ -221,21 +223,21 @@ public class AiInferenceController {
         boundDeviceData.setDeviceId(device.getId().toString());
         boundDeviceData.setDeviceName(device.getName());
 
-        String modelId = (String) entityValueServiceProvider.findValueByKey(getDeviceEntityKey(device.getKey(), Constants.IDENTIFIER_MODEL_ID));
+        String modelId = (String) entityValueServiceProvider.findValueByKey(EntitySupport.getDeviceEntityKey(device.getKey(), Constants.IDENTIFIER_MODEL_ID));
         boundDeviceData.setModelName(modelMap.get(modelId));
 
         String imageEntityKey = DataCenter.getImageEntityKeyByDeviceId(device.getId());
         String originImage = (String) entityValueServiceProvider.findValueByKey(imageEntityKey);
         boundDeviceData.setOriginImage(originImage);
 
-        String inferHistoryKey = getDeviceEntityChildrenKey(device.getKey(), modelId, Constants.IDENTIFIER_INFER_HISTORY);
+        String inferHistoryKey = EntitySupport.getDeviceEntityChildrenKey(device.getKey(), modelId, Constants.IDENTIFIER_INFER_HISTORY);
         String inferHistoryJson = (String) entityValueServiceProvider.findValueByKey(inferHistoryKey);
         if (!StringUtils.isEmpty(inferHistoryJson)) {
             InferHistory inferHistory = JsonUtils.fromJSON(inferHistoryJson, InferHistory.class);
             boundDeviceData.fillInferHistory(inferHistory);
         }
 
-        String bindAt = (String) entityValueServiceProvider.findValueByKey(getDeviceEntityKey(device.getKey(), Constants.IDENTIFIER_BIND_AT));
+        String bindAt = (String) entityValueServiceProvider.findValueByKey(EntitySupport.getDeviceEntityKey(device.getKey(), Constants.IDENTIFIER_BIND_AT));
         boundDeviceData.setCreateAt(bindAt == null ? null : Long.parseLong(bindAt));
 
         boundDeviceData.setInferHistoryKey(inferHistoryKey);
@@ -251,22 +253,6 @@ public class AiInferenceController {
                 },
                 Entity::getName
         ));
-    }
-
-    private String getDeviceEntityKey(String deviceKey, String identifier) {
-        return MessageFormat.format(Constants.ENTITY_KEY_FORMAT, deviceKey, identifier);
-    }
-
-    private String getDeviceEntityChildrenKey(String deviceKey, String parentIdentifier, String identifier) {
-        return MessageFormat.format(Constants.CHILDREN_ENTITY_KEY_FORMAT, deviceKey, parentIdentifier, identifier);
-    }
-
-    private Entity buildStringEntity(String integrationId, String deviceKey, String identifier, String name) {
-        return new EntityBuilder(integrationId, deviceKey)
-                .identifier(identifier)
-                .property(name, AccessMod.R)
-                .valueType(EntityValueType.STRING)
-                .build();
     }
 
     private void saveEntityValue(String entityKey, Object value) {
