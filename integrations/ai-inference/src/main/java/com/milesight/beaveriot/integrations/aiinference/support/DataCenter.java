@@ -24,6 +24,12 @@ public class DataCenter {
         saveDeviceImageEntityMap(deviceImageEntityMap);
     }
 
+    public static void removeDevice(Long deviceId) {
+        Map<Long, String> deviceImageEntityMap = loadDeviceImageEntityMap();
+        deviceImageEntityMap.remove(deviceId);
+        saveDeviceImageEntityMap(deviceImageEntityMap);
+    }
+
     public static boolean isDeviceInDeviceImageEntityMap(Long deviceId) {
         Map<Long, String> deviceImageEntityMap = loadDeviceImageEntityMap();
         return deviceImageEntityMap.containsKey(deviceId);

@@ -20,6 +20,7 @@ import com.milesight.beaveriot.integrations.aiinference.model.InferHistory;
 import com.milesight.beaveriot.integrations.aiinference.model.request.BoundDeviceSearchRequest;
 import com.milesight.beaveriot.integrations.aiinference.model.request.DeviceBindRequest;
 import com.milesight.beaveriot.integrations.aiinference.model.request.DeviceSearchRequest;
+import com.milesight.beaveriot.integrations.aiinference.model.request.DeviceUnbindRequest;
 import com.milesight.beaveriot.integrations.aiinference.model.response.*;
 import com.milesight.beaveriot.integrations.aiinference.service.AiInferenceService;
 import com.milesight.beaveriot.integrations.aiinference.support.DataCenter;
@@ -176,7 +177,7 @@ public class AiInferenceController {
         String imageEntityKey = DataCenter.getImageEntityKeyByDeviceId(device.getId());
         response.setImageEntityKey(imageEntityKey);
 
-        if (modelId != null) {
+        if (StringUtils.isEmpty(modelId)) {
             String modelIdentifier = MessageFormat.format(Constants.IDENTIFIER_MODEL_FORMAT, modelId);
             String inferInputs = (String) entityValueServiceProvider.findValueByKey(EntitySupport.getDeviceEntityChildrenKey(deviceKey, modelIdentifier, Constants.IDENTIFIER_MODEL_INFER_INPUTS));
             if (inferInputs != null) {
@@ -216,6 +217,25 @@ public class AiInferenceController {
         List<BoundDeviceData> boundDeviceData = devices.stream().map(device -> convertToBoundDeviceData(device, modelMap)).toList();
         Page<BoundDeviceData> pageData = PageSupport.fromAllList(boundDeviceData, boundDeviceSearchRequest.getPageNumber(), boundDeviceSearchRequest.getPageSize());
         return ResponseBuilder.success(pageData);
+    }
+
+    @PostMapping("/device/unbind")
+    public ResponseBody<Void> deviceUnbind(@RequestBody DeviceUnbindRequest deviceUnbindRequest) {
+        List<String> deviceIds = deviceUnbindRequest.getDeviceIds();
+        deviceIds.forEach(deviceId -> {
+            Device device = deviceServiceProvider.findById(Long.parseLong(deviceId));
+            doUnbindDevice(device);
+        });
+        return ResponseBuilder.success();
+    }
+
+    private void doUnbindDevice(Device device) {
+        String deviceKey = device.getKey();
+        DataCenter.removeDevice(device.getId());
+
+        String modelId = (String) entityValueServiceProvider.findValueByKey(EntitySupport.getDeviceEntityKey(deviceKey, Constants.IDENTIFIER_MODEL_ID));
+        saveEntityValue(EntitySupport.getDeviceEntityKey(deviceKey, Constants.IDENTIFIER_MODEL_ID), "");
+        entityServiceProvider.deleteByKey(EntitySupport.getDeviceEntityKey(deviceKey, MessageFormat.format(Constants.IDENTIFIER_MODEL_FORMAT, modelId)));
     }
 
     private BoundDeviceData convertToBoundDeviceData(Device device, Map<String, String> modelMap) {
