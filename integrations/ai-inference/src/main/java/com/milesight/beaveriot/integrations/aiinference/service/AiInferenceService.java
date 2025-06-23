@@ -47,6 +47,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * author: Luxb
@@ -153,7 +154,7 @@ public class AiInferenceService {
 
             CamThinkModelInferRequest camThinkModelInferRequest = new CamThinkModelInferRequest();
             Map<String, Object> inferInputs = JsonUtils.toMap(inferInputsValue);
-            inferInputs.put("image", imageEntityValue);
+            inferInputs.put(CamThinkModelInferRequest.INPUT_IMAGE_FIELD, imageEntityValue);
             camThinkModelInferRequest.setInputs(inferInputs);
 
             CamThinkModelInferResponse camThinkModelInferResponse = aiInferenceClient.modelInfer(modelId, camThinkModelInferRequest);
@@ -163,10 +164,12 @@ public class AiInferenceService {
             }
             long inferAt = System.currentTimeMillis() / 1000;
 
+            Map<String, String> modelMap = getModelMap();
+
             ExchangePayload exchangePayload = new ExchangePayload();
 
             InferHistory inferHistory = new InferHistory();
-            inferHistory.setModelName(modelId);
+            inferHistory.setModelName(modelMap.get(modelId));
             inferHistory.setOriginImage(imageEntityValue);
             inferHistory.setInferStatus(inferStatus.getValue());
             inferHistory.setUplinkAt(uplinkAt);
@@ -207,6 +210,17 @@ public class AiInferenceService {
         }
     }
 
+    public Map<String, String> getModelMap() {
+        List<Entity> entities = entityServiceProvider.findByTargetId(AttachTargetType.INTEGRATION, Constants.INTEGRATION_ID);
+        return entities.stream().filter(entity -> entity.getIdentifier().startsWith(Constants.IDENTIFIER_MODEL_PREFIX)).collect(Collectors.toMap(
+                entity -> {
+                    String identifier = entity.getIdentifier();
+                    return identifier.substring(Constants.IDENTIFIER_MODEL_PREFIX.length());
+                },
+                Entity::getName
+        ));
+    }
+
     private String drawResultImage(String imageBase64, CamThinkModelInferResponse camThinkModelInferResponse) throws Exception {
         if (camThinkModelInferResponse.getData() == null) {
             return "";
@@ -235,9 +249,14 @@ public class AiInferenceService {
 
         for (CamThinkModelInferResponse.ModelInferData.OutputData.Detection detection : outputData.getDetections()) {
             List<Integer> box = detection.getBox();
-            if (!CollectionUtils.isEmpty(box) && box.size() == 4) {
+            if (!CollectionUtils.isEmpty(box) && box.size() == CamThinkModelInferResponse.BOX_SIZE) {
                 String tag = getTag(detection.getCls(), detection.getConf());
-                ImageDrawRectangleAction imageDrawRectangleAction = new ImageDrawRectangleAction(box.get(0), box.get(1), box.get(2), box.get(3), tag);
+                ImageDrawRectangleAction imageDrawRectangleAction = new ImageDrawRectangleAction(
+                        box.get(CamThinkModelInferResponse.BOX_X_INDEX),
+                        box.get(CamThinkModelInferResponse.BOX_Y_INDEX),
+                        box.get(CamThinkModelInferResponse.BOX_WIDTH_INDEX),
+                        box.get(CamThinkModelInferResponse.BOX_HEIGHT_INDEX),
+                        tag);
                 engine.addAction(imageDrawRectangleAction);
             }
 
@@ -245,8 +264,9 @@ public class AiInferenceService {
             if (!CollectionUtils.isEmpty(masks)) {
                 ImageDrawPolygonAction imageDrawPolygonAction = new ImageDrawPolygonAction();
                 for (List<Integer> mask : masks) {
-                    if (!CollectionUtils.isEmpty(mask) && mask.size() == 2) {
-                        imageDrawPolygonAction.addPoint(mask.get(0), mask.get(1));
+                    if (!CollectionUtils.isEmpty(mask) && mask.size() == CamThinkModelInferResponse.MASK_SIZE) {
+                        imageDrawPolygonAction.addPoint(
+                                mask.get(CamThinkModelInferResponse.MASK_POINT_X_INDEX), mask.get(CamThinkModelInferResponse.MASK_POINT_Y_INDEX));
                     }
                 }
                 engine.addAction(imageDrawPolygonAction);
@@ -267,15 +287,18 @@ public class AiInferenceService {
     private ImageDrawPathAction buildImageDrawPathAction(List<List<Double>> points, List<List<Integer>> skeleton) {
         ImageDrawPathAction imageDrawPathAction = new ImageDrawPathAction();
         for (List<Double> point : points) {
-            if (!CollectionUtils.isEmpty(point) && point.size() == 4) {
-                imageDrawPathAction.addPoint(point.get(0).intValue(), point.get(1).intValue(), point.get(2).intValue());
+            if (!CollectionUtils.isEmpty(point) && point.size() == CamThinkModelInferResponse.POINT_SIZE) {
+                imageDrawPathAction.addPoint(
+                        point.get(CamThinkModelInferResponse.POINT_X_INDEX).intValue(),
+                        point.get(CamThinkModelInferResponse.POINT_Y_INDEX).intValue(),
+                        point.get(CamThinkModelInferResponse.POINT_ID_INDEX).intValue());
             }
         }
 
         if (!CollectionUtils.isEmpty(skeleton)) {
             for (List<Integer> line : skeleton) {
-                if (!CollectionUtils.isEmpty(line) && line.size() == 2) {
-                    imageDrawPathAction.addLine(line.get(0), line.get(1));
+                if (!CollectionUtils.isEmpty(line) && line.size() == CamThinkModelInferResponse.LINE_SIZE) {
+                    imageDrawPathAction.addLine(line.get(CamThinkModelInferResponse.LINE_START_POINT_ID_INDEX), line.get(CamThinkModelInferResponse.LINE_END_POINT_ID_INDEX));
                 }
             }
         }
@@ -290,7 +313,7 @@ public class AiInferenceService {
         if (conf == null) {
             return "";
         }
-        return String.format("%s:(%.2f)", cls, conf);
+        return String.format("%s:%.2f", cls, conf);
     }
 
     private static EventResponse getEventResponse(ModelInferResponse modelInferResponse) {

@@ -11,5 +11,6 @@ import java.util.Map;
  **/
 @Data
 public class CamThinkModelInferRequest {
+    public static final String INPUT_IMAGE_FIELD = "image";
     private Map<String, Object> inputs = new HashMap<>();
 }

@@ -8,7 +8,6 @@ import com.milesight.beaveriot.context.api.DeviceServiceProvider;
 import com.milesight.beaveriot.context.api.EntityServiceProvider;
 import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
 import com.milesight.beaveriot.context.api.IntegrationServiceProvider;
-import com.milesight.beaveriot.context.integration.enums.AttachTargetType;
 import com.milesight.beaveriot.context.integration.model.Device;
 import com.milesight.beaveriot.context.integration.model.Entity;
 import com.milesight.beaveriot.context.integration.model.ExchangePayload;
@@ -216,7 +215,7 @@ public class AiInferenceController {
 
         int total = devices.size();
         List<Device> pageDeviceList = PageSupport.toPageList(devices, boundDeviceSearchRequest.getPageNumber(), boundDeviceSearchRequest.getPageSize());
-        Map<String, String> modelMap = getModelMap();
+        Map<String, String> modelMap = service.getModelMap();
         List<BoundDeviceData> pageBoundDeviceDataList = pageDeviceList.stream().map(device -> convertToBoundDeviceData(device, modelMap)).toList();
         return ResponseBuilder.success(PageSupport.toPage(pageBoundDeviceDataList, boundDeviceSearchRequest.getPageNumber(), boundDeviceSearchRequest.getPageSize(), total));
     }
@@ -269,17 +268,6 @@ public class AiInferenceController {
         }
         boundDeviceData.setInferHistoryEntityKey(inferHistoryKey);
         return boundDeviceData;
-    }
-
-    private Map<String, String> getModelMap() {
-        List<Entity> entities = entityServiceProvider.findByTargetId(AttachTargetType.INTEGRATION, Constants.INTEGRATION_ID);
-        return entities.stream().filter(entity -> entity.getIdentifier().startsWith(Constants.IDENTIFIER_MODEL_PREFIX)).collect(Collectors.toMap(
-                entity -> {
-                    String identifier = entity.getIdentifier();
-                    return identifier.substring(Constants.IDENTIFIER_MODEL_PREFIX.length());
-                },
-                Entity::getName
-        ));
     }
 
     private void saveEntityValue(String entityKey, Object value) {
