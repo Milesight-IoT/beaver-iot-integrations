@@ -128,15 +128,15 @@ public class AiInferenceController {
         String deviceKey = device.getKey();
         String modelId = deviceBindRequest.getModelId();
 
-        Entity modelIdEntity = EntitySupport.buildStringEntity(integrationId, deviceKey, Constants.IDENTIFIER_MODEL_ID, "Model ID");
+        Entity modelIdEntity = EntitySupport.buildDeviceStringEntity(integrationId, deviceKey, Constants.IDENTIFIER_MODEL_ID, "Model ID");
         entityServiceProvider.save(modelIdEntity);
         saveEntityValue(modelIdEntity.getKey(), modelId);
 
         List<Entity> modelEntityChildren = new ArrayList<>();
-        Entity modelInferInputsEntity = EntitySupport.buildStringEntity(integrationId, deviceKey, Constants.IDENTIFIER_MODEL_INFER_INPUTS, "Model Infer Inputs");
+        Entity modelInferInputsEntity = EntitySupport.buildDeviceStringEntity(integrationId, deviceKey, Constants.IDENTIFIER_MODEL_INFER_INPUTS, "Model Infer Inputs");
         modelEntityChildren.add(modelInferInputsEntity);
 
-        Entity inferHistoryEntity = EntitySupport.buildStringEntity(integrationId, deviceKey, Constants.IDENTIFIER_INFER_HISTORY, "Model Infer History");
+        Entity inferHistoryEntity = EntitySupport.buildDeviceStringEntity(integrationId, deviceKey, Constants.IDENTIFIER_INFER_HISTORY, "Model Infer History");
         entityServiceProvider.save(inferHistoryEntity);
 
         if (CollectionUtils.isEmpty(deviceBindRequest.getInferOutputs())) {
@@ -144,15 +144,15 @@ public class AiInferenceController {
         }
 
         for (DeviceBindRequest.OutputItem outputItem : deviceBindRequest.getInferOutputs()) {
-            Entity outputItemEntity = EntitySupport.buildStringEntity(integrationId, deviceKey, outputItem.getFieldName(), outputItem.getEntityName());
+            Entity outputItemEntity = EntitySupport.buildDeviceStringEntity(integrationId, deviceKey, outputItem.getFieldName(), outputItem.getEntityName());
             modelEntityChildren.add(outputItemEntity);
         }
-        Entity modelEntity = EntitySupport.buildStringEntity(integrationId, deviceKey, MessageFormat.format(Constants.IDENTIFIER_MODEL_FORMAT, modelId), "Model " + modelId);
+        Entity modelEntity = EntitySupport.buildDeviceStringEntity(integrationId, deviceKey, MessageFormat.format(Constants.IDENTIFIER_MODEL_FORMAT, modelId), "Model " + modelId);
         modelEntity.setChildren(modelEntityChildren);
         entityServiceProvider.save(modelEntity);
         saveEntityValue(modelInferInputsEntity.getKey(), JsonUtils.toJSON(deviceBindRequest.getInferInputs()));
 
-        Entity bindAtEntity = EntitySupport.buildStringEntity(integrationId, deviceKey, Constants.IDENTIFIER_BIND_AT, "Bind At");
+        Entity bindAtEntity = EntitySupport.buildDeviceLongEntity(integrationId, deviceKey, Constants.IDENTIFIER_BIND_AT, "Bind At");
         entityServiceProvider.save(bindAtEntity);
         saveEntityValue(bindAtEntity.getKey(), System.currentTimeMillis());
 

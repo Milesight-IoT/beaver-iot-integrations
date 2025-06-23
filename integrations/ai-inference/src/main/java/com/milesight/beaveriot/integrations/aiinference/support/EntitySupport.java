@@ -21,11 +21,19 @@ public class EntitySupport {
         return MessageFormat.format(Constants.CHILDREN_ENTITY_KEY_FORMAT, deviceKey, parentIdentifier, identifier);
     }
 
-    public static Entity buildStringEntity(String integrationId, String deviceKey, String identifier, String name) {
+    public static Entity buildDeviceStringEntity(String integrationId, String deviceKey, String identifier, String name) {
+        return buildDeviceEntity(integrationId, deviceKey, identifier, name, EntityValueType.STRING);
+    }
+
+    public static Entity buildDeviceLongEntity(String integrationId, String deviceKey, String identifier, String name) {
+        return buildDeviceEntity(integrationId, deviceKey, identifier, name, EntityValueType.LONG);
+    }
+
+    public static Entity buildDeviceEntity(String integrationId, String deviceKey, String identifier, String name, EntityValueType valueType) {
         return new EntityBuilder(integrationId, deviceKey)
                 .identifier(identifier)
                 .property(name, AccessMod.R)
-                .valueType(EntityValueType.STRING)
+                .valueType(valueType)
                 .build();
     }
 }
