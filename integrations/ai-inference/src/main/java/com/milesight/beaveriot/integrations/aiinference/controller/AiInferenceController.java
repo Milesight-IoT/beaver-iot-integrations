@@ -156,7 +156,7 @@ public class AiInferenceController {
         entityServiceProvider.save(bindAtEntity);
         saveEntityValue(bindAtEntity.getKey(), System.currentTimeMillis());
 
-        DataCenter.putDeviceImageEntity(device.getId(), deviceBindRequest.getImageEntityKey());
+        DataCenter.putDeviceImageEntity(deviceBindRequest.getImageEntityKey(), device.getId());
 
         return ResponseBuilder.success();
     }
@@ -176,7 +176,7 @@ public class AiInferenceController {
         String imageEntityKey = DataCenter.getImageEntityKeyByDeviceId(device.getId());
         response.setImageEntityKey(imageEntityKey);
 
-        if (StringUtils.isEmpty(modelId)) {
+        if (!StringUtils.isEmpty(modelId)) {
             String modelIdentifier = MessageFormat.format(Constants.IDENTIFIER_MODEL_FORMAT, modelId);
             String inferInputs = (String) entityValueServiceProvider.findValueByKey(EntitySupport.getDeviceEntityChildrenKey(deviceKey, modelIdentifier, Constants.IDENTIFIER_MODEL_INFER_INPUTS));
             if (inferInputs != null) {
@@ -228,7 +228,7 @@ public class AiInferenceController {
     }
 
     private void doUnbindDevice(Long deviceId) {
-        DataCenter.removeDevice(deviceId);
+        DataCenter.removeDeviceFromImageEntityMap(deviceId);
         Device device = deviceServiceProvider.findById(deviceId);
         if (device == null) {
             return;
@@ -259,8 +259,8 @@ public class AiInferenceController {
             boundDeviceData.fillInferHistory(inferHistory);
         }
 
-        String bindAt = (String) entityValueServiceProvider.findValueByKey(EntitySupport.getDeviceEntityKey(device.getKey(), Constants.IDENTIFIER_BIND_AT));
-        boundDeviceData.setCreateAt(bindAt == null ? null : Long.parseLong(bindAt));
+        Long bindAt = (Long) entityValueServiceProvider.findValueByKey(EntitySupport.getDeviceEntityKey(device.getKey(), Constants.IDENTIFIER_BIND_AT));
+        boundDeviceData.setCreateAt(bindAt);
 
         Entity inferHistoryEntity = entityServiceProvider.findByKey(inferHistoryKey);
         if (inferHistoryEntity != null) {

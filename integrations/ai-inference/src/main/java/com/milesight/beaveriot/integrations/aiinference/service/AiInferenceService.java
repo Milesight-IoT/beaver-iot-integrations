@@ -111,29 +111,23 @@ public class AiInferenceService {
     public void detectImageAutoInfer(Event<ExchangePayload> event) {
         ExchangePayload exchangePayload = event.getPayload();
         exchangePayload.forEach((key, value) -> {
-            Device device = getDeviceIdByImageEntityKey(key);
+            Device device = getDeviceByImageEntityKey(key);
             if (device != null) {
                 autoInfer(device, key, value.toString());
             }
         });
     }
 
-    private Device getDeviceIdByImageEntityKey(String imageEntityKey) {
-        List<Long> deviceIdList = DataCenter.getDeviceIdListByImageEntityKey(imageEntityKey);
-        if (CollectionUtils.isEmpty(deviceIdList)) {
+    private Device getDeviceByImageEntityKey(String imageEntityKey) {
+        Long deviceId = DataCenter.getDeviceIdByImageEntityKey(imageEntityKey);
+        if (deviceId == null) {
             return null;
         }
-
-        Device foundDevice = null;
-        for (Long deviceId : deviceIdList) {
-            Device device = deviceServiceProvider.findById(deviceId);
-            if (device == null) {
-                DataCenter.removeDevice(deviceId);
-            }else if (foundDevice == null) {
-                foundDevice = device;
-            }
+        Device device = deviceServiceProvider.findById(deviceId);
+        if (device == null) {
+            DataCenter.removeDeviceFromImageEntityMap(deviceId);
         }
-        return foundDevice;
+        return device;
     }
 
     private void autoInfer(Device device, String imageEntityKey, String imageEntityValue) {
