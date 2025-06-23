@@ -183,7 +183,12 @@ public class AiInferenceService {
                     inferHistory.setInferOutputsData(outputsData);
 
                     for (String filed : camThinkModelInferResponse.getData().getOutputs().keySet()) {
-                        String value = camThinkModelInferResponse.getData().getOutputs().get(filed).toString();
+                        String value;
+                        if (CamThinkModelInferResponse.ModelInferData.FIELD_DATA.equals(filed)) {
+                            value = JsonUtils.toJSON(camThinkModelInferResponse.getData().getOutputs().get(filed));
+                        } else {
+                            value = camThinkModelInferResponse.getData().getOutputs().get(filed).toString();
+                        }
                         String outputFiledEntityKey = EntitySupport.getDeviceEntityChildrenKey(deviceKey, modelIdentifier, filed);
                         if (entityServiceProvider.findByKey(outputFiledEntityKey) != null) {
                             exchangePayload.put(outputFiledEntityKey, value);
