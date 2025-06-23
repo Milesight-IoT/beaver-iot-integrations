@@ -154,7 +154,7 @@ public class AiInferenceController {
 
         Entity bindAtEntity = EntitySupport.buildStringEntity(integrationId, deviceKey, Constants.IDENTIFIER_BIND_AT, "Bind At");
         entityServiceProvider.save(bindAtEntity);
-        saveEntityValue(bindAtEntity.getKey(), System.currentTimeMillis() / 1000);
+        saveEntityValue(bindAtEntity.getKey(), System.currentTimeMillis());
 
         DataCenter.putDeviceImageEntity(device.getId(), deviceBindRequest.getImageEntityKey());
 

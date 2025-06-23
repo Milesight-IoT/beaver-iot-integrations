@@ -138,7 +138,7 @@ public class AiInferenceService {
 
     private void autoInfer(Device device, String imageEntityKey, String imageEntityValue) {
         try {
-            long uplinkAt = System.currentTimeMillis() / 1000;
+            long uplinkAt = System.currentTimeMillis();
             String deviceKey = device.getKey();
             String modelId = (String) entityValueServiceProvider.findValueByKey(EntitySupport.getDeviceEntityKey(deviceKey, Constants.IDENTIFIER_MODEL_ID));
             if (StringUtils.isEmpty(modelId)) {
@@ -162,7 +162,7 @@ public class AiInferenceService {
             if (camThinkModelInferResponse == null || !camThinkModelInferResponse.isSuccess()) {
                 inferStatus = InferStatus.FAILED;
             }
-            long inferAt = System.currentTimeMillis() / 1000;
+            long inferAt = System.currentTimeMillis();
 
             Map<String, String> modelMap = getModelMap();
 
