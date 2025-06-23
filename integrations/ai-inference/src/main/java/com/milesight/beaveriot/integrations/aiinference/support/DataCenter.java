@@ -5,6 +5,7 @@ import com.milesight.beaveriot.base.utils.JsonUtils;
 import com.milesight.beaveriot.context.integration.wrapper.AnnotatedEntityWrapper;
 import com.milesight.beaveriot.integrations.aiinference.entity.AiInferenceIntegrationEntities;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -40,14 +41,12 @@ public class DataCenter {
         return deviceImageEntityMap.get(deviceId);
     }
 
-    public static Long getDeviceIdByImageEntityKey(String imageEntityKey) {
+    public static List<Long> getDeviceIdListByImageEntityKey(String imageEntityKey) {
         Map<Long, String> deviceImageEntityMap = loadDeviceImageEntityMap();
-        for (Map.Entry<Long, String> entry : deviceImageEntityMap.entrySet()) {
-            if (entry.getValue().equals(imageEntityKey)) {
-                return entry.getKey();
-            }
-        }
-        return null;
+        return deviceImageEntityMap.entrySet().stream()
+                .filter(entry -> entry.getValue().equals(imageEntityKey))
+                .map(Map.Entry::getKey)
+                .toList();
     }
 
     private static void saveDeviceImageEntityMap(Map<Long, String> deviceImageEntityMap) {

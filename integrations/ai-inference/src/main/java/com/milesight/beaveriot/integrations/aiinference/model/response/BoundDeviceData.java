@@ -14,7 +14,8 @@ public class BoundDeviceData extends InferHistory {
     private String deviceId;
     private String deviceName;
     private Long createAt;
-    private String inferHistoryKey;
+    private String inferHistoryEntityId;
+    private String inferHistoryEntityKey;
 
     public void fillInferHistory(InferHistory inferHistory) {
         this.modelName = inferHistory.getModelName();

@@ -1,10 +1,12 @@
 package com.milesight.beaveriot.integrations.aiinference.support.image.action;
 
+import com.milesight.beaveriot.integrations.aiinference.support.image.ColorManager;
 import com.milesight.beaveriot.integrations.aiinference.support.image.ColorPicker;
 import com.milesight.beaveriot.integrations.aiinference.support.image.intefaces.ImageDrawAction;
 import lombok.Data;
 
 import java.awt.*;
+import java.util.Map;
 
 /**
  * author: Luxb
@@ -13,7 +15,7 @@ import java.awt.*;
 @Data
 public class ImageDrawRectangleAction implements ImageDrawAction {
     private final static float DEFAULT_LINE_WIDTH = 2.0f;
-    private final static ColorPicker colorPicker = new ColorPicker();
+    private final static String DEFAULT_COLOR_FIELD = "default";
     private int x;
     private int y;
     private int width;
@@ -29,7 +31,13 @@ public class ImageDrawRectangleAction implements ImageDrawAction {
     }
 
     @Override
-    public void draw(Graphics2D g2d) {
+    public Map<String, ColorPicker> getColorPickerMap() {
+        return Map.of(DEFAULT_COLOR_FIELD, new ColorPicker());
+    }
+
+    @Override
+    public void draw(Graphics2D g2d, ColorManager colorManager) {
+        ColorPicker colorPicker = colorManager.getColorPicker(this.getClass(), DEFAULT_COLOR_FIELD);
         g2d.setColor(colorPicker.nextColor());
         g2d.setStroke(new BasicStroke(DEFAULT_LINE_WIDTH));
         g2d.drawRect(x, y, width, height);

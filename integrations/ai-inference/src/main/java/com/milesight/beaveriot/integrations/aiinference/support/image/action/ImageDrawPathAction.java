@@ -1,5 +1,6 @@
 package com.milesight.beaveriot.integrations.aiinference.support.image.action;
 
+import com.milesight.beaveriot.integrations.aiinference.support.image.ColorManager;
 import com.milesight.beaveriot.integrations.aiinference.support.image.ColorPicker;
 import com.milesight.beaveriot.integrations.aiinference.support.image.intefaces.ImageDrawAction;
 import lombok.Data;
@@ -19,8 +20,8 @@ import java.util.List;
 public class ImageDrawPathAction implements ImageDrawAction {
     private final static float DEFAULT_LINE_WIDTH = 2.0f;
     private static final int DEFAULT_POINT_DIAMETER = 10;
-    private final static ColorPicker lineColorPicker = new ColorPicker(4);
-    private final static ColorPicker pointColorPicker = new ColorPicker();
+    private final static String LINE_COLOR_FIELD = "line";
+    private final static String POINT_COLOR_FIELD = "point";
     private Map<Integer, Point> pointMap;
     private List<Line> lineList;
     private GeneralPath path;
@@ -42,17 +43,30 @@ public class ImageDrawPathAction implements ImageDrawAction {
     }
 
     @Override
-    public void draw(Graphics2D g2d) {
+    public Map<String, ColorPicker> getColorPickerMap() {
+        return Map.of(
+                LINE_COLOR_FIELD, new ColorPicker(4),
+                POINT_COLOR_FIELD, new ColorPicker()
+        );
+    }
+
+    @Override
+    public void draw(Graphics2D g2d, ColorManager colorManager) {
         g2d.setStroke(new BasicStroke(DEFAULT_LINE_WIDTH));
+
+        ColorPicker lineColorPicker = colorManager.getColorPicker(this.getClass(), LINE_COLOR_FIELD);
         g2d.setColor(lineColorPicker.nextColor());
         for (Line line : lineList) {
             Point startPoint = pointMap.get(line.getStartPointId());
             Point endPoint = pointMap.get(line.getEndPointId());
-            path.moveTo(startPoint.getX(), startPoint.getY());
-            path.lineTo(endPoint.getX(), endPoint.getY());
+            if (startPoint != null && endPoint != null) {
+                path.moveTo(startPoint.getX(), startPoint.getY());
+                path.lineTo(endPoint.getX(), endPoint.getY());
+            }
         }
         g2d.draw(path);
 
+        ColorPicker pointColorPicker = colorManager.getColorPicker(this.getClass(), POINT_COLOR_FIELD);
         for (Point point : pointMap.values()) {
             g2d.setColor(pointColorPicker.nextColor());
             g2d.fillOval((int)point.getX() - DEFAULT_POINT_DIAMETER / 2, (int)point.getY() - DEFAULT_POINT_DIAMETER / 2, DEFAULT_POINT_DIAMETER, DEFAULT_POINT_DIAMETER);

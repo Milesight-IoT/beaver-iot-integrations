@@ -213,25 +213,28 @@ public class AiInferenceController {
                 }
             }
         });
+
+        int total = devices.size();
+        List<Device> pageDeviceList = PageSupport.toPageList(devices, boundDeviceSearchRequest.getPageNumber(), boundDeviceSearchRequest.getPageSize());
         Map<String, String> modelMap = getModelMap();
-        List<BoundDeviceData> boundDeviceData = devices.stream().map(device -> convertToBoundDeviceData(device, modelMap)).toList();
-        Page<BoundDeviceData> pageData = PageSupport.fromAllList(boundDeviceData, boundDeviceSearchRequest.getPageNumber(), boundDeviceSearchRequest.getPageSize());
-        return ResponseBuilder.success(pageData);
+        List<BoundDeviceData> pageBoundDeviceDataList = pageDeviceList.stream().map(device -> convertToBoundDeviceData(device, modelMap)).toList();
+        return ResponseBuilder.success(PageSupport.toPage(pageBoundDeviceDataList, boundDeviceSearchRequest.getPageNumber(), boundDeviceSearchRequest.getPageSize(), total));
     }
 
     @PostMapping("/device/unbind")
     public ResponseBody<Void> deviceUnbind(@RequestBody DeviceUnbindRequest deviceUnbindRequest) {
         List<String> deviceIds = deviceUnbindRequest.getDeviceIds();
-        deviceIds.forEach(deviceId -> {
-            Device device = deviceServiceProvider.findById(Long.parseLong(deviceId));
-            doUnbindDevice(device);
-        });
+        deviceIds.forEach(deviceId -> doUnbindDevice(Long.parseLong(deviceId)));
         return ResponseBuilder.success();
     }
 
-    private void doUnbindDevice(Device device) {
+    private void doUnbindDevice(Long deviceId) {
+        DataCenter.removeDevice(deviceId);
+        Device device = deviceServiceProvider.findById(deviceId);
+        if (device == null) {
+            return;
+        }
         String deviceKey = device.getKey();
-        DataCenter.removeDevice(device.getId());
 
         String modelId = (String) entityValueServiceProvider.findValueByKey(EntitySupport.getDeviceEntityKey(deviceKey, Constants.IDENTIFIER_MODEL_ID));
         saveEntityValue(EntitySupport.getDeviceEntityKey(deviceKey, Constants.IDENTIFIER_MODEL_ID), "");
@@ -250,7 +253,7 @@ public class AiInferenceController {
         String originImage = (String) entityValueServiceProvider.findValueByKey(imageEntityKey);
         boundDeviceData.setOriginImage(originImage);
 
-        String inferHistoryKey = EntitySupport.getDeviceEntityChildrenKey(device.getKey(), modelId, Constants.IDENTIFIER_INFER_HISTORY);
+        String inferHistoryKey = EntitySupport.getDeviceEntityKey(device.getKey(), Constants.IDENTIFIER_INFER_HISTORY);
         String inferHistoryJson = (String) entityValueServiceProvider.findValueByKey(inferHistoryKey);
         if (!StringUtils.isEmpty(inferHistoryJson)) {
             InferHistory inferHistory = JsonUtils.fromJSON(inferHistoryJson, InferHistory.class);
@@ -260,7 +263,11 @@ public class AiInferenceController {
         String bindAt = (String) entityValueServiceProvider.findValueByKey(EntitySupport.getDeviceEntityKey(device.getKey(), Constants.IDENTIFIER_BIND_AT));
         boundDeviceData.setCreateAt(bindAt == null ? null : Long.parseLong(bindAt));
 
-        boundDeviceData.setInferHistoryKey(inferHistoryKey);
+        Entity inferHistoryEntity = entityServiceProvider.findByKey(inferHistoryKey);
+        if (inferHistoryEntity != null) {
+            boundDeviceData.setInferHistoryEntityId(inferHistoryEntity.getId().toString());
+        }
+        boundDeviceData.setInferHistoryEntityKey(inferHistoryKey);
         return boundDeviceData;
     }
 

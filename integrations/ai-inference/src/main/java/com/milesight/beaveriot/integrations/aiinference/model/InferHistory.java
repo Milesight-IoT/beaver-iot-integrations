@@ -1,5 +1,6 @@
 package com.milesight.beaveriot.integrations.aiinference.model;
 
+import com.milesight.beaveriot.integrations.aiinference.enums.InferStatus;
 import lombok.Data;
 
 /**
@@ -15,4 +16,10 @@ public class InferHistory {
     protected String inferStatus;
     protected Long uplinkAt;
     protected Long inferAt;
+
+    public InferHistory() {
+        resultImage = "";
+        inferOutputsData = "";
+        inferStatus = InferStatus.UNKNOWN.getValue();
+    }
 }

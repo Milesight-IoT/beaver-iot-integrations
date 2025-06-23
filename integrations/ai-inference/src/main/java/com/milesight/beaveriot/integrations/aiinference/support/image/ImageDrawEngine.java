@@ -28,12 +28,15 @@ public class ImageDrawEngine {
     private String imageBase64Header;
     private String outputBase64Data;
     private List<ImageDrawAction> actions;
+    private ColorManager colorManager;
 
     public ImageDrawEngine(ImageDrawConfig config) {
         this.config = config;
         this.actions = new ArrayList<>();
+        this.colorManager = new ColorManager();
     }
 
+    @SuppressWarnings("UnusedReturnValue")
     public ImageDrawEngine loadImageFromBase64(String imageBase64) throws IOException {
         String[] extractedData = extractImageBase64(imageBase64);
         imageBase64Header = extractedData[0];
@@ -41,23 +44,31 @@ public class ImageDrawEngine {
 
         byte[] imageBytes = Base64.getDecoder().decode(base64Data);
         ByteArrayInputStream bis = new ByteArrayInputStream(imageBytes);
-        image = ImageIO.read(bis);
-
+        BufferedImage originImage = ImageIO.read(bis);
+        image = new BufferedImage(
+                originImage.getWidth(), originImage.getHeight(), BufferedImage.TYPE_INT_RGB);
         g2d = image.createGraphics();
+
+        g2d.drawImage(originImage, 0, 0, null);
+
         g2d.setColor(config.getLineColor());
         g2d.setStroke(new BasicStroke(config.getLineWidth()));
 
         return this;
     }
 
+    @SuppressWarnings("UnusedReturnValue")
     public ImageDrawEngine addAction(ImageDrawAction action) {
+        if (!colorManager.isRegistered(action.getClass())) {
+            colorManager.register(action.getClass(), action.getColorPickerMap());
+        }
         actions.add(action);
         return this;
     }
 
     public ImageDrawEngine draw() throws IOException {
         for (ImageDrawAction action : actions) {
-            action.draw(g2d);
+            action.draw(g2d, colorManager);
         }
         g2d.dispose();
 
@@ -74,6 +85,7 @@ public class ImageDrawEngine {
         return this;
     }
 
+    @SuppressWarnings("unused")
     public String outputBase64Data() {
         return outputBase64Data;
     }

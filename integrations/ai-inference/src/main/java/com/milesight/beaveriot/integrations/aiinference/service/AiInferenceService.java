@@ -1,12 +1,16 @@
 package com.milesight.beaveriot.integrations.aiinference.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.milesight.beaveriot.base.exception.ServiceException;
 import com.milesight.beaveriot.base.utils.JsonUtils;
+import com.milesight.beaveriot.context.api.DeviceServiceProvider;
 import com.milesight.beaveriot.context.api.EntityServiceProvider;
 import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
 import com.milesight.beaveriot.context.integration.enums.AttachTargetType;
 import com.milesight.beaveriot.context.integration.enums.EntityValueType;
+import com.milesight.beaveriot.context.integration.model.Device;
 import com.milesight.beaveriot.context.integration.model.Entity;
+import com.milesight.beaveriot.context.integration.model.ExchangePayload;
 import com.milesight.beaveriot.context.integration.wrapper.AnnotatedEntityWrapper;
 import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
 import com.milesight.beaveriot.eventbus.api.Event;
@@ -18,17 +22,27 @@ import com.milesight.beaveriot.integrations.aiinference.api.model.request.CamThi
 import com.milesight.beaveriot.integrations.aiinference.api.model.response.CamThinkModelDetailResponse;
 import com.milesight.beaveriot.integrations.aiinference.api.model.response.CamThinkModelInferResponse;
 import com.milesight.beaveriot.integrations.aiinference.api.model.response.CamThinkModelListResponse;
-import com.milesight.beaveriot.integrations.aiinference.model.response.ModelInferResponse;
 import com.milesight.beaveriot.integrations.aiinference.constant.Constants;
 import com.milesight.beaveriot.integrations.aiinference.entity.AiInferenceConnectionPropertiesEntities;
 import com.milesight.beaveriot.integrations.aiinference.entity.AiInferenceServiceEntities;
 import com.milesight.beaveriot.integrations.aiinference.entity.ModelServiceEntityTemplate;
 import com.milesight.beaveriot.integrations.aiinference.entity.ModelServiceInputEntityTemplate;
+import com.milesight.beaveriot.integrations.aiinference.enums.InferStatus;
+import com.milesight.beaveriot.integrations.aiinference.model.InferHistory;
+import com.milesight.beaveriot.integrations.aiinference.model.response.ModelInferResponse;
+import com.milesight.beaveriot.integrations.aiinference.support.DataCenter;
+import com.milesight.beaveriot.integrations.aiinference.support.EntitySupport;
+import com.milesight.beaveriot.integrations.aiinference.support.image.ImageDrawEngine;
+import com.milesight.beaveriot.integrations.aiinference.support.image.action.ImageDrawPathAction;
+import com.milesight.beaveriot.integrations.aiinference.support.image.action.ImageDrawPolygonAction;
+import com.milesight.beaveriot.integrations.aiinference.support.image.action.ImageDrawRectangleAction;
+import com.milesight.beaveriot.integrations.aiinference.support.image.config.ImageDrawConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
+import java.text.MessageFormat;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -41,11 +55,13 @@ import java.util.Set;
 @Slf4j
 @Service
 public class AiInferenceService {
+    private final DeviceServiceProvider deviceServiceProvider;
     private final EntityServiceProvider entityServiceProvider;
     private final EntityValueServiceProvider entityValueServiceProvider;
     private AiInferenceClient aiInferenceClient;
 
-    public AiInferenceService(EntityServiceProvider entityServiceProvider, EntityValueServiceProvider entityValueServiceProvider) {
+    public AiInferenceService(DeviceServiceProvider deviceServiceProvider, EntityServiceProvider entityServiceProvider, EntityValueServiceProvider entityValueServiceProvider) {
+        this.deviceServiceProvider = deviceServiceProvider;
         this.entityServiceProvider = entityServiceProvider;
         this.entityValueServiceProvider = entityValueServiceProvider;
     }
@@ -65,16 +81,216 @@ public class AiInferenceService {
         }
     }
 
+    @SuppressWarnings("unused")
+    @EventSubscribe(payloadKeyExpression = Constants.INTEGRATION_ID + ".integration.ai_inference_properties.*")
+    public void onAiInferencePropertiesUpdate(Event<AiInferenceConnectionPropertiesEntities.AiInferenceProperties> event) {
+        if (isConfigChanged(event)) {
+            AiInferenceConnectionPropertiesEntities.AiInferenceProperties aiInferenceProperties = event.getPayload();
+            initConnection(aiInferenceProperties);
+            initModels();
+        }
+    }
+
+    @SuppressWarnings("unused")
     @EventSubscribe(payloadKeyExpression = Constants.INTEGRATION_ID + ".integration.refresh_models")
     public void refreshModels(Event<AiInferenceServiceEntities.RefreshModels> event) {
         initModels();
     }
 
+    @SuppressWarnings("unused")
     @EventSubscribe(payloadKeyExpression = Constants.INTEGRATION_ID + ".integration.model_*")
     public EventResponse infer(Event<AiInferenceServiceEntities.ModelInput> event) {
         AiInferenceServiceEntities.ModelInput modelInput = event.getPayload();
         CamThinkModelInferResponse camThinkModelInferResponse = modelInfer(modelInput);
         return getEventResponse(new ModelInferResponse(camThinkModelInferResponse));
+    }
+
+    @SuppressWarnings("unused")
+    @EventSubscribe(payloadKeyExpression = "*.device.*")
+    public void detectImageAutoInfer(Event<ExchangePayload> event) {
+        ExchangePayload exchangePayload = event.getPayload();
+        exchangePayload.forEach((key, value) -> {
+            Device device = getDeviceIdByImageEntityKey(key);
+            if (device != null) {
+                autoInfer(device, key, value.toString());
+            }
+        });
+    }
+
+    private Device getDeviceIdByImageEntityKey(String imageEntityKey) {
+        List<Long> deviceIdList = DataCenter.getDeviceIdListByImageEntityKey(imageEntityKey);
+        if (CollectionUtils.isEmpty(deviceIdList)) {
+            return null;
+        }
+
+        Device foundDevice = null;
+        for (Long deviceId : deviceIdList) {
+            Device device = deviceServiceProvider.findById(deviceId);
+            if (device == null) {
+                DataCenter.removeDevice(deviceId);
+            }else if (foundDevice == null) {
+                foundDevice = device;
+            }
+        }
+        return foundDevice;
+    }
+
+    private void autoInfer(Device device, String imageEntityKey, String imageEntityValue) {
+        try {
+            long uplinkAt = System.currentTimeMillis() / 1000;
+            String deviceKey = device.getKey();
+            String modelId = (String) entityValueServiceProvider.findValueByKey(EntitySupport.getDeviceEntityKey(deviceKey, Constants.IDENTIFIER_MODEL_ID));
+            if (StringUtils.isEmpty(modelId)) {
+                return;
+            }
+
+            String modelIdentifier = MessageFormat.format(Constants.IDENTIFIER_MODEL_FORMAT, modelId);
+            String modelInferInputsKey = EntitySupport.getDeviceEntityChildrenKey(deviceKey, modelIdentifier, Constants.IDENTIFIER_MODEL_INFER_INPUTS);
+            String inferInputsValue = (String) entityValueServiceProvider.findValueByKey(modelInferInputsKey);
+            if (StringUtils.isEmpty(inferInputsValue)) {
+                return;
+            }
+
+            CamThinkModelInferRequest camThinkModelInferRequest = new CamThinkModelInferRequest();
+            Map<String, Object> inferInputs = JsonUtils.toMap(inferInputsValue);
+            inferInputs.put("image", imageEntityValue);
+            camThinkModelInferRequest.setInputs(inferInputs);
+
+            CamThinkModelInferResponse camThinkModelInferResponse = aiInferenceClient.modelInfer(modelId, camThinkModelInferRequest);
+            InferStatus inferStatus = InferStatus.OK;
+            if (camThinkModelInferResponse == null || !camThinkModelInferResponse.isSuccess()) {
+                inferStatus = InferStatus.FAILED;
+            }
+            long inferAt = System.currentTimeMillis() / 1000;
+
+            ExchangePayload exchangePayload = new ExchangePayload();
+
+            InferHistory inferHistory = new InferHistory();
+            inferHistory.setModelName(modelId);
+            inferHistory.setOriginImage(imageEntityValue);
+            inferHistory.setInferStatus(inferStatus.getValue());
+            inferHistory.setUplinkAt(uplinkAt);
+            inferHistory.setInferAt(inferAt);
+
+            String inferHistoryEntityKey = EntitySupport.getDeviceEntityKey(device.getKey(), Constants.IDENTIFIER_INFER_HISTORY);
+            if (InferStatus.OK.equals(inferStatus)) {
+                String resultImageBase64 = drawResultImage(imageEntityValue, camThinkModelInferResponse);
+                inferHistory.setResultImage(resultImageBase64);
+                String resultImageEntityKey = EntitySupport.getDeviceEntityChildrenKey(deviceKey, modelIdentifier, Constants.IDENTIFIER_MODEL_RESULT_IMAGE);
+                if (entityServiceProvider.findByKey(resultImageEntityKey) != null) {
+                    exchangePayload.put(resultImageEntityKey, resultImageBase64);
+                }
+
+                if (camThinkModelInferResponse.getData() != null && camThinkModelInferResponse.getData().getOutputs() != null) {
+                    String outputsData = JsonUtils.toJSON(camThinkModelInferResponse.getData().getOutputs());
+                    inferHistory.setInferOutputsData(outputsData);
+
+                    for (String filed : camThinkModelInferResponse.getData().getOutputs().keySet()) {
+                        String value = camThinkModelInferResponse.getData().getOutputs().get(filed).toString();
+                        String outputFiledEntityKey = EntitySupport.getDeviceEntityChildrenKey(deviceKey, modelIdentifier, filed);
+                        if (entityServiceProvider.findByKey(outputFiledEntityKey) != null) {
+                            exchangePayload.put(outputFiledEntityKey, value);
+                        }
+                    }
+                }
+            }
+
+            if (entityServiceProvider.findByKey(inferHistoryEntityKey) != null) {
+                exchangePayload.put(inferHistoryEntityKey, JsonUtils.toJSON(inferHistory));
+            }
+
+            if (!exchangePayload.isEmpty()) {
+                entityValueServiceProvider.saveValuesAndPublishSync(exchangePayload);
+            }
+        } catch (Exception e) {
+            log.error("autoInfer error deviceId:{}, imageEntityKey:{}, error:", device.getId(), imageEntityKey, e);
+        }
+    }
+
+    private String drawResultImage(String imageBase64, CamThinkModelInferResponse camThinkModelInferResponse) throws Exception {
+        if (camThinkModelInferResponse.getData() == null) {
+            return "";
+        }
+
+        if (camThinkModelInferResponse.getData().getOutputs() == null) {
+            return "";
+        }
+
+        if (camThinkModelInferResponse.getData().getOutputs().get(CamThinkModelInferResponse.ModelInferData.FIELD_DATA) == null) {
+            return "";
+        }
+        String dataJson = JsonUtils.toJSON(camThinkModelInferResponse.getData().getOutputs().get(CamThinkModelInferResponse.ModelInferData.FIELD_DATA));
+        List<CamThinkModelInferResponse.ModelInferData.OutputData> data = JsonUtils.fromJSON(dataJson, new TypeReference<>() {});
+        if(CollectionUtils.isEmpty(data)) {
+            return "";
+        }
+
+        CamThinkModelInferResponse.ModelInferData.OutputData outputData = data.get(0);
+        if (CollectionUtils.isEmpty(outputData.getDetections())) {
+            return "";
+        }
+
+        ImageDrawEngine engine = new ImageDrawEngine(ImageDrawConfig.getDefault());
+        engine.loadImageFromBase64(imageBase64);
+
+        for (CamThinkModelInferResponse.ModelInferData.OutputData.Detection detection : outputData.getDetections()) {
+            List<Integer> box = detection.getBox();
+            if (!CollectionUtils.isEmpty(box) && box.size() == 4) {
+                String tag = getTag(detection.getCls(), detection.getConf());
+                ImageDrawRectangleAction imageDrawRectangleAction = new ImageDrawRectangleAction(box.get(0), box.get(1), box.get(2), box.get(3), tag);
+                engine.addAction(imageDrawRectangleAction);
+            }
+
+            List<List<Integer>> masks = detection.getMasks();
+            if (!CollectionUtils.isEmpty(masks)) {
+                ImageDrawPolygonAction imageDrawPolygonAction = new ImageDrawPolygonAction();
+                for (List<Integer> mask : masks) {
+                    if (!CollectionUtils.isEmpty(mask) && mask.size() == 2) {
+                        imageDrawPolygonAction.addPoint(mask.get(0), mask.get(1));
+                    }
+                }
+                engine.addAction(imageDrawPolygonAction);
+            }
+
+            List<List<Double>> points = detection.getPoints();
+            if (!CollectionUtils.isEmpty(points)) {
+                List<List<Integer>> skeleton = detection.getSkeleton();
+                ImageDrawPathAction imageDrawPathAction = buildImageDrawPathAction(points, skeleton);
+
+                engine.addAction(imageDrawPathAction);
+            }
+        }
+
+        return engine.draw().outputImageBase64();
+    }
+
+    private ImageDrawPathAction buildImageDrawPathAction(List<List<Double>> points, List<List<Integer>> skeleton) {
+        ImageDrawPathAction imageDrawPathAction = new ImageDrawPathAction();
+        for (List<Double> point : points) {
+            if (!CollectionUtils.isEmpty(point) && point.size() == 4) {
+                imageDrawPathAction.addPoint(point.get(0).intValue(), point.get(1).intValue(), point.get(2).intValue());
+            }
+        }
+
+        if (!CollectionUtils.isEmpty(skeleton)) {
+            for (List<Integer> line : skeleton) {
+                if (!CollectionUtils.isEmpty(line) && line.size() == 2) {
+                    imageDrawPathAction.addLine(line.get(0), line.get(1));
+                }
+            }
+        }
+
+        return imageDrawPathAction;
+    }
+
+    private String getTag(String cls, Double conf) {
+        if (StringUtils.isEmpty(cls)) {
+            return "";
+        }
+        if (conf == null) {
+            return "";
+        }
+        return String.format("%s:(%.2f)", cls, conf);
     }
 
     private static EventResponse getEventResponse(ModelInferResponse modelInferResponse) {
@@ -112,15 +328,6 @@ public class AiInferenceService {
         return aiInferenceClient.modelInfer(modelId, camThinkModelInferRequest);
     }
 
-    @EventSubscribe(payloadKeyExpression = Constants.INTEGRATION_ID + ".integration.ai_inference_properties.*")
-    public void onAiInferencePropertiesUpdate(Event<AiInferenceConnectionPropertiesEntities.AiInferenceProperties> event) {
-        if (isConfigChanged(event)) {
-            AiInferenceConnectionPropertiesEntities.AiInferenceProperties aiInferenceProperties = event.getPayload();
-            initConnection(aiInferenceProperties);
-            initModels();
-        }
-    }
-
     private boolean isConfigChanged(Event<AiInferenceConnectionPropertiesEntities.AiInferenceProperties> event) {
         // check if required fields are set
         AiInferenceConnectionPropertiesEntities.AiInferenceProperties aiInferenceProperties = event.getPayload();
@@ -154,7 +361,7 @@ public class AiInferenceService {
         if (!isConnection) {
             throw ServiceException.with(ServerErrorCode.SERVER_NOT_REACHABLE.getErrorCode(), ServerErrorCode.SERVER_NOT_REACHABLE.getErrorMessage()).build();
         }
-        return isConnection;
+        return true;
     }
 
     private void initModels() {
