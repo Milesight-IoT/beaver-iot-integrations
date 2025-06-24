@@ -13,7 +13,6 @@ import com.milesight.beaveriot.context.integration.model.Entity;
 import com.milesight.beaveriot.context.integration.model.ExchangePayload;
 import com.milesight.beaveriot.context.integration.model.Integration;
 import com.milesight.beaveriot.integrations.aiinference.api.enums.ServerErrorCode;
-import com.milesight.beaveriot.integrations.aiinference.api.model.response.CamThinkModelDetailResponse;
 import com.milesight.beaveriot.integrations.aiinference.constant.Constants;
 import com.milesight.beaveriot.integrations.aiinference.model.InferHistory;
 import com.milesight.beaveriot.integrations.aiinference.model.request.BoundDeviceSearchRequest;
@@ -60,12 +59,11 @@ public class AiInferenceController {
 
     @PostMapping("/model/{modelId}/sync-detail")
     public ResponseBody<ModelOutputSchemaResponse> fetchModelDetail(@PathVariable("modelId") String modelId) {
-        CamThinkModelDetailResponse camThinkModelDetailResponse = service.fetchModelDetail(modelId);
-        if (camThinkModelDetailResponse == null) {
+        ModelOutputSchemaResponse modelOutputSchemaResponse = service.fetchModelDetail(modelId);
+        if (modelOutputSchemaResponse == null) {
             throw ServiceException.with(ServerErrorCode.SERVER_DATA_NOT_FOUND.getErrorCode(), ServerErrorCode.SERVER_DATA_NOT_FOUND.getErrorMessage()).build();
         }
-        ModelOutputSchemaResponse outputResponse = new ModelOutputSchemaResponse(camThinkModelDetailResponse);
-        return ResponseBuilder.success(outputResponse);
+        return ResponseBuilder.success(modelOutputSchemaResponse);
     }
 
     @PostMapping("/device/search")
@@ -145,6 +143,11 @@ public class AiInferenceController {
 
         for (DeviceBindRequest.OutputItem outputItem : deviceBindRequest.getInferOutputs()) {
             Entity outputItemEntity = EntitySupport.buildDeviceStringEntity(integrationId, deviceKey, outputItem.getFieldName(), outputItem.getEntityName());
+            if (Constants.IDENTIFIER_MODEL_RESULT_IMAGE.equals(outputItem.getFieldName())) {
+                outputItemEntity.setAttributes(Map.of(
+                        Constants.ATTRIBUTE_KEY_FORMAT, Constants.ATTRIBUTE_FORMAT_IMAGE_BASE64
+                ));
+            }
             modelEntityChildren.add(outputItemEntity);
         }
         Entity modelEntity = EntitySupport.buildDeviceStringEntity(integrationId, deviceKey, MessageFormat.format(Constants.IDENTIFIER_MODEL_FORMAT, modelId), "Model " + modelId);

@@ -30,6 +30,7 @@ import com.milesight.beaveriot.integrations.aiinference.entity.ModelServiceInput
 import com.milesight.beaveriot.integrations.aiinference.enums.InferStatus;
 import com.milesight.beaveriot.integrations.aiinference.model.InferHistory;
 import com.milesight.beaveriot.integrations.aiinference.model.response.ModelInferResponse;
+import com.milesight.beaveriot.integrations.aiinference.model.response.ModelOutputSchemaResponse;
 import com.milesight.beaveriot.integrations.aiinference.support.DataCenter;
 import com.milesight.beaveriot.integrations.aiinference.support.EntitySupport;
 import com.milesight.beaveriot.integrations.aiinference.support.image.ImageDrawEngine;
@@ -43,10 +44,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
 import java.text.MessageFormat;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -431,8 +429,9 @@ public class AiInferenceService {
         }
     }
 
-    public CamThinkModelDetailResponse fetchModelDetail(String modelId) {
-        CamThinkModelDetailResponse camThinkModelDetailResponse = null;
+    public ModelOutputSchemaResponse fetchModelDetail(String modelId) {
+        ModelOutputSchemaResponse modelOutputSchemaResponse = new ModelOutputSchemaResponse();
+        CamThinkModelDetailResponse camThinkModelDetailResponse;
         if (testConnection()) {
             camThinkModelDetailResponse = aiInferenceClient.getModelDetail(modelId);
             if (camThinkModelDetailResponse == null) {
@@ -447,10 +446,15 @@ public class AiInferenceService {
             if (CollectionUtils.isEmpty(camThinkModelDetailResponse.getData().getOutputSchema())) {
                 return null;
             }
+
+            modelOutputSchemaResponse.setOutputSchema(camThinkModelDetailResponse.getData().getOutputSchema());
+
             String modelKey = ModelServiceEntityTemplate.getModelKey(modelId);
             Entity modelServiceEntity = entityServiceProvider.findByKey(modelKey);
             String modelServiceIdentifier = modelServiceEntity.getIdentifier();
             modelServiceEntity.getChildren().clear();
+
+            List<Entity> inputEntities = new ArrayList<>();
             for (CamThinkModelDetailResponse.InputSchema inputSchema : camThinkModelDetailResponse.getData().getInputSchema()) {
                 ModelServiceInputEntityTemplate modelServiceInputEntityTemplate = ModelServiceInputEntityTemplate.builder()
                         .parentIdentifier(modelServiceIdentifier)
@@ -464,11 +468,13 @@ public class AiInferenceService {
                         .maximum(inputSchema.getMaximum())
                         .build();
                 Entity modelServiceInputEntity = modelServiceInputEntityTemplate.toEntity();
+                inputEntities.add(modelServiceInputEntity);
                 modelServiceEntity.getChildren().add(modelServiceInputEntity);
             }
             entityServiceProvider.save(modelServiceEntity);
+            modelOutputSchemaResponse.setInputEntities(inputEntities);
         }
-        return camThinkModelDetailResponse;
+        return modelOutputSchemaResponse;
     }
 
     public void initConnection(AiInferenceConnectionPropertiesEntities.AiInferenceProperties aiInferenceProperties) {

@@ -1,5 +1,6 @@
 package com.milesight.beaveriot.integrations.aiinference.model.response;
 
+import com.milesight.beaveriot.context.integration.model.Entity;
 import com.milesight.beaveriot.integrations.aiinference.api.model.response.CamThinkModelDetailResponse;
 import lombok.Data;
 
@@ -11,9 +12,6 @@ import java.util.List;
  **/
 @Data
 public class ModelOutputSchemaResponse {
+    private List<Entity> inputEntities;
     private List<CamThinkModelDetailResponse.OutputSchema> outputSchema;
-
-    public ModelOutputSchemaResponse(CamThinkModelDetailResponse camThinkModelDetailResponse) {
-        this.outputSchema = camThinkModelDetailResponse.getData().getOutputSchema();
-    }
 }

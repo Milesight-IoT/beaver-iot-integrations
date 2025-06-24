@@ -54,10 +54,12 @@ public class ModelServiceInputEntityTemplate {
     }
 
     private String convertFormat() {
-        if ("uri".equals(format)) {
-            return "IMAGE:URL";
+        if (format.contains("uri")) {
+            return Constants.ATTRIBUTE_FORMAT_IMAGE_URL;
+        } else if (format.contains("base64")) {
+            return Constants.ATTRIBUTE_FORMAT_IMAGE_BASE64;
         } else {
-            return "IMAGE:BASE64";
+            return format;
         }
     }
 
