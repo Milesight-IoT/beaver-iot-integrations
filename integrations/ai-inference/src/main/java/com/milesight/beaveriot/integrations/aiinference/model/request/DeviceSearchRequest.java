@@ -9,4 +9,5 @@ import lombok.Data;
 @Data
 public class DeviceSearchRequest {
     private String name;
+    private Boolean isBound;
 }

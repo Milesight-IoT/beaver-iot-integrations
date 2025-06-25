@@ -82,8 +82,29 @@ public class AiInferenceController {
                 }
             }
         });
-        List<DeviceData> deviceData = devices.stream().map(device -> new DeviceData(device.getId().toString(), device.getName(), device.getIntegrationId(), integrationMap.get(device.getIntegrationId()))).toList();
-        return ResponseBuilder.success(DeviceResponse.build(deviceData));
+        List<DeviceData> allDeviceDataList = devices.stream().map(device -> convertToDeviceData(device, integrationMap)).toList();
+        List<DeviceData> deviceDataList = new ArrayList<>();
+        List<DeviceData> boundDeviceDataList = allDeviceDataList.stream().filter(DeviceData::isBound).toList();
+        List<DeviceData> unboundDeviceDataList = allDeviceDataList.stream().filter(deviceData -> !deviceData.isBound()).toList();
+        if (deviceSearchRequest.getIsBound() == null) {
+            deviceDataList.addAll(unboundDeviceDataList);
+            deviceDataList.addAll(boundDeviceDataList);
+        } else if (deviceSearchRequest.getIsBound()) {
+            deviceDataList.addAll(boundDeviceDataList);
+        } else {
+            deviceDataList.addAll(unboundDeviceDataList);
+        }
+        return ResponseBuilder.success(DeviceResponse.build(deviceDataList));
+    }
+
+    private DeviceData convertToDeviceData(Device device, Map<String, String> integrationMap) {
+        DeviceData deviceData = new DeviceData();
+        deviceData.setId(device.getId().toString());
+        deviceData.setName(device.getName());
+        deviceData.setIntegrationId(device.getIntegrationId());
+        deviceData.setIntegrationName(integrationMap.get(device.getIntegrationId()));
+        deviceData.setBound(DataCenter.isDeviceInDeviceImageEntityMap(device.getId()));
+        return deviceData;
     }
 
     @GetMapping("/device/{deviceId}/image-entities")
@@ -289,10 +310,6 @@ public class AiInferenceController {
         }
 
         if (!isMatch) {
-            return false;
-        }
-
-        if (DataCenter.isDeviceInDeviceImageEntityMap(device.getId())) {
             return false;
         }
 

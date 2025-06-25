@@ -12,11 +12,5 @@ public class DeviceData {
     private String name;
     private String integrationId;
     private String integrationName;
-
-    public DeviceData(String id, String name, String integrationId, String integrationName) {
-        this.id = id;
-        this.name = name;
-        this.integrationId = integrationId;
-        this.integrationName = integrationName;
-    }
+    private boolean isBound;
 }
