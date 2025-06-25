@@ -194,11 +194,14 @@ public class AiInferenceController {
 
         String deviceKey = device.getKey();
         DeviceBindingDetailResponse response = new DeviceBindingDetailResponse();
+        response.setIntegrationId(device.getIntegrationId());
         String modelId = (String) entityValueServiceProvider.findValueByKey(EntitySupport.getDeviceEntityKey(deviceKey, Constants.IDENTIFIER_MODEL_ID));
         response.setModelId(modelId);
 
         String imageEntityKey = DataCenter.getImageEntityKeyByDeviceId(device.getId());
         response.setImageEntityKey(imageEntityKey);
+        String imageEntityValue = (String) entityValueServiceProvider.findValueByKey(imageEntityKey);
+        response.setImageEntityValue(imageEntityValue);
 
         if (!StringUtils.isEmpty(modelId)) {
             String modelIdentifier = MessageFormat.format(Constants.IDENTIFIER_MODEL_FORMAT, modelId);

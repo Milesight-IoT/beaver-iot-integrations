@@ -11,8 +11,10 @@ import java.util.Map;
  **/
 @Data
 public class DeviceBindingDetailResponse {
+    private String integrationId;
     private String modelId;
     private String imageEntityKey;
+    private String imageEntityValue;
     private Map<String, Object> inferInputs;
     private List<OutputItem> inferOutputs;
 
