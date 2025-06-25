@@ -36,7 +36,7 @@ public class AiInferenceClient {
 
     public CamThinkModelListResponse getModels() {
         String url = config.getModelsUrl();
-        String params = "page=1&page_size=9999";
+        String params = "page=1&page_size=100";
         url = url + "?" + params;
         ClientResponse clientResponse = OkHttpUtil.get(url);
         validateResponse(clientResponse);

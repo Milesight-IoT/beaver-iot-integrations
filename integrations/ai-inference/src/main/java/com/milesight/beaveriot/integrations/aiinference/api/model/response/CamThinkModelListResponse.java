@@ -14,7 +14,7 @@ import java.util.List;
 public class CamThinkModelListResponse extends CamThinkResponse<List<CamThinkModelListResponse.ModelData>>{
     @Data
     public static class ModelData {
-        private String modelId;
+        private String id;
         private String name;
         private String version;
         private String description;

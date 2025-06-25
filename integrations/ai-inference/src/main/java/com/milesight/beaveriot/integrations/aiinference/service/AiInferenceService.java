@@ -397,7 +397,7 @@ public class AiInferenceService {
 
             Set<String> newModelKeys = new HashSet<>();
             for (CamThinkModelListResponse.ModelData modelData : camThinkModelListResponse.getData()) {
-                String modelKey = ModelServiceEntityTemplate.getModelKey(modelData.getModelId());
+                String modelKey = ModelServiceEntityTemplate.getModelKey(modelData.getId());
                 newModelKeys.add(modelKey);
             }
 
@@ -417,7 +417,7 @@ public class AiInferenceService {
 
             for (CamThinkModelListResponse.ModelData modelData : camThinkModelListResponse.getData()) {
                 ModelServiceEntityTemplate modelServiceEntityTemplate = ModelServiceEntityTemplate.builder()
-                        .modelId(modelData.getModelId())
+                        .modelId(modelData.getId())
                         .name(modelData.getName())
                         .version(modelData.getVersion())
                         .description(modelData.getDescription())
