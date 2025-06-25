@@ -15,6 +15,8 @@ import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * author: Luxb
@@ -27,12 +29,14 @@ public class MqttDeviceMqttService {
     private final DeviceTemplateParserProvider deviceTemplateParserProvider;
     private final DeviceServiceProvider deviceServiceProvider;
     private final EntityValueServiceProvider entityValueServiceProvider;
+    private final ExecutorService jsonDataHandleService;
 
     public MqttDeviceMqttService(MqttPubSubServiceProvider mqttPubSubServiceProvider, DeviceTemplateParserProvider deviceTemplateParserProvider, DeviceServiceProvider deviceServiceProvider, EntityValueServiceProvider entityValueServiceProvider) {
         this.mqttPubSubServiceProvider = mqttPubSubServiceProvider;
         this.deviceTemplateParserProvider = deviceTemplateParserProvider;
         this.deviceServiceProvider = deviceServiceProvider;
         this.entityValueServiceProvider = entityValueServiceProvider;
+        this.jsonDataHandleService = Executors.newCachedThreadPool();
     }
 
     public void subscribe() {
@@ -44,18 +48,25 @@ public class MqttDeviceMqttService {
                     throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), MessageFormat.format("No device template related to the sub topic ''{0}''", topic)).build();
                 }
                 String jsonData = new String(message.getPayload(), StandardCharsets.UTF_8);
-                DeviceTemplateInputResult result = deviceTemplateParserProvider.input(DataCenter.INTEGRATION_ID, deviceTemplateId, jsonData);
-                Device device = result.getDevice();
-                ExchangePayload payload = result.getPayload();
-                if (device != null) {
-                    deviceServiceProvider.save(device);
-                    if (payload != null) {
-                        entityValueServiceProvider.saveValuesAndPublishSync(payload);
+                jsonDataHandleService.execute(() -> {
+                    DeviceTemplateInputResult result = deviceTemplateParserProvider.input(DataCenter.INTEGRATION_ID, deviceTemplateId, jsonData);
+                    Device device = result.getDevice();
+                    ExchangePayload payload = result.getPayload();
+                    if (device != null) {
+                        deviceServiceProvider.save(device);
+                        if (payload != null) {
+                            entityValueServiceProvider.saveValuesAndPublishSync(payload);
+                        }
                     }
-                }
+                });
             } catch (Exception e) {
                 log.error("MqttDeviceMqttService.subscribe error: {}", e.getMessage());
             }
         });
+    }
+
+    public void unsubscribe() {
+        mqttPubSubServiceProvider.unsubscribe(DataCenter.INTEGRATION_ID + "/#");
+        jsonDataHandleService.shutdown();
     }
 }

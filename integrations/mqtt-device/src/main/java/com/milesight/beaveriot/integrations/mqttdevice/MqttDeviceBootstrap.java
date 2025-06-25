@@ -36,11 +36,17 @@ public class MqttDeviceBootstrap implements IntegrationBootstrap {
 
     @Override
     public void onDestroy(Integration integrationConfig) {
-        // do nothing
+        log.info("Mqtt device integration destroying");
+        unsubscribeTopic();
+        log.info("Mqtt device integration destroyed");
     }
 
     private void subscribeTopic() {
         mqttDeviceMqttService.subscribe();
+    }
+
+    private void unsubscribeTopic() {
+        mqttDeviceMqttService.unsubscribe();
     }
 
     @Override
