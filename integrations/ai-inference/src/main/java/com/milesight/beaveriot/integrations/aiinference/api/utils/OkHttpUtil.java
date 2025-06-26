@@ -71,6 +71,20 @@ public class OkHttpUtil {
         return request(builder, headers);
     }
 
+    public static ClientResponse postForm(String url, Map<String, String> formData) {
+        return postForm(url, null, formData);
+    }
+
+    public static ClientResponse postForm(String url, Map<String, String> headers, Map<String, String> formData) {
+        FormBody.Builder formBuilder = new FormBody.Builder();
+        for (Map.Entry<String, String> entry : formData.entrySet()) {
+            formBuilder.add(entry.getKey(), entry.getValue());
+        }
+        RequestBody body = formBuilder.build();
+        Request.Builder builder = new Request.Builder().url(url).post(body);
+        return request(builder, headers);
+    }
+
     private static ClientResponse request(Request.Builder builder, Map<String, String> headers) {
         if (headers == null) {
             headers = new HashMap<>();

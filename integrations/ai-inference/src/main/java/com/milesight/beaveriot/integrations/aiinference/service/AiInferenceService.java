@@ -12,6 +12,7 @@ import com.milesight.beaveriot.context.integration.model.Device;
 import com.milesight.beaveriot.context.integration.model.Entity;
 import com.milesight.beaveriot.context.integration.model.ExchangePayload;
 import com.milesight.beaveriot.context.integration.wrapper.AnnotatedEntityWrapper;
+import com.milesight.beaveriot.context.support.SpringContext;
 import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
 import com.milesight.beaveriot.eventbus.api.Event;
 import com.milesight.beaveriot.eventbus.api.EventResponse;
@@ -38,6 +39,8 @@ import com.milesight.beaveriot.integrations.aiinference.support.image.action.Ima
 import com.milesight.beaveriot.integrations.aiinference.support.image.action.ImageDrawPolygonAction;
 import com.milesight.beaveriot.integrations.aiinference.support.image.action.ImageDrawRectangleAction;
 import com.milesight.beaveriot.integrations.aiinference.support.image.config.ImageDrawConfig;
+import io.micrometer.core.annotation.Counted;
+import io.micrometer.core.annotation.Timed;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
@@ -45,6 +48,7 @@ import org.springframework.util.CollectionUtils;
 
 import java.text.MessageFormat;
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 /**
@@ -58,11 +62,31 @@ public class AiInferenceService {
     private final EntityServiceProvider entityServiceProvider;
     private final EntityValueServiceProvider entityValueServiceProvider;
     private AiInferenceClient aiInferenceClient;
+    private final ThreadPoolExecutor autoInferThreadPoolExecutor;
 
     public AiInferenceService(DeviceServiceProvider deviceServiceProvider, EntityServiceProvider entityServiceProvider, EntityValueServiceProvider entityValueServiceProvider) {
         this.deviceServiceProvider = deviceServiceProvider;
         this.entityServiceProvider = entityServiceProvider;
         this.entityValueServiceProvider = entityValueServiceProvider;
+        this.autoInferThreadPoolExecutor = buildAutoInferThreadPoolExecutor();
+    }
+
+    private ThreadPoolExecutor buildAutoInferThreadPoolExecutor() {
+        int corePoolSize = Runtime.getRuntime().availableProcessors() * 2;
+        int maxPoolSize = corePoolSize * 2;
+        long keepAliveTime = 60L;
+        TimeUnit unit = TimeUnit.SECONDS;
+        BlockingQueue<Runnable> workQueue = new LinkedBlockingQueue<>(1000);
+        RejectedExecutionHandler handler = new ThreadPoolExecutor.CallerRunsPolicy();
+
+        return new ThreadPoolExecutor(
+                corePoolSize,
+                maxPoolSize,
+                keepAliveTime,
+                unit,
+                workQueue,
+                handler
+        );
     }
 
     public void init() {
@@ -77,6 +101,21 @@ public class AiInferenceService {
         } catch (Exception e) {
             log.error("Error occurs while initializing connection", e);
             wrapper.saveValue(AiInferenceConnectionPropertiesEntities::getApiStatus, false).publishSync();
+        }
+    }
+
+    public void destroy() {
+        closeAutoInferThreadPoolExecutorGracefully();
+    }
+
+    private void closeAutoInferThreadPoolExecutorGracefully() {
+        autoInferThreadPoolExecutor.shutdown();
+        try {
+            if (!autoInferThreadPoolExecutor.awaitTermination(60, TimeUnit.SECONDS)) {
+                autoInferThreadPoolExecutor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            autoInferThreadPoolExecutor.shutdownNow();
         }
     }
 
@@ -111,9 +150,14 @@ public class AiInferenceService {
         exchangePayload.forEach((key, value) -> {
             Device device = getDeviceByImageEntityKey(key);
             if (device != null) {
-                autoInfer(device, key, value.toString());
+                AiInferenceService service = self();
+                autoInferThreadPoolExecutor.execute(() -> service.autoInfer(device, key, value.toString()));
             }
         });
+    }
+
+    public AiInferenceService self() {
+        return SpringContext.getBean(AiInferenceService.class);
     }
 
     private Device getDeviceByImageEntityKey(String imageEntityKey) {
@@ -128,7 +172,9 @@ public class AiInferenceService {
         return device;
     }
 
-    private void autoInfer(Device device, String imageEntityKey, String imageEntityValue) {
+    @Timed(value = "ai_inference_auto_infer")
+    @Counted(value = "ai_inference_auto_infer")
+    public void autoInfer(Device device, String imageEntityKey, String imageEntityValue) {
         try {
             long uplinkAt = System.currentTimeMillis();
             String deviceKey = device.getKey();

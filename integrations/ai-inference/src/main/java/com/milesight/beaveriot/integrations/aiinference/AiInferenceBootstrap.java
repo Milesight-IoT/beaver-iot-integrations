@@ -30,15 +30,17 @@ public class AiInferenceBootstrap implements IntegrationBootstrap {
     }
 
     @Override
-    public void onDestroy(Integration integrationConfig) {
-        // do nothing
-    }
-
-    @Override
     public void onEnabled(String tenantId, Integration integrationConfig) {
         log.info("Ai inference integration starting");
         aiInferenceService.init();
         log.info("Ai inference integration started");
         IntegrationBootstrap.super.onEnabled(tenantId, integrationConfig);
+    }
+
+    @Override
+    public void onDestroy(Integration integrationConfig) {
+        log.info("Ai inference integration destroying");
+        aiInferenceService.destroy();
+        log.info("Ai inference integration destroyed");
     }
 }
