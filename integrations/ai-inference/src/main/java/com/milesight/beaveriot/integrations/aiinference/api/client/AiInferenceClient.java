@@ -6,15 +6,13 @@ import com.milesight.beaveriot.context.integration.wrapper.AnnotatedEntityWrappe
 import com.milesight.beaveriot.integrations.aiinference.api.config.Config;
 import com.milesight.beaveriot.integrations.aiinference.api.enums.ServerErrorCode;
 import com.milesight.beaveriot.integrations.aiinference.api.model.request.CamThinkModelInferRequest;
-import com.milesight.beaveriot.integrations.aiinference.api.model.response.ClientResponse;
-import com.milesight.beaveriot.integrations.aiinference.api.model.response.CamThinkModelDetailResponse;
-import com.milesight.beaveriot.integrations.aiinference.api.model.response.CamThinkModelInferResponse;
-import com.milesight.beaveriot.integrations.aiinference.api.model.response.CamThinkModelListResponse;
+import com.milesight.beaveriot.integrations.aiinference.api.model.response.*;
 import com.milesight.beaveriot.integrations.aiinference.api.utils.OkHttpUtil;
 import com.milesight.beaveriot.integrations.aiinference.entity.AiInferenceConnectionPropertiesEntities;
 import lombok.Builder;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatus;
 
 import java.text.MessageFormat;
@@ -65,6 +63,7 @@ public class AiInferenceClient {
         String url = config.getModelInferUrl();
         url = MessageFormat.format(url, modelId);
         ClientResponse clientResponse = OkHttpUtil.post(url, JsonUtils.toJSON(camThinkModelInferRequest));
+        validateResponse(clientResponse);
         try {
             return JsonUtils.fromJSON(clientResponse.getData(), CamThinkModelInferResponse.class);
         } catch (Exception e) {
@@ -75,11 +74,8 @@ public class AiInferenceClient {
 
     private void validateResponse(ClientResponse clientResponse) {
         try {
-            if (!clientResponse.isSuccessful()) {
-                throw buildServiceException(clientResponse.getCode());
-            }
-            if (clientResponse.getData() == null) {
-                throw buildServiceException(ServerErrorCode.SERVER_DATA_NOT_FOUND);
+            if (!clientResponse.isSuccessful() || clientResponse.getData() == null) {
+                throw buildServiceException(clientResponse);
             }
         } catch (ServiceException e) {
             AnnotatedEntityWrapper<AiInferenceConnectionPropertiesEntities> wrapper = new AnnotatedEntityWrapper<>();
@@ -88,32 +84,48 @@ public class AiInferenceClient {
         }
     }
 
-    private ServiceException buildServiceException(int code) {
+    private ServiceException buildServiceException(ClientResponse clientResponse) {
+        int code = clientResponse.getCode();
         ServiceException exception;
-        if (code == HttpStatus.BAD_REQUEST.value()) {
-            exception = buildServiceException(ServerErrorCode.SERVER_NOT_REACHABLE);
-        } else if (code == HttpStatus.UNAUTHORIZED.value()) {
-            exception = buildServiceException(ServerErrorCode.SERVER_TOKEN_INVALID);
-        } else if (code == HttpStatus.FORBIDDEN.value()) {
-            exception = buildServiceException(ServerErrorCode.SERVER_TOKEN_ACCESS_DENIED);
-        } else if (code == HttpStatus.NOT_FOUND.value()) {
-            exception = buildServiceException(ServerErrorCode.SERVER_DATA_NOT_FOUND);
-        } else if (code == HttpStatus.UNPROCESSABLE_ENTITY.value()) {
-            exception = buildServiceException(ServerErrorCode.SERVER_INVALID_INPUT_DATA);
-        } else if (code == HttpStatus.TOO_MANY_REQUESTS.value()) {
-            exception = buildServiceException(ServerErrorCode.SERVER_RATE_LIMIT_EXCEEDED);
-        } else if (code == HttpStatus.INTERNAL_SERVER_ERROR.value()) {
-            exception = buildServiceException(ServerErrorCode.SERVER_INTERNAL_SERVER_ERROR);
-        } else if (code == HttpStatus.SERVICE_UNAVAILABLE.value()) {
-            exception = buildServiceException(ServerErrorCode.SERVER_MODEL_WORKER_BUSY);
+        String detailMessage = "";
+        if (clientResponse.getData() == null) {
+            return buildServiceException(ServerErrorCode.SERVER_DATA_NOT_FOUND, detailMessage);
         } else {
-            exception = ServiceException.with(ServerErrorCode.SERVER_OTHER_ERROR.getErrorCode(), ServerErrorCode.SERVER_OTHER_ERROR.getErrorMessage() + code).build();
+            CamThinkCommonResponse camThinkResponse = JsonUtils.fromJSON(clientResponse.getData(), CamThinkCommonResponse.class);
+            detailMessage = camThinkResponse.getMessage();
+        }
+        if (code == HttpStatus.BAD_REQUEST.value()) {
+            exception = buildServiceException(ServerErrorCode.SERVER_NOT_REACHABLE, detailMessage);
+        } else if (code == HttpStatus.UNAUTHORIZED.value()) {
+            exception = buildServiceException(ServerErrorCode.SERVER_TOKEN_INVALID, detailMessage);
+        } else if (code == HttpStatus.FORBIDDEN.value()) {
+            exception = buildServiceException(ServerErrorCode.SERVER_TOKEN_ACCESS_DENIED, detailMessage);
+        } else if (code == HttpStatus.NOT_FOUND.value()) {
+            exception = buildServiceException(ServerErrorCode.SERVER_DATA_NOT_FOUND, detailMessage);
+        } else if (code == HttpStatus.UNPROCESSABLE_ENTITY.value()) {
+            exception = buildServiceException(ServerErrorCode.SERVER_INVALID_INPUT_DATA, detailMessage);
+        } else if (code == HttpStatus.TOO_MANY_REQUESTS.value()) {
+            exception = buildServiceException(ServerErrorCode.SERVER_RATE_LIMIT_EXCEEDED, detailMessage);
+        } else if (code == HttpStatus.INTERNAL_SERVER_ERROR.value()) {
+            exception = buildServiceException(ServerErrorCode.SERVER_INTERNAL_SERVER_ERROR, detailMessage);
+        } else if (code == HttpStatus.SERVICE_UNAVAILABLE.value()) {
+            exception = buildServiceException(ServerErrorCode.SERVER_MODEL_WORKER_BUSY, detailMessage);
+        } else {
+            exception = buildServiceException(ServerErrorCode.SERVER_OTHER_ERROR, ServerErrorCode.SERVER_OTHER_ERROR.getErrorMessage() + code, detailMessage);
         }
         return exception;
     }
 
-    private ServiceException buildServiceException(ServerErrorCode serverErrorCode) {
-        return ServiceException.with(serverErrorCode.getErrorCode(), serverErrorCode.getErrorMessage()).build();
+    private ServiceException buildServiceException(ServerErrorCode serverErrorCode, String detailMessage) {
+        return buildServiceException(serverErrorCode, serverErrorCode.getErrorMessage(), detailMessage);
+    }
+
+    private ServiceException buildServiceException(ServerErrorCode serverErrorCode, String errorMessage, String detailMessage) {
+        ServiceException.ServiceExceptionBuilder builder = ServiceException.with(serverErrorCode.getErrorCode(), errorMessage);
+        if (!StringUtils.isEmpty(detailMessage)) {
+            builder.detailMessage(detailMessage);
+        }
+        return builder.build();
     }
 
     public boolean testConnection() {
