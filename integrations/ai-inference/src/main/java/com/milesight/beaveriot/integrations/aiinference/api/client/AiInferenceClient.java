@@ -91,8 +91,13 @@ public class AiInferenceClient {
         if (clientResponse.getData() == null) {
             return buildServiceException(ServerErrorCode.SERVER_DATA_NOT_FOUND, detailMessage);
         } else {
-            CamThinkCommonResponse camThinkResponse = JsonUtils.fromJSON(clientResponse.getData(), CamThinkCommonResponse.class);
-            detailMessage = camThinkResponse.getMessage();
+            CamThinkCommonResponse camThinkResponse;
+            try {
+                camThinkResponse = JsonUtils.fromJSON(clientResponse.getData(), CamThinkCommonResponse.class);
+                detailMessage = camThinkResponse.getMessage();
+            } catch (Exception e) {
+                detailMessage = e.getMessage();
+            }
         }
         if (code == HttpStatus.BAD_REQUEST.value()) {
             exception = buildServiceException(ServerErrorCode.SERVER_NOT_REACHABLE, detailMessage);
