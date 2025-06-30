@@ -55,7 +55,7 @@ public class MqttDeviceMqttService {
                     if (device != null) {
                         deviceServiceProvider.save(device);
                         if (payload != null) {
-                            entityValueServiceProvider.saveValuesAndPublishSync(payload);
+                            entityValueServiceProvider.saveValuesAndPublishAsync(payload);
                         }
                     }
                 });
