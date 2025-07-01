@@ -195,7 +195,12 @@ public class AiInferenceService {
             inferInputs.put(CamThinkModelInferRequest.INPUT_IMAGE_FIELD, imageEntityValue);
             camThinkModelInferRequest.setInputs(inferInputs);
 
-            CamThinkModelInferResponse camThinkModelInferResponse = aiInferenceClient.modelInfer(modelId, camThinkModelInferRequest);
+            CamThinkModelInferResponse camThinkModelInferResponse = null;
+            try {
+                camThinkModelInferResponse = aiInferenceClient.modelInfer(modelId, camThinkModelInferRequest);
+            } catch (Exception e) {
+                log.error("modelInfer error deviceId:{}, imageEntityKey:{}, error:", device.getId(), imageEntityKey, e);
+            }
             InferStatus inferStatus = InferStatus.OK;
             if (camThinkModelInferResponse == null || !camThinkModelInferResponse.isSuccess()) {
                 inferStatus = InferStatus.FAILED;
