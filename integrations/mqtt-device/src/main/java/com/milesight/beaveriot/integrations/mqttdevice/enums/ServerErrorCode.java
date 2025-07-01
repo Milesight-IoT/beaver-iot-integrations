@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 public enum ServerErrorCode implements ErrorCodeSpec {
     INTEGRATION_NOT_FOUND(HttpStatus.NOT_FOUND.value(), "integration_not_found", "integration not found"),
     TEMPLATE_NOT_FOUND(HttpStatus.NOT_FOUND.value(), "template_not_found", "template not found"),
+    TEMPLATE_NAME_EXISTS(HttpStatus.BAD_REQUEST.value(), "template_name_exists", "template name exists"),
     TOPIC_EXISTS(HttpStatus.BAD_REQUEST.value(), "topic_exists", "topic exists")
     ;
 

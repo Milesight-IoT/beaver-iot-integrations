@@ -56,6 +56,10 @@ public class MqttDeviceTemplateService {
     }
 
     public void createDeviceTemplate(CreateDeviceTemplateRequest createDeviceTemplateRequest) {
+        if (isDeviceTemplateNameExists(createDeviceTemplateRequest.getName())) {
+            throw ServiceException.with(ServerErrorCode.TEMPLATE_NAME_EXISTS.getErrorCode(), ServerErrorCode.TEMPLATE_NAME_EXISTS.getErrorMessage()).build();
+        }
+
         DeviceTemplate deviceTemplate = new DeviceTemplateBuilder(IntegrationConstants.SYSTEM_INTEGRATION_ID)
                 .name(createDeviceTemplateRequest.getName())
                 .content(createDeviceTemplateRequest.getContent())
@@ -70,6 +74,20 @@ public class MqttDeviceTemplateService {
         deviceTemplateServiceProvider.save(deviceTemplate);
         DataCenter.putTopic(topic, deviceTemplate.getId());
         mqttDeviceService.syncTemplates();
+    }
+
+    private boolean isDeviceTemplateNameExists(String name) {
+        List<DeviceTemplate> deviceTemplates = deviceTemplateServiceProvider.findAll(IntegrationConstants.SYSTEM_INTEGRATION_ID);
+        if (deviceTemplates == null) {
+            return false;
+        }
+
+        for (DeviceTemplate deviceTemplate : deviceTemplates) {
+            if (deviceTemplate.getName().equals(name)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public Page<DeviceTemplateResponseData> searchDeviceTemplate(SearchDeviceTemplateRequest searchDeviceTemplateRequest) {
@@ -99,6 +117,11 @@ public class MqttDeviceTemplateService {
         if (deviceTemplate == null) {
             throw ServiceException.with(ErrorCode.DATA_NO_FOUND).build();
         }
+
+        if (!deviceTemplate.getName().equals(updateDeviceTemplateRequest.getName()) && isDeviceTemplateNameExists(updateDeviceTemplateRequest.getName())) {
+            throw ServiceException.with(ServerErrorCode.TEMPLATE_NAME_EXISTS.getErrorCode(), ServerErrorCode.TEMPLATE_NAME_EXISTS.getErrorMessage()).build();
+        }
+
         String topic = updateDeviceTemplateRequest.getTopic();
         deviceTemplate.setName(updateDeviceTemplateRequest.getName());
         deviceTemplate.setContent(updateDeviceTemplateRequest.getContent());
