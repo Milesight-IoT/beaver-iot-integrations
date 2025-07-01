@@ -12,6 +12,7 @@ import java.util.Map;
 @Data
 public class DeviceBindingDetailResponse {
     private String integrationId;
+    private String deviceIdentifier;
     private String modelId;
     private String imageEntityKey;
     private String imageEntityValue;

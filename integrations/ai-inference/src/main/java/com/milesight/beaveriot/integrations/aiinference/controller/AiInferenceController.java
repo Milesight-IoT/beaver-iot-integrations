@@ -196,6 +196,9 @@ public class AiInferenceController {
         String deviceKey = device.getKey();
         DeviceBindingDetailResponse response = new DeviceBindingDetailResponse();
         response.setIntegrationId(device.getIntegrationId());
+
+        response.setDeviceIdentifier(device.getIdentifier());
+
         String modelId = (String) entityValueServiceProvider.findValueByKey(EntitySupport.getDeviceEntityKey(deviceKey, Constants.IDENTIFIER_MODEL_ID));
         response.setModelId(modelId);
 
