@@ -100,6 +100,7 @@ public class AiInferenceController {
     private DeviceData convertToDeviceData(Device device, Map<String, String> integrationMap) {
         DeviceData deviceData = new DeviceData();
         deviceData.setId(device.getId().toString());
+        deviceData.setIdentifier(device.getIdentifier());
         deviceData.setName(device.getName());
         deviceData.setIntegrationId(device.getIntegrationId());
         deviceData.setIntegrationName(integrationMap.get(device.getIntegrationId()));

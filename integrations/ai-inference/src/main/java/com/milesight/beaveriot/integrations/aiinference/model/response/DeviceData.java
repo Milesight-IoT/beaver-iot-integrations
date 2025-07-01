@@ -9,6 +9,7 @@ import lombok.Data;
 @Data
 public class DeviceData {
     private String id;
+    private String identifier;
     private String name;
     private String integrationId;
     private String integrationName;
