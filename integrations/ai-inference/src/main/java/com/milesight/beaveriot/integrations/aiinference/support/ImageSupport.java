@@ -6,6 +6,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.text.MessageFormat;
 import java.time.Duration;
 import java.util.Base64;
 
@@ -14,6 +15,12 @@ import java.util.Base64;
  * create: 2025/6/24 11:03
  **/
 public class ImageSupport {
+    public static final String IMAGE_BASE64_HEADER_FORMAT = "data:{0};base64,";
+
+    public static boolean isUrl(String content) {
+        return content != null && (content.startsWith("http://") || content.startsWith("https://"));
+    }
+
     public static ImageResult getImageBase64FromUrl(String imageUrl) throws Exception {
         ImageResult result = new ImageResult();
         HttpClient client = HttpClient.newBuilder()
@@ -32,14 +39,11 @@ public class ImageSupport {
             String fileExtension = getFileExtensionFromMimeType(contentType);
 
             String imageBase64 = Base64.getEncoder().encodeToString(response.body());
-            result.setImageBase64(imageBase64);
+            result.setImageBase64(MessageFormat.format(IMAGE_BASE64_HEADER_FORMAT, contentType) + imageBase64);
             result.setImageSuffix(fileExtension);
-            System.out.println("data:image/jpeg;base64," + imageBase64);
             return result;
-        } else {
-            System.err.println("Failed to download image: HTTP " + response.statusCode());
         }
-        return null;
+        return result;
     }
 
     private static String getFileExtensionFromMimeType(String mimeType) {

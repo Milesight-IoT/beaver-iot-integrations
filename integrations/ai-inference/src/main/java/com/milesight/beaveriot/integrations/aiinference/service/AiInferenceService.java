@@ -34,6 +34,7 @@ import com.milesight.beaveriot.integrations.aiinference.model.response.ModelInfe
 import com.milesight.beaveriot.integrations.aiinference.model.response.ModelOutputSchemaResponse;
 import com.milesight.beaveriot.integrations.aiinference.support.DataCenter;
 import com.milesight.beaveriot.integrations.aiinference.support.EntitySupport;
+import com.milesight.beaveriot.integrations.aiinference.support.ImageSupport;
 import com.milesight.beaveriot.integrations.aiinference.support.image.ImageDrawEngine;
 import com.milesight.beaveriot.integrations.aiinference.support.image.action.ImageDrawPathAction;
 import com.milesight.beaveriot.integrations.aiinference.support.image.action.ImageDrawPolygonAction;
@@ -220,7 +221,14 @@ public class AiInferenceService {
 
             String inferHistoryEntityKey = EntitySupport.getDeviceEntityKey(device.getKey(), Constants.IDENTIFIER_INFER_HISTORY);
             if (InferStatus.OK.equals(inferStatus)) {
-                String resultImageBase64 = drawResultImage(imageEntityValue, camThinkModelInferResponse);
+                String imageBase64;
+                if (ImageSupport.isUrl(imageEntityValue)) {
+                    ImageSupport.ImageResult imageResult = ImageSupport.getImageBase64FromUrl(imageEntityValue);
+                    imageBase64 = imageResult.getImageBase64();
+                } else {
+                    imageBase64 = imageEntityValue;
+                }
+                String resultImageBase64 = drawResultImage(imageBase64, camThinkModelInferResponse);
                 inferHistory.setResultImage(resultImageBase64);
                 String resultImageEntityKey = EntitySupport.getDeviceEntityChildrenKey(deviceKey, modelIdentifier, Constants.IDENTIFIER_MODEL_RESULT_IMAGE);
                 if (entityServiceProvider.findByKey(resultImageEntityKey) != null) {
@@ -289,6 +297,10 @@ public class AiInferenceService {
 
         CamThinkModelInferResponse.ModelInferData.OutputData outputData = data.get(0);
         if (CollectionUtils.isEmpty(outputData.getDetections())) {
+            return "";
+        }
+
+        if (StringUtils.isEmpty(imageBase64)) {
             return "";
         }
 
