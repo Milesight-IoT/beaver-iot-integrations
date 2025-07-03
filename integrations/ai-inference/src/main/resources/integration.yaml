@@ -1,6 +1,0 @@
-integration:
-  ai-inference: # integration identifier
-    name: AI Inference Service # integration name
-    description: "Provide AI models and reasoning capabilities required for various scenarios, supporting device-bound AI model inference." # integration description
-    icon-url: "public/ai-inference.svg"
-    enabled: true # whether enable this integration. Must be "true" for now

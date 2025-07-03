@@ -41,7 +41,7 @@
         <module>msc-integration</module>
         <module>ollama-integration</module>
         <module>milesight-gateway</module>
-        <module>ai-inference</module>
+        <module>camthink-ai-inference</module>
     </modules>
 
     <properties>
