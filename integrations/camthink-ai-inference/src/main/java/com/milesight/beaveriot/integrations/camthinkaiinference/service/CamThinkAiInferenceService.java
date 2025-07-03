@@ -92,7 +92,7 @@ public class CamThinkAiInferenceService {
         AnnotatedEntityWrapper<CamThinkAiInferenceConnectionPropertiesEntities> wrapper = new AnnotatedEntityWrapper<>();
         try {
             CamThinkAiInferenceConnectionPropertiesEntities.CamThinkAiInferenceProperties camThinkAiInferenceProperties = entityValueServiceProvider.findValuesByKey(
-                    CamThinkAiInferenceConnectionPropertiesEntities.getKey(CamThinkAiInferenceConnectionPropertiesEntities.Fields.camThinkAiInferenceProperties), CamThinkAiInferenceConnectionPropertiesEntities.CamThinkAiInferenceProperties.class);
+                    CamThinkAiInferenceConnectionPropertiesEntities.getKey(CamThinkAiInferenceConnectionPropertiesEntities.Fields.camthinkAiInferenceProperties), CamThinkAiInferenceConnectionPropertiesEntities.CamThinkAiInferenceProperties.class);
             if (!camThinkAiInferenceProperties.isEmpty()) {
                 initConnection(camThinkAiInferenceProperties);
                 initModels();
@@ -114,6 +114,9 @@ public class CamThinkAiInferenceService {
         AnnotatedEntityWrapper<CamThinkAiInferenceIntegrationEntities.SyncModels> wrapper = new AnnotatedEntityWrapper<>();
         wrapper.saveValue(CamThinkAiInferenceIntegrationEntities.SyncModels::getPeriod, Constants.SYNC_MODELS_PERIOD_SECONDS);
         wrapper.saveValue(CamThinkAiInferenceIntegrationEntities.SyncModels::getEnabled, enabled);
+        if (enabled) {
+            log.info("--debug------------------------------updateSyncModelsScheduled enabled-------------------");
+        }
     }
 
     public void destroy() {
@@ -152,10 +155,11 @@ public class CamThinkAiInferenceService {
         AnnotatedEntityWrapper<CamThinkAiInferenceConnectionPropertiesEntities> wrapper = new AnnotatedEntityWrapper<>();
         try {
             CamThinkAiInferenceConnectionPropertiesEntities.CamThinkAiInferenceProperties camThinkAiInferenceProperties = entityValueServiceProvider.findValuesByKey(
-                    CamThinkAiInferenceConnectionPropertiesEntities.getKey(CamThinkAiInferenceConnectionPropertiesEntities.Fields.camThinkAiInferenceProperties), CamThinkAiInferenceConnectionPropertiesEntities.CamThinkAiInferenceProperties.class);
+                    CamThinkAiInferenceConnectionPropertiesEntities.getKey(CamThinkAiInferenceConnectionPropertiesEntities.Fields.camthinkAiInferenceProperties), CamThinkAiInferenceConnectionPropertiesEntities.CamThinkAiInferenceProperties.class);
             if (!camThinkAiInferenceProperties.isEmpty()) {
                 initConnection(camThinkAiInferenceProperties);
                 initModels();
+                log.info("--debug------------------------------Sync models successfully!!!!!!!!!!!-------------------");
             }
         } catch (Exception e) {
             log.error("Error occurs while sync models", e);

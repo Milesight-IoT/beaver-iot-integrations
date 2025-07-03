@@ -22,8 +22,8 @@ import lombok.experimental.FieldNameConstants;
 @EqualsAndHashCode(callSuper = true)
 @IntegrationEntities
 public class CamThinkAiInferenceConnectionPropertiesEntities extends ExchangePayload {
-    @Entity(type = EntityType.PROPERTY, identifier = "camthink_ai_inference_properties", name = "CamThink Ai inference properties")
-    private CamThinkAiInferenceProperties camThinkAiInferenceProperties;
+    @Entity(type = EntityType.PROPERTY, name = "CamThink Ai inference properties")
+    private CamThinkAiInferenceProperties camthinkAiInferenceProperties;
 
     @Entity(type = EntityType.PROPERTY, name = "CamThink Ai inference api status", accessMod = AccessMod.R)
     private Boolean apiStatus;
