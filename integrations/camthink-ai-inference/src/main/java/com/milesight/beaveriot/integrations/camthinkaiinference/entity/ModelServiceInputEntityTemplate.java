@@ -67,7 +67,11 @@ public class ModelServiceInputEntityTemplate {
         Map<String, Object> attributes = new HashMap<>();
         attributes.put("optional", !required);
         if (format != null) {
-            attributes.put("format", convertFormat());
+            String convertFormat = convertFormat();
+            attributes.put("format", convertFormat);
+            if (convertFormat.equals(Constants.ATTRIBUTE_FORMAT_IMAGE_URL)) {
+                attributes.put("max_length", Constants.IMAGE_URL_MAX_LENGTH);
+            }
         }
         if (defaultValue != null) {
             attributes.put("default_value", defaultValue);

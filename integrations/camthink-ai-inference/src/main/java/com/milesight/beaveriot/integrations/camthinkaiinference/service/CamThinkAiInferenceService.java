@@ -24,10 +24,7 @@ import com.milesight.beaveriot.integrations.camthinkaiinference.api.model.respon
 import com.milesight.beaveriot.integrations.camthinkaiinference.api.model.response.CamThinkModelInferResponse;
 import com.milesight.beaveriot.integrations.camthinkaiinference.api.model.response.CamThinkModelListResponse;
 import com.milesight.beaveriot.integrations.camthinkaiinference.constant.Constants;
-import com.milesight.beaveriot.integrations.camthinkaiinference.entity.CamThinkAiInferenceConnectionPropertiesEntities;
-import com.milesight.beaveriot.integrations.camthinkaiinference.entity.CamThinkAiInferenceServiceEntities;
-import com.milesight.beaveriot.integrations.camthinkaiinference.entity.ModelServiceEntityTemplate;
-import com.milesight.beaveriot.integrations.camthinkaiinference.entity.ModelServiceInputEntityTemplate;
+import com.milesight.beaveriot.integrations.camthinkaiinference.entity.*;
 import com.milesight.beaveriot.integrations.camthinkaiinference.enums.InferStatus;
 import com.milesight.beaveriot.integrations.camthinkaiinference.model.InferHistory;
 import com.milesight.beaveriot.integrations.camthinkaiinference.model.response.ModelInferResponse;
@@ -40,6 +37,7 @@ import com.milesight.beaveriot.integrations.camthinkaiinference.support.image.ac
 import com.milesight.beaveriot.integrations.camthinkaiinference.support.image.action.ImageDrawPolygonAction;
 import com.milesight.beaveriot.integrations.camthinkaiinference.support.image.action.ImageDrawRectangleAction;
 import com.milesight.beaveriot.integrations.camthinkaiinference.support.image.config.ImageDrawConfig;
+import com.milesight.beaveriot.scheduler.integration.IntegrationScheduled;
 import io.micrometer.core.annotation.Counted;
 import io.micrometer.core.annotation.Timed;
 import lombok.extern.slf4j.Slf4j;
@@ -105,6 +103,18 @@ public class CamThinkAiInferenceService {
         }
     }
 
+    private void checkAndUpdateSyncModelsScheduled() {
+        AnnotatedEntityWrapper<CamThinkAiInferenceConnectionPropertiesEntities> wrapper = new AnnotatedEntityWrapper<>();
+        boolean apiStatus = (Boolean) wrapper.getValue(CamThinkAiInferenceConnectionPropertiesEntities::getApiStatus).orElse(false);
+        updateSyncModelsScheduled(apiStatus);
+    }
+
+    private void updateSyncModelsScheduled(boolean enabled) {
+        AnnotatedEntityWrapper<CamThinkAiInferenceIntegrationEntities.SyncModels> wrapper = new AnnotatedEntityWrapper<>();
+        wrapper.saveValue(CamThinkAiInferenceIntegrationEntities.SyncModels::getPeriod, Constants.SYNC_MODELS_PERIOD_SECONDS);
+        wrapper.saveValue(CamThinkAiInferenceIntegrationEntities.SyncModels::getEnabled, enabled);
+    }
+
     public void destroy() {
         closeAutoInferThreadPoolExecutorGracefully();
     }
@@ -127,6 +137,28 @@ public class CamThinkAiInferenceService {
             CamThinkAiInferenceConnectionPropertiesEntities.CamThinkAiInferenceProperties camThinkAiInferenceProperties = event.getPayload();
             initConnection(camThinkAiInferenceProperties);
             initModels();
+            checkAndUpdateSyncModelsScheduled();
+        }
+    }
+
+    @SuppressWarnings("unused")
+    @IntegrationScheduled(
+            name = "camthink-ai-inference.sync_models",
+            fixedRateEntity = "camthink-ai-inference.integration.sync_models.period",
+            enabledEntity = "camthink-ai-inference.integration.sync_models.enabled"
+    )
+    public void syncModels() {
+        AnnotatedEntityWrapper<CamThinkAiInferenceConnectionPropertiesEntities> wrapper = new AnnotatedEntityWrapper<>();
+        try {
+            CamThinkAiInferenceConnectionPropertiesEntities.CamThinkAiInferenceProperties camThinkAiInferenceProperties = entityValueServiceProvider.findValuesByKey(
+                    CamThinkAiInferenceConnectionPropertiesEntities.getKey(CamThinkAiInferenceConnectionPropertiesEntities.Fields.camThinkAiInferenceProperties), CamThinkAiInferenceConnectionPropertiesEntities.CamThinkAiInferenceProperties.class);
+            if (!camThinkAiInferenceProperties.isEmpty()) {
+                initConnection(camThinkAiInferenceProperties);
+                initModels();
+            }
+        } catch (Exception e) {
+            log.error("Error occurs while sync models", e);
+            wrapper.saveValue(CamThinkAiInferenceConnectionPropertiesEntities::getApiStatus, false).publishSync();
         }
     }
 
@@ -414,20 +446,7 @@ public class CamThinkAiInferenceService {
     private boolean isConfigChanged(Event<CamThinkAiInferenceConnectionPropertiesEntities.CamThinkAiInferenceProperties> event) {
         // check if required fields are set
         CamThinkAiInferenceConnectionPropertiesEntities.CamThinkAiInferenceProperties camThinkAiInferenceProperties = event.getPayload();
-        if (camThinkAiInferenceProperties.getBaseUrl() == null) {
-            return false;
-        }
-        if (camThinkAiInferenceProperties.getToken() == null) {
-            return false;
-        }
-        if (camThinkAiInferenceClient == null || camThinkAiInferenceClient.getConfig() == null) {
-            return true;
-        }
-        AnnotatedEntityWrapper<CamThinkAiInferenceConnectionPropertiesEntities> wrapper = new AnnotatedEntityWrapper<>();
-        boolean apiStatus = (Boolean) wrapper.getValue(CamThinkAiInferenceConnectionPropertiesEntities::getApiStatus).orElse(false);
-        return !apiStatus ||
-                !StringUtils.equals(camThinkAiInferenceClient.getConfig().getBaseUrl(), camThinkAiInferenceProperties.getBaseUrl()) ||
-                !StringUtils.equals(camThinkAiInferenceClient.getConfig().getToken(), camThinkAiInferenceProperties.getToken());
+        return camThinkAiInferenceProperties.getBaseUrl() != null && camThinkAiInferenceProperties.getToken() != null;
     }
 
     private boolean testConnection() {
@@ -541,13 +560,20 @@ public class CamThinkAiInferenceService {
     }
 
     public void initConnection(CamThinkAiInferenceConnectionPropertiesEntities.CamThinkAiInferenceProperties camThinkAiInferenceProperties) {
-        Config config = Config.builder()
-                .baseUrl(camThinkAiInferenceProperties.getBaseUrl())
-                .token(camThinkAiInferenceProperties.getToken())
-                .build();
-        camThinkAiInferenceClient = CamThinkAiInferenceClient.builder()
-                .config(config)
-                .build();
+        Config config;
+        if (camThinkAiInferenceClient == null) {
+            config = Config.builder()
+                    .baseUrl(camThinkAiInferenceProperties.getBaseUrl())
+                    .token(camThinkAiInferenceProperties.getToken())
+                    .build();
+            camThinkAiInferenceClient = CamThinkAiInferenceClient.builder()
+                    .config(config)
+                    .build();
+        } else {
+            config = camThinkAiInferenceClient.getConfig();
+            config.setBaseUrl(camThinkAiInferenceProperties.getBaseUrl());
+            config.setToken(camThinkAiInferenceProperties.getToken());
+        }
         camThinkAiInferenceClient.init();
     }
 }

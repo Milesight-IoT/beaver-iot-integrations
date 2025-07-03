@@ -36,6 +36,12 @@
             <version>${okhttp3.version}</version>
         </dependency>
         <dependency>
+            <groupId>com.milesight.beaveriot</groupId>
+            <artifactId>scheduler</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-registry-prometheus</artifactId>
         </dependency>
