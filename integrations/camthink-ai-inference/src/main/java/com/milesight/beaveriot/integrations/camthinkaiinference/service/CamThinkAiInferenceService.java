@@ -96,6 +96,7 @@ public class CamThinkAiInferenceService {
             if (!camThinkAiInferenceProperties.isEmpty()) {
                 initConnection(camThinkAiInferenceProperties);
                 initModels();
+                checkAndUpdateSyncModelsScheduled();
             }
         } catch (Exception e) {
             log.error("Error occurs while initializing connection", e);
