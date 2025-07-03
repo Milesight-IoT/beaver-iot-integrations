@@ -236,7 +236,7 @@ public class AiInferenceController {
             List<Device> integrationDevices = deviceServiceProvider.findAll(integration.getId());
             if (!CollectionUtils.isEmpty(integrationDevices)) {
                 List<Device> filteredDevices = integrationDevices.stream().filter(
-                        device -> (StringUtils.isEmpty(searchName) || device.getName().contains(searchName)) && DataCenter.isDeviceInDeviceImageEntityMap(device.getId())
+                        device -> (StringUtils.isEmpty(searchName) || device.getName().toLowerCase().contains(searchName.toLowerCase())) && DataCenter.isDeviceInDeviceImageEntityMap(device.getId())
                 ).toList();
                 if (!CollectionUtils.isEmpty(filteredDevices)) {
                     devices.addAll(filteredDevices);
@@ -313,7 +313,7 @@ public class AiInferenceController {
         if (StringUtils.isEmpty(searchName)) {
             isMatch = true;
         } else {
-            isMatch = device.getName().contains(searchName);
+            isMatch = device.getName().toLowerCase().contains(searchName.toLowerCase());
         }
 
         if (!isMatch) {
