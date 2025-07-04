@@ -139,8 +139,8 @@ public class MqttDeviceTemplateService {
     public void batchDeleteDeviceTemplates(BatchDeleteDeviceTemplateRequest batchDeleteDeviceTemplateRequest) {
         if (!CollectionUtils.isEmpty(batchDeleteDeviceTemplateRequest.getIdList())) {
             batchDeleteDeviceTemplateRequest.getIdList().stream().map(Long::parseLong).toList().forEach(id -> {
-                deviceTemplateServiceProvider.deleteById(id);
                 DataCenter.removeTopicByTemplateId(id);
+                deviceTemplateServiceProvider.deleteById(id);
             });
             mqttDeviceService.syncTemplates();
         }
