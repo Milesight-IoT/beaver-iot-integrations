@@ -1,5 +1,7 @@
 package com.milesight.beaveriot.integrations.camthinkaiinference.api.config;
 
+import com.milesight.beaveriot.context.integration.wrapper.AnnotatedEntityWrapper;
+import com.milesight.beaveriot.integrations.camthinkaiinference.entity.CamThinkAiInferenceConnectionPropertiesEntities;
 import lombok.Builder;
 import lombok.Data;
 
@@ -17,14 +19,24 @@ public class Config {
     public static final String URL_MODEL_INFER = "/api/v1/models/{0}/infer";
 
     public String getModelsUrl() {
-        return baseUrl + URL_MODELS;
+        return getBaseUrl() + URL_MODELS;
     }
 
     public String getModelDetailUrl() {
-        return baseUrl + URL_MODEL_DETAIL;
+        return getBaseUrl() + URL_MODEL_DETAIL;
     }
 
     public String getModelInferUrl() {
-        return baseUrl + URL_MODEL_INFER;
+        return getBaseUrl() + URL_MODEL_INFER;
+    }
+
+    public String getBaseUrl() {
+        AnnotatedEntityWrapper<CamThinkAiInferenceConnectionPropertiesEntities.CamThinkAiInferenceProperties> wrapper = new AnnotatedEntityWrapper<>();
+        return (String) wrapper.getValue(CamThinkAiInferenceConnectionPropertiesEntities.CamThinkAiInferenceProperties::getBaseUrl).orElse("");
+    }
+
+    public String getToken() {
+        AnnotatedEntityWrapper<CamThinkAiInferenceConnectionPropertiesEntities.CamThinkAiInferenceProperties> wrapper = new AnnotatedEntityWrapper<>();
+        return (String) wrapper.getValue(CamThinkAiInferenceConnectionPropertiesEntities.CamThinkAiInferenceProperties::getToken).orElse("");
     }
 }

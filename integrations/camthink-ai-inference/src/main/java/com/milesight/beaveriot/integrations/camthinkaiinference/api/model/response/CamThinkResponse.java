@@ -12,4 +12,5 @@ public class CamThinkResponse<T> {
     private String message;
     private T data;
     private Pagination pagination;
+    private String errorCode;
 }

@@ -17,7 +17,6 @@ import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
 import com.milesight.beaveriot.eventbus.api.Event;
 import com.milesight.beaveriot.eventbus.api.EventResponse;
 import com.milesight.beaveriot.integrations.camthinkaiinference.api.client.CamThinkAiInferenceClient;
-import com.milesight.beaveriot.integrations.camthinkaiinference.api.config.Config;
 import com.milesight.beaveriot.integrations.camthinkaiinference.api.enums.ServerErrorCode;
 import com.milesight.beaveriot.integrations.camthinkaiinference.api.model.request.CamThinkModelInferRequest;
 import com.milesight.beaveriot.integrations.camthinkaiinference.api.model.response.CamThinkModelDetailResponse;
@@ -60,13 +59,14 @@ public class CamThinkAiInferenceService {
     private final DeviceServiceProvider deviceServiceProvider;
     private final EntityServiceProvider entityServiceProvider;
     private final EntityValueServiceProvider entityValueServiceProvider;
-    private CamThinkAiInferenceClient camThinkAiInferenceClient;
+    private final CamThinkAiInferenceClient camThinkAiInferenceClient;
     private final ThreadPoolExecutor autoInferThreadPoolExecutor;
 
-    public CamThinkAiInferenceService(DeviceServiceProvider deviceServiceProvider, EntityServiceProvider entityServiceProvider, EntityValueServiceProvider entityValueServiceProvider) {
+    public CamThinkAiInferenceService(DeviceServiceProvider deviceServiceProvider, EntityServiceProvider entityServiceProvider, EntityValueServiceProvider entityValueServiceProvider, CamThinkAiInferenceClient camThinkAiInferenceClient) {
         this.deviceServiceProvider = deviceServiceProvider;
         this.entityServiceProvider = entityServiceProvider;
         this.entityValueServiceProvider = entityValueServiceProvider;
+        this.camThinkAiInferenceClient = camThinkAiInferenceClient;
         this.autoInferThreadPoolExecutor = buildAutoInferThreadPoolExecutor();
     }
 
@@ -94,7 +94,6 @@ public class CamThinkAiInferenceService {
             CamThinkAiInferenceConnectionPropertiesEntities.CamThinkAiInferenceProperties camThinkAiInferenceProperties = entityValueServiceProvider.findValuesByKey(
                     CamThinkAiInferenceConnectionPropertiesEntities.getKey(CamThinkAiInferenceConnectionPropertiesEntities.Fields.camthinkAiInferenceProperties), CamThinkAiInferenceConnectionPropertiesEntities.CamThinkAiInferenceProperties.class);
             if (!camThinkAiInferenceProperties.isEmpty()) {
-                initConnection(camThinkAiInferenceProperties);
                 initModels();
                 checkAndUpdateSyncModelsScheduled();
             }
@@ -135,8 +134,6 @@ public class CamThinkAiInferenceService {
     @EventSubscribe(payloadKeyExpression = Constants.INTEGRATION_ID + ".integration.camthink_ai_inference_properties.*")
     public void onAiInferencePropertiesUpdate(Event<CamThinkAiInferenceConnectionPropertiesEntities.CamThinkAiInferenceProperties> event) {
         if (isConfigChanged(event)) {
-            CamThinkAiInferenceConnectionPropertiesEntities.CamThinkAiInferenceProperties camThinkAiInferenceProperties = event.getPayload();
-            initConnection(camThinkAiInferenceProperties);
             initModels();
             checkAndUpdateSyncModelsScheduled();
         }
@@ -154,7 +151,6 @@ public class CamThinkAiInferenceService {
             CamThinkAiInferenceConnectionPropertiesEntities.CamThinkAiInferenceProperties camThinkAiInferenceProperties = entityValueServiceProvider.findValuesByKey(
                     CamThinkAiInferenceConnectionPropertiesEntities.getKey(CamThinkAiInferenceConnectionPropertiesEntities.Fields.camthinkAiInferenceProperties), CamThinkAiInferenceConnectionPropertiesEntities.CamThinkAiInferenceProperties.class);
             if (!camThinkAiInferenceProperties.isEmpty()) {
-                initConnection(camThinkAiInferenceProperties);
                 initModels();
             }
         } catch (Exception e) {
@@ -558,23 +554,5 @@ public class CamThinkAiInferenceService {
             modelOutputSchemaResponse.setInputEntities(inputEntities);
         }
         return modelOutputSchemaResponse;
-    }
-
-    public void initConnection(CamThinkAiInferenceConnectionPropertiesEntities.CamThinkAiInferenceProperties camThinkAiInferenceProperties) {
-        Config config;
-        if (camThinkAiInferenceClient == null) {
-            config = Config.builder()
-                    .baseUrl(camThinkAiInferenceProperties.getBaseUrl())
-                    .token(camThinkAiInferenceProperties.getToken())
-                    .build();
-            camThinkAiInferenceClient = CamThinkAiInferenceClient.builder()
-                    .config(config)
-                    .build();
-        } else {
-            config = camThinkAiInferenceClient.getConfig();
-            config.setBaseUrl(camThinkAiInferenceProperties.getBaseUrl());
-            config.setToken(camThinkAiInferenceProperties.getToken());
-        }
-        camThinkAiInferenceClient.init();
     }
 }

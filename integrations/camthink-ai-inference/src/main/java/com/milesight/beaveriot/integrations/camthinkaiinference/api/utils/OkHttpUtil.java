@@ -7,6 +7,7 @@ import okhttp3.*;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -14,7 +15,7 @@ public class OkHttpUtil {
 
     private static final OkHttpClient client;
 
-    private static Map<String, String> commonHeaders = new HashMap<>();
+    private static final Map<String, String> commonHeaders = new ConcurrentHashMap<>();
 
     static {
         // Initialize OkHttpClient and set timeout
@@ -25,8 +26,8 @@ public class OkHttpUtil {
                 .build();
     }
 
-    public static void setCommonHeaders(Map<String, String> commonHeaders) {
-        OkHttpUtil.commonHeaders = commonHeaders;
+    public static void updateCommonHeaders(Map<String, String> commonHeaders) {
+        OkHttpUtil.commonHeaders.putAll(commonHeaders);
     }
 
     public static ClientResponse get(String url) {
@@ -89,7 +90,9 @@ public class OkHttpUtil {
         if (headers == null) {
             headers = new HashMap<>();
         }
-        headers.putAll(commonHeaders);
+        if (!commonHeaders.isEmpty()) {
+            headers.putAll(commonHeaders);
+        }
         addHeaders(builder, headers);
         Request request = builder.build();
 

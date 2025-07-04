@@ -4,16 +4,17 @@ import com.milesight.beaveriot.base.exception.ServiceException;
 import com.milesight.beaveriot.base.utils.JsonUtils;
 import com.milesight.beaveriot.context.integration.wrapper.AnnotatedEntityWrapper;
 import com.milesight.beaveriot.integrations.camthinkaiinference.api.config.Config;
+import com.milesight.beaveriot.integrations.camthinkaiinference.api.enums.CamThinkErrorCode;
 import com.milesight.beaveriot.integrations.camthinkaiinference.api.enums.ServerErrorCode;
 import com.milesight.beaveriot.integrations.camthinkaiinference.api.model.request.CamThinkModelInferRequest;
 import com.milesight.beaveriot.integrations.camthinkaiinference.api.model.response.*;
 import com.milesight.beaveriot.integrations.camthinkaiinference.api.utils.OkHttpUtil;
 import com.milesight.beaveriot.integrations.camthinkaiinference.entity.CamThinkAiInferenceConnectionPropertiesEntities;
-import lombok.Builder;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Component;
 
 import java.text.MessageFormat;
 import java.util.Map;
@@ -23,20 +24,20 @@ import java.util.Map;
  * create: 2025/6/5 8:49
  **/
 @Slf4j
-@Builder
 @Data
+@Component
 public class CamThinkAiInferenceClient {
-    private Config config;
+    private Config config = Config.builder().build();
 
-    public void init() {
-        OkHttpUtil.setCommonHeaders(Map.of("X-Access-Token", config.getToken()));
+    public Map<String, String> getCommonHeaders() {
+        return Map.of("X-Access-Token", config.getToken());
     }
 
     public CamThinkModelListResponse getModels() {
         String url = config.getModelsUrl();
-        String params = "page=1&page_size=100";
+        String params = "page=1&page_size=9999";
         url = url + "?" + params;
-        ClientResponse clientResponse = OkHttpUtil.get(url);
+        ClientResponse clientResponse = OkHttpUtil.get(url, getCommonHeaders());
         validateResponse(clientResponse);
         try {
             return JsonUtils.fromJSON(clientResponse.getData(), CamThinkModelListResponse.class);
@@ -49,7 +50,7 @@ public class CamThinkAiInferenceClient {
     public CamThinkModelDetailResponse getModelDetail(String modelId) {
         String url = config.getModelDetailUrl();
         url = MessageFormat.format(url, modelId);
-        ClientResponse clientResponse = OkHttpUtil.get(url);
+        ClientResponse clientResponse = OkHttpUtil.get(url, getCommonHeaders());
         validateResponse(clientResponse);
         try {
             return JsonUtils.fromJSON(clientResponse.getData(), CamThinkModelDetailResponse.class);
@@ -62,7 +63,7 @@ public class CamThinkAiInferenceClient {
     public CamThinkModelInferResponse modelInfer(String modelId, CamThinkModelInferRequest camThinkModelInferRequest) {
         String url = config.getModelInferUrl();
         url = MessageFormat.format(url, modelId);
-        ClientResponse clientResponse = OkHttpUtil.post(url, JsonUtils.toJSON(camThinkModelInferRequest));
+        ClientResponse clientResponse = OkHttpUtil.post(url, getCommonHeaders(), JsonUtils.toJSON(camThinkModelInferRequest));
         validateResponse(clientResponse);
         try {
             return JsonUtils.fromJSON(clientResponse.getData(), CamThinkModelInferResponse.class);
@@ -88,10 +89,10 @@ public class CamThinkAiInferenceClient {
         int code = clientResponse.getCode();
         ServiceException exception;
         String detailMessage = "";
+        CamThinkCommonResponse camThinkResponse = null;
         if (clientResponse.getData() == null) {
             return buildServiceException(ServerErrorCode.SERVER_DATA_NOT_FOUND, detailMessage);
         } else {
-            CamThinkCommonResponse camThinkResponse;
             try {
                 camThinkResponse = JsonUtils.fromJSON(clientResponse.getData(), CamThinkCommonResponse.class);
                 detailMessage = camThinkResponse.getMessage();
@@ -106,7 +107,11 @@ public class CamThinkAiInferenceClient {
         } else if (code == HttpStatus.FORBIDDEN.value()) {
             exception = buildServiceException(ServerErrorCode.SERVER_TOKEN_ACCESS_DENIED, detailMessage);
         } else if (code == HttpStatus.NOT_FOUND.value()) {
-            exception = buildServiceException(ServerErrorCode.SERVER_DATA_NOT_FOUND, detailMessage);
+            if (camThinkResponse != null && CamThinkErrorCode.TOKEN_NOT_FOUND.getValue().equals(camThinkResponse.getErrorCode())) {
+                exception = buildServiceException(ServerErrorCode.SERVER_TOKEN_INVALID, detailMessage);
+            } else {
+                exception = buildServiceException(ServerErrorCode.SERVER_DATA_NOT_FOUND, detailMessage);
+            }
         } else if (code == HttpStatus.UNPROCESSABLE_ENTITY.value()) {
             exception = buildServiceException(ServerErrorCode.SERVER_INVALID_INPUT_DATA, detailMessage);
         } else if (code == HttpStatus.TOO_MANY_REQUESTS.value()) {
@@ -147,7 +152,7 @@ public class CamThinkAiInferenceClient {
 
     private boolean validBaseUrl(String url) {
         try {
-            ClientResponse clientResponse = OkHttpUtil.get(url);
+            ClientResponse clientResponse = OkHttpUtil.get(url, getCommonHeaders());
             return clientResponse != null && clientResponse.isSuccessful();
         } catch (Exception e) {
             return false;
