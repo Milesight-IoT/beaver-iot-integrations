@@ -10,6 +10,7 @@ import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
 import com.milesight.beaveriot.context.constants.ExchangeContextKeys;
 import com.milesight.beaveriot.context.integration.model.Device;
 import com.milesight.beaveriot.context.integration.model.ExchangePayload;
+import com.milesight.beaveriot.context.security.SecurityUserContext;
 import com.milesight.beaveriot.context.security.TenantContext;
 import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
 import com.milesight.beaveriot.eventbus.api.Event;
@@ -92,8 +93,11 @@ public class MscDataSyncService {
 
     private Future<?> runSyncTask(boolean delta) {
         val tenantId = TenantContext.getTenantId();
+        val user = SecurityUserContext.getSecurityUser();
         return executor.submit(() -> {
             TenantContext.setTenantId(tenantId);
+            SecurityUserContext.setSecurityUser(user);
+
             val lockConfiguration = ScopedLockConfiguration.builder(LockScope.TENANT)
                     .name("msc-integration:sync-all")
                     .lockAtLeastFor(Duration.ofSeconds(0))
@@ -143,6 +147,8 @@ public class MscDataSyncService {
             enabledEntity = "msc-integration.integration.scheduled_data_fetch.enabled"
     )
     public void scheduledSync() {
+        // ensure user context is empty
+        SecurityUserContext.clear(false);
         runSyncTask(true);
     }
 
@@ -238,10 +244,14 @@ public class MscDataSyncService {
             log.info("Skip execution because device task is running: {}", task.identifier);
             return CompletableFuture.completedFuture(null);
         }
+
         val tenantId = TenantContext.getTenantId();
+        val user = SecurityUserContext.getSecurityUser();
         return CompletableFuture.supplyAsync(() -> {
             try {
                 TenantContext.setTenantId(tenantId);
+                SecurityUserContext.setSecurityUser(user);
+
                 Device device = null;
                 switch (task.type) {
                     case ADD_LOCAL_DEVICE -> device = addLocalDevice(task);

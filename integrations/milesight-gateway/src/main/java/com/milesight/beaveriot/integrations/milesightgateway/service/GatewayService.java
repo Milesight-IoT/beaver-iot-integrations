@@ -36,6 +36,7 @@ import com.milesight.beaveriot.integrations.milesightgateway.util.Constants;
 import com.milesight.beaveriot.integrations.milesightgateway.util.GatewayString;
 import com.milesight.beaveriot.integrations.milesightgateway.util.LockConstants;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.aop.framework.AopContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Component;
@@ -175,7 +176,7 @@ public class GatewayService {
     }
 
     @DistributedLock(name = LockConstants.UPDATE_GATEWAY_DEVICE_ENUM_LOCK)
-    private void putAddDeviceGatewayEui(List<Device> gateways) {
+    public void putAddDeviceGatewayEui(List<Device> gateways) {
         Entity gatewayEuiEntity = getAddDeviceGatewayEntity();
         LinkedHashMap<String, String> attrEnum = json.convertValue(gatewayEuiEntity.getAttributes().get(AttributeBuilder.ATTRIBUTE_ENUM), new TypeReference<>() {});
         gateways.forEach(gateway -> attrEnum.put(getGatewayEui(gateway), gateway.getName()));
@@ -186,7 +187,7 @@ public class GatewayService {
     }
 
     @DistributedLock(name = LockConstants.UPDATE_GATEWAY_DEVICE_ENUM_LOCK)
-    private void removeAddDeviceGatewayEui(List<String> gatewayEuiList) {
+    public void removeAddDeviceGatewayEui(List<String> gatewayEuiList) {
         Entity gatewayEuiEntity = getAddDeviceGatewayEntity();
         LinkedHashMap<String, String> attrEnum = json.convertValue(gatewayEuiEntity.getAttributes().get(AttributeBuilder.ATTRIBUTE_ENUM), new TypeReference<>() {});
         gatewayEuiList.forEach(eui -> attrEnum.remove(GatewayString.standardizeEUI(eui)));
@@ -244,7 +245,7 @@ public class GatewayService {
         msGwEntityService.saveGatewayRelation(gatewayRelation);
 
         // add to add device gateway list
-        putAddDeviceGatewayEui(List.of(gateway));
+        self().putAddDeviceGatewayEui(List.of(gateway));
 
         // check duplicate eui
         return newGatewayData;
@@ -303,7 +304,7 @@ public class GatewayService {
         msGwEntityService.saveGatewayRelation(gatewayMap);
 
         // delete gateway from add device gateway eui list
-        removeAddDeviceGatewayEui(gatewayEuiList);
+        self().removeAddDeviceGatewayEui(gatewayEuiList);
     }
 
     public String getGatewayEui(Device gateway) {
@@ -340,7 +341,7 @@ public class GatewayService {
         MsGwIntegrationEntities.DeleteDevice deleteDevice = event.getPayload();
         Device device = deleteDevice.getDeletedDevice();
         if (GatewayString.isGatewayIdentifier(device.getIdentifier())) {
-            batchDeleteGateway(List.of(getGatewayEui(device)));
+            self().batchDeleteGateway(List.of(getGatewayEui(device)));
         } else {
             GatewayDeviceData deviceData = deviceService.getDeviceData(device);
             gatewayRequester.requestDeleteDevice(deviceData.getGatewayEUI(), List.of(deviceData.getEui()));
@@ -370,7 +371,7 @@ public class GatewayService {
         Device device = event.getPayload();
         if (GatewayString.isGatewayIdentifier(device.getIdentifier())) {
             // sync gateway name to add device gateway eui list
-            putAddDeviceGatewayEui(List.of(device));
+            self().putAddDeviceGatewayEui(List.of(device));
         }
     }
 
@@ -402,5 +403,9 @@ public class GatewayService {
 
         gatewayRequester.requestUpdateDeviceItem(gatewayEui, deviceEui, deviceItem.get());
         return deviceItem.get();
+    }
+
+    private GatewayService self() {
+        return (GatewayService) AopContext.currentProxy();
     }
 }
