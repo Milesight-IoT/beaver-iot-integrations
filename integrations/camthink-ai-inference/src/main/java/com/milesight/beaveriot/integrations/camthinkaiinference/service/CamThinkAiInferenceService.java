@@ -37,8 +37,6 @@ import com.milesight.beaveriot.integrations.camthinkaiinference.support.image.ac
 import com.milesight.beaveriot.integrations.camthinkaiinference.support.image.action.ImageDrawRectangleAction;
 import com.milesight.beaveriot.integrations.camthinkaiinference.support.image.config.ImageDrawConfig;
 import com.milesight.beaveriot.scheduler.integration.IntegrationScheduled;
-import io.micrometer.core.annotation.Counted;
-import io.micrometer.core.annotation.Timed;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
@@ -202,8 +200,6 @@ public class CamThinkAiInferenceService {
         return device;
     }
 
-    @Timed(value = "camthink_ai_inference_auto_infer")
-    @Counted(value = "camthink_ai_inference_auto_infer")
     public void autoInfer(Device device, String imageEntityKey, String imageEntityValue) {
         try {
             long uplinkAt = System.currentTimeMillis();
