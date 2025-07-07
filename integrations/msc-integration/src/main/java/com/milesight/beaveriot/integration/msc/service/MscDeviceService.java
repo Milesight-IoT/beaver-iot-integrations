@@ -34,10 +34,14 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 @Slf4j
@@ -182,8 +186,22 @@ public class MscDeviceService {
         addAdditionalEntities(integrationId, deviceKey, entities);
 
         val device = deviceServiceProvider.findByIdentifier(identifier, integrationId);
+
+        // keep entity name
+        val keyToUpdatedEntity = entities.stream().collect(Collectors.toMap(Entity::getKey, Function.identity(), (a, b) -> a));
+        device.getEntities().stream()
+                .flatMap(existingEntity -> Optional.ofNullable(existingEntity.getChildren())
+                        .map(Collection::stream)
+                        .map(childrenStream -> Stream.concat(Stream.of(existingEntity), childrenStream))
+                        .orElseGet(() -> Stream.of(existingEntity)))
+                .forEach(existingEntity -> {
+                    val updatedEntity = keyToUpdatedEntity.get(existingEntity.getKey());
+                    if (updatedEntity != null) {
+                        updatedEntity.setName(existingEntity.getName());
+                    }
+                });
+
         // update device attributes except name
-//        device.setIdentifier(identifier);
         device.setAdditional(Map.of(MscIntegrationConstants.DeviceAdditionalDataName.DEVICE_ID, deviceId));
         device.setEntities(entities);
         deviceServiceProvider.save(device);
