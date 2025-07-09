@@ -41,6 +41,7 @@
         <module>msc-integration</module>
         <module>ollama-integration</module>
         <module>milesight-gateway</module>
+        <module>camthink-ai-inference</module>
         <module>mqtt-device</module>
     </modules>
 
