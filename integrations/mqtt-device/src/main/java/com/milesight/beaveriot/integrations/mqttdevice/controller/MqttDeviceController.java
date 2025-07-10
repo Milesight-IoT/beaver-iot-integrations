@@ -16,8 +16,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.net.InetAddress;
-
 /**
  * author: Luxb
  * create: 2025/5/26 16:49
@@ -39,11 +37,8 @@ public class MqttDeviceController {
         if (mqttBrokerInfo == null) {
             throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), "Mqtt broker not found").build();
         }
-        if (mqttBrokerInfo.getHost() == null) {
-            mqttBrokerInfo.setHost(getLocalAddress());
-        }
-        if (mqttBrokerInfo.getHost() == null || mqttBrokerInfo.getMqttPort() == null) {
-            throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), "Mqtt broker host or port empty").build();
+        if (mqttBrokerInfo.getMqttPort() == null) {
+            throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), "Mqtt broker port empty").build();
         }
         Credentials mqttCredentials = credentialsServiceProvider.getOrCreateCredentials(CredentialsType.MQTT);
         if (StringUtils.isEmpty(mqttCredentials.getAccessKey())) {
@@ -57,14 +52,5 @@ public class MqttDeviceController {
                 .password(mqttCredentials.getAccessSecret())
                 .topicPrefix(brokerTopicPrefix)
                 .build());
-    }
-
-    private String getLocalAddress() {
-        try {
-            InetAddress localHost = InetAddress.getLocalHost();
-            return localHost.getHostAddress();
-        } catch (Exception e) {
-            return null;
-        }
     }
 }
