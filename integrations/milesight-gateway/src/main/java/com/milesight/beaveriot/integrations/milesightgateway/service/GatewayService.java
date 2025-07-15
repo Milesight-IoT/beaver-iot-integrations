@@ -21,13 +21,11 @@ import com.milesight.beaveriot.integrations.milesightgateway.entity.MsGwIntegrat
 import com.milesight.beaveriot.integrations.milesightgateway.model.DeviceConnectStatus;
 import com.milesight.beaveriot.integrations.milesightgateway.model.GatewayDeviceData;
 import com.milesight.beaveriot.integrations.milesightgateway.model.GatewayDeviceOperation;
-import com.milesight.beaveriot.integrations.milesightgateway.model.api.DeviceListItemFields;
 import com.milesight.beaveriot.integrations.milesightgateway.model.request.FetchGatewayCredentialRequest;
 import com.milesight.beaveriot.integrations.milesightgateway.model.response.MqttCredentialResponse;
 import com.milesight.beaveriot.integrations.milesightgateway.mqtt.MsGwMqttUtil;
 import com.milesight.beaveriot.integrations.milesightgateway.mqtt.model.MqttResponse;
 import com.milesight.beaveriot.integrations.milesightgateway.util.GatewayRequester;
-import com.milesight.beaveriot.integrations.milesightgateway.model.api.DeviceListProfileItem;
 import com.milesight.beaveriot.integrations.milesightgateway.model.api.DeviceListResponse;
 import com.milesight.beaveriot.integrations.milesightgateway.model.GatewayData;
 import com.milesight.beaveriot.integrations.milesightgateway.model.request.AddGatewayRequest;
@@ -175,7 +173,7 @@ public class GatewayService {
         return gatewayEuiEntity;
     }
 
-    @DistributedLock(name = LockConstants.UPDATE_GATEWAY_DEVICE_ENUM_LOCK)
+    @DistributedLock(name = LockConstants.UPDATE_GATEWAY_DEVICE_ENUM_LOCK, waitForLock = "5s")
     public void putAddDeviceGatewayEui(List<Device> gateways) {
         Entity gatewayEuiEntity = getAddDeviceGatewayEntity();
         LinkedHashMap<String, String> attrEnum = json.convertValue(gatewayEuiEntity.getAttributes().get(AttributeBuilder.ATTRIBUTE_ENUM), new TypeReference<>() {});
@@ -186,7 +184,7 @@ public class GatewayService {
         entityServiceProvider.save(gatewayEuiEntity);
     }
 
-    @DistributedLock(name = LockConstants.UPDATE_GATEWAY_DEVICE_ENUM_LOCK)
+    @DistributedLock(name = LockConstants.UPDATE_GATEWAY_DEVICE_ENUM_LOCK, waitForLock = "5s")
     public void removeAddDeviceGatewayEui(List<String> gatewayEuiList) {
         Entity gatewayEuiEntity = getAddDeviceGatewayEntity();
         LinkedHashMap<String, String> attrEnum = json.convertValue(gatewayEuiEntity.getAttributes().get(AttributeBuilder.ATTRIBUTE_ENUM), new TypeReference<>() {});
@@ -200,7 +198,7 @@ public class GatewayService {
         entityServiceProvider.save(gatewayEuiEntity);
     }
 
-    @DistributedLock(name = LockConstants.UPDATE_GATEWAY_DEVICE_RELATION_LOCK)
+    @DistributedLock(name = LockConstants.UPDATE_GATEWAY_DEVICE_RELATION_LOCK, waitForLock = "10s")
     public GatewayData addGateway(AddGatewayRequest request) {
         GatewayData newGatewayData = new GatewayData();
 
@@ -251,7 +249,7 @@ public class GatewayService {
         return newGatewayData;
     }
 
-    @DistributedLock(name = LockConstants.UPDATE_GATEWAY_DEVICE_RELATION_LOCK)
+    @DistributedLock(name = LockConstants.UPDATE_GATEWAY_DEVICE_RELATION_LOCK, waitForLock = "10s")
     public void batchDeleteGateway(List<String> gatewayEuiList) {
         Map<String, List<String>> gatewayMap = msGwEntityService.getGatewayRelation();
 

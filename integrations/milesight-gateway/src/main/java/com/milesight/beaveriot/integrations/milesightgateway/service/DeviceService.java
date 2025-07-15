@@ -158,7 +158,7 @@ public class DeviceService {
         return json.convertValue(device.getAdditional(), GatewayDeviceData.class);
     }
 
-    @DistributedLock(name = LockConstants.UPDATE_GATEWAY_DEVICE_ENUM_LOCK)
+    @DistributedLock(name = LockConstants.UPDATE_GATEWAY_DEVICE_ENUM_LOCK, waitForLock = "5s")
     public void manageGatewayDevices(String gatewayEUI, String deviceEUI, GatewayDeviceOperation op) {
         Map<String, List<String>> gatewayDeviceRelation = msGwEntityService.getGatewayRelation();
         List<String> deviceList = gatewayDeviceRelation.get(gatewayEUI);
