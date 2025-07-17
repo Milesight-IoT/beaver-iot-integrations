@@ -19,6 +19,7 @@ import com.milesight.beaveriot.integrations.milesightgateway.codec.CodecExecutor
 import com.milesight.beaveriot.integrations.milesightgateway.codec.EntityValueConverter;
 import com.milesight.beaveriot.integrations.milesightgateway.entity.MsGwIntegrationEntities;
 import com.milesight.beaveriot.integrations.milesightgateway.model.DeviceConnectStatus;
+import com.milesight.beaveriot.integrations.milesightgateway.model.MilesightGatewayErrorCode;
 import com.milesight.beaveriot.integrations.milesightgateway.service.MsGwEntityService;
 import com.milesight.beaveriot.integrations.milesightgateway.util.Constants;
 import com.milesight.beaveriot.integrations.milesightgateway.mqtt.model.*;
@@ -174,9 +175,9 @@ public class MsGwMqttClient {
     private void updateGatewayStatus(String eui, DeviceConnectStatus status, Long ts) {
         SimpleLock lock = lockProvider.lock(ScopedLockConfiguration.builder(LockScope.TENANT)
                 .name(LockConstants.UPDATE_GATEWAY_STATUS_LOCK_PREFIX + ":" + eui)
-                .throwOnLockFailure(false)
+                .lockAtMostFor(Duration.ofSeconds(5))
                 .lockAtLeastFor(Duration.ZERO)
-                .lockAtMostFor(Duration.ofMinutes(1))
+                .waitForLock(Duration.ofSeconds(5))
                 .build()).orElse(null);
         if (lock == null) {
             return;
@@ -249,10 +250,9 @@ public class MsGwMqttClient {
             } else {
                 response.setErrorBody(json.readValue(json.writeValueAsString(rawResponse.getBody()), MqttRequestError.class));
             }
-        } catch (InterruptedException e) {
-            throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), "Request Gateway Timeout").build();
         } catch (Exception e) {
-            throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), "Request Gateway Error: " + e.getMessage()).build();
+            log.error("Request Gateway Error: " + e.getMessage());
+            throw ServiceException.with(MilesightGatewayErrorCode.GATEWAY_REQUEST_TIMEOUT).build();
         } finally {
             pendingRequests.remove(req.getId());
         }

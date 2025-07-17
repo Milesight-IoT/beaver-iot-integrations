@@ -1,7 +1,7 @@
 package com.milesight.beaveriot.integrations.milesightgateway.codec;
 
+import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.milesight.beaveriot.base.enums.ErrorCode;
 import com.milesight.beaveriot.base.exception.ServiceException;
 import com.milesight.beaveriot.integrations.milesightgateway.codec.model.*;
 import lombok.Getter;
@@ -14,6 +14,7 @@ import java.io.InputStream;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 
 /**
  * ResourceRequester class.
@@ -47,13 +48,18 @@ public class ResourceRequester {
             URI resolvedUri = baseUri.resolve(path);
             return resolvedUri.toString();
         } catch (URISyntaxException e) {
-            throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), "Invalid Url:" + base + " + " + path).build();
+            log.error("Invalid Url:" + base + " + " + path);
+            throw ServiceException
+                    .with(CodecErrorCode.CODEC_RESOURCE_INVALID_URL)
+                    .args(Map.of("base", base, "path", path))
+                    .build();
         }
     }
 
     private InputStream getUrlInputStream(String url) throws IOException {
         HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
         connection.setConnectTimeout(ResourceConstant.JSON_REQUEST_CONNECTION_TIMEOUT);
+        connection.setReadTimeout(ResourceConstant.JSON_REQUEST_READ_TIMEOUT);
         return connection.getInputStream();
     }
 
@@ -61,15 +67,24 @@ public class ResourceRequester {
         String requestUrl = this.joinUrl(this.repoUrl, resourcePath);
         try {
             return json.readValue(getUrlInputStream(requestUrl), clazz);
-        } catch (Exception e) {
-            throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), "Request json error from " + requestUrl + " : " + e.getMessage()).build();
+        } catch (JsonParseException e) {
+            log.error("Json format error from " + requestUrl + " : " + e.getMessage());
+            throw ServiceException
+                    .with(CodecErrorCode.CODEC_RESOURCE_FORMAT_ERROR)
+                    .args(Map.of("requestUrl", requestUrl))
+                    .build();
+        } catch (IOException e) {
+            log.error("Request json error from " + requestUrl + " : " + e.getMessage());
+            throw ServiceException
+                    .with(CodecErrorCode.CODEC_RESOURCE_REQUEST_ERROR)
+                    .args(Map.of("requestUrl", requestUrl))
+                    .build();
         }
     }
 
-    public String requestJsonResource(String resourcePath) {
+    public String requestResourceAsString(String resourcePath) {
         String requestUrlStr = this.joinUrl(this.repoUrl, resourcePath);
         try (
-
                 InputStream inputStream = getUrlInputStream(requestUrlStr);
                 ByteArrayOutputStream result = new ByteArrayOutputStream();
         ) {
@@ -81,14 +96,22 @@ public class ResourceRequester {
 
             return result.toString(StandardCharsets.UTF_8);
         } catch (Exception e) {
-            throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), "Request json error from " + requestUrlStr + " : " + e.getMessage()).build();
+            log.error("Request resource error from " + resourcePath + " : " + e.getMessage());
+            throw ServiceException
+                    .with(CodecErrorCode.CODEC_RESOURCE_REQUEST_ERROR)
+                    .args(Map.of("requestUrl", requestUrlStr))
+                    .build();
         }
     }
 
     public VersionResponse requestCodecVersion() {
         VersionResponse response = requestJsonResource(ResourceConstant.DEFAULT_DEVICE_CODEC_VERSION, VersionResponse.class);
         if (response.getVersion() == null || response.getVendors() == null) {
-            throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), "Broken remote version resource: " + response).build();
+            log.error("Broken remote version resource: " + response);
+            throw ServiceException
+                    .with(CodecErrorCode.CODEC_RESOURCE_FORMAT_ERROR)
+                    .args(Map.of("requestUrl", "version"))
+                    .build();
         }
         return response;
     }
