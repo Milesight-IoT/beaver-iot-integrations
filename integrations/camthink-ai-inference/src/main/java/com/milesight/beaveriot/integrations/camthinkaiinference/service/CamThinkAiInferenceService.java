@@ -401,8 +401,8 @@ public class CamThinkAiInferenceService {
         return String.format("%s:%.2f", cls, conf);
     }
 
-    private static EventResponse getEventResponse(ModelInferResponse modelInferResponse) {
-        Map<String, Object> response = JsonUtils.toMap(modelInferResponse);
+    private static EventResponse getEventResponse(Object responseObj) {
+        Map<String, Object> response = JsonUtils.toMap(responseObj);
         EventResponse eventResponse = EventResponse.empty();
         for (Map.Entry<String, Object> entry : response.entrySet()) {
             String key = entry.getKey();
@@ -499,8 +499,43 @@ public class CamThinkAiInferenceService {
                         .engineType(modelData.getEngineType())
                         .build();
                 Entity modelServiceEntity = modelServiceEntityTemplate.toEntity();
+                fetchAndSetModelInputEntities(modelServiceEntity, modelData.getId());
                 entityServiceProvider.save(modelServiceEntity);
             }
+        }
+    }
+
+    private void fetchAndSetModelInputEntities(Entity modelServiceEntity, String modelId) {
+        CamThinkModelDetailResponse camThinkModelDetailResponse = camThinkAiInferenceClient.getModelDetail(modelId);
+        if (camThinkModelDetailResponse == null) {
+            return;
+        }
+        if (camThinkModelDetailResponse.getData() == null) {
+            return;
+        }
+        if (CollectionUtils.isEmpty(camThinkModelDetailResponse.getData().getInputSchema())) {
+            return;
+        }
+
+        List<Entity> inputEntities = new ArrayList<>();
+        for (CamThinkModelDetailResponse.InputSchema inputSchema : camThinkModelDetailResponse.getData().getInputSchema()) {
+            ModelServiceInputEntityTemplate modelServiceInputEntityTemplate = ModelServiceInputEntityTemplate.builder()
+                    .parentIdentifier(modelServiceEntity.getIdentifier())
+                    .name(inputSchema.getName())
+                    .type(inputSchema.getType())
+                    .description(inputSchema.getDescription())
+                    .required(inputSchema.isRequired())
+                    .format(inputSchema.getFormat())
+                    .defaultValue(inputSchema.getDefaultValue())
+                    .minimum(inputSchema.getMinimum())
+                    .maximum(inputSchema.getMaximum())
+                    .build();
+            Entity modelServiceInputEntity = modelServiceInputEntityTemplate.toEntity();
+            inputEntities.add(modelServiceInputEntity);
+        }
+
+        if (!CollectionUtils.isEmpty(inputEntities)) {
+            modelServiceEntity.setChildren(inputEntities);
         }
     }
 
@@ -526,28 +561,7 @@ public class CamThinkAiInferenceService {
 
             String modelKey = ModelServiceEntityTemplate.getModelKey(modelId);
             Entity modelServiceEntity = entityServiceProvider.findByKey(modelKey);
-            String modelServiceIdentifier = modelServiceEntity.getIdentifier();
-            modelServiceEntity.getChildren().clear();
-
-            List<Entity> inputEntities = new ArrayList<>();
-            for (CamThinkModelDetailResponse.InputSchema inputSchema : camThinkModelDetailResponse.getData().getInputSchema()) {
-                ModelServiceInputEntityTemplate modelServiceInputEntityTemplate = ModelServiceInputEntityTemplate.builder()
-                        .parentIdentifier(modelServiceIdentifier)
-                        .name(inputSchema.getName())
-                        .type(inputSchema.getType())
-                        .description(inputSchema.getDescription())
-                        .required(inputSchema.isRequired())
-                        .format(inputSchema.getFormat())
-                        .defaultValue(inputSchema.getDefaultValue())
-                        .minimum(inputSchema.getMinimum())
-                        .maximum(inputSchema.getMaximum())
-                        .build();
-                Entity modelServiceInputEntity = modelServiceInputEntityTemplate.toEntity();
-                inputEntities.add(modelServiceInputEntity);
-                modelServiceEntity.getChildren().add(modelServiceInputEntity);
-            }
-            entityServiceProvider.save(modelServiceEntity);
-            modelOutputSchemaResponse.setInputEntities(inputEntities);
+            modelOutputSchemaResponse.setInputEntities(modelServiceEntity.getChildren());
         }
         return modelOutputSchemaResponse;
     }
