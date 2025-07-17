@@ -12,6 +12,7 @@ import com.milesight.beaveriot.context.integration.model.Device;
 import com.milesight.beaveriot.context.integration.model.Entity;
 import com.milesight.beaveriot.context.integration.model.ExchangePayload;
 import com.milesight.beaveriot.context.integration.wrapper.AnnotatedEntityWrapper;
+import com.milesight.beaveriot.context.security.TenantContext;
 import com.milesight.beaveriot.context.support.SpringContext;
 import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
 import com.milesight.beaveriot.eventbus.api.Event;
@@ -461,6 +462,7 @@ public class CamThinkAiInferenceService {
 
     private void initModels() {
         if (testConnection()) {
+            long start = System.currentTimeMillis();
             CamThinkModelListResponse camThinkModelListResponse = camThinkAiInferenceClient.getModels();
             if (camThinkModelListResponse == null) {
                 return;
@@ -490,6 +492,7 @@ public class CamThinkAiInferenceService {
                 toDeleteModelKeys.forEach(entityServiceProvider::deleteByKey);
             }
 
+            List<CompletableFuture<Entity>> futures = new ArrayList<>();
             for (CamThinkModelListResponse.ModelData modelData : camThinkModelListResponse.getData()) {
                 ModelServiceEntityTemplate modelServiceEntityTemplate = ModelServiceEntityTemplate.builder()
                         .modelId(modelData.getId())
@@ -499,44 +502,77 @@ public class CamThinkAiInferenceService {
                         .engineType(modelData.getEngineType())
                         .build();
                 Entity modelServiceEntity = modelServiceEntityTemplate.toEntity();
-                fetchAndSetModelInputEntities(modelServiceEntity, modelData.getId());
-                entityServiceProvider.save(modelServiceEntity);
+                futures.add(fetchAndSetModelInputEntities(modelServiceEntity, modelData.getId()));
             }
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                    .orTimeout(10, TimeUnit.SECONDS)
+                    .thenRun(() -> {
+                        try {
+                            futures.stream().map(CompletableFuture::join).forEach(entityServiceProvider::save);
+                        } catch (Exception e) {
+                            log.error("Error occurs while saving model entities", e);
+                        }
+                    })
+                    .whenComplete((v, e) -> {
+                        long duration = System.currentTimeMillis() - start;
+                        if (e != null) {
+                            log.error("initModels failed after {} ms", duration, e);
+                        } else {
+                            log.info("initModels succeeded in {} ms", duration);
+                        }
+                    })
+                    .exceptionally(e -> {
+                        if (e instanceof TimeoutException) {
+                            log.error("Timeout while waiting for some fetching model detail tasks", e);
+                            futures.forEach(f -> f.cancel(true));
+                        } else {
+                            log.error("Error occurs while waiting for all futures to complete: fetching model details and setting model input entities", e);
+                        }
+                        return null;
+                    });
         }
     }
 
-    private void fetchAndSetModelInputEntities(Entity modelServiceEntity, String modelId) {
-        CamThinkModelDetailResponse camThinkModelDetailResponse = camThinkAiInferenceClient.getModelDetail(modelId);
-        if (camThinkModelDetailResponse == null) {
-            return;
-        }
-        if (camThinkModelDetailResponse.getData() == null) {
-            return;
-        }
-        if (CollectionUtils.isEmpty(camThinkModelDetailResponse.getData().getInputSchema())) {
-            return;
-        }
+    private CompletableFuture<Entity> fetchAndSetModelInputEntities(Entity modelServiceEntity, String modelId) {
+        String tenantId = TenantContext.getTenantId();
+        return CompletableFuture.supplyAsync(() -> {
+            TenantContext.setTenantId(tenantId);
+            CamThinkModelDetailResponse camThinkModelDetailResponse = camThinkAiInferenceClient.getModelDetail(modelId);
+            if (camThinkModelDetailResponse == null) {
+                return modelServiceEntity;
+            }
+            if (camThinkModelDetailResponse.getData() == null) {
+                return modelServiceEntity;
+            }
+            if (CollectionUtils.isEmpty(camThinkModelDetailResponse.getData().getInputSchema())) {
+                return modelServiceEntity;
+            }
 
-        List<Entity> inputEntities = new ArrayList<>();
-        for (CamThinkModelDetailResponse.InputSchema inputSchema : camThinkModelDetailResponse.getData().getInputSchema()) {
-            ModelServiceInputEntityTemplate modelServiceInputEntityTemplate = ModelServiceInputEntityTemplate.builder()
-                    .parentIdentifier(modelServiceEntity.getIdentifier())
-                    .name(inputSchema.getName())
-                    .type(inputSchema.getType())
-                    .description(inputSchema.getDescription())
-                    .required(inputSchema.isRequired())
-                    .format(inputSchema.getFormat())
-                    .defaultValue(inputSchema.getDefaultValue())
-                    .minimum(inputSchema.getMinimum())
-                    .maximum(inputSchema.getMaximum())
-                    .build();
-            Entity modelServiceInputEntity = modelServiceInputEntityTemplate.toEntity();
-            inputEntities.add(modelServiceInputEntity);
-        }
+            List<Entity> inputEntities = new ArrayList<>();
+            for (CamThinkModelDetailResponse.InputSchema inputSchema : camThinkModelDetailResponse.getData().getInputSchema()) {
+                ModelServiceInputEntityTemplate modelServiceInputEntityTemplate = ModelServiceInputEntityTemplate.builder()
+                        .parentIdentifier(modelServiceEntity.getIdentifier())
+                        .name(inputSchema.getName())
+                        .type(inputSchema.getType())
+                        .description(inputSchema.getDescription())
+                        .required(inputSchema.isRequired())
+                        .format(inputSchema.getFormat())
+                        .defaultValue(inputSchema.getDefaultValue())
+                        .minimum(inputSchema.getMinimum())
+                        .maximum(inputSchema.getMaximum())
+                        .build();
+                Entity modelServiceInputEntity = modelServiceInputEntityTemplate.toEntity();
+                inputEntities.add(modelServiceInputEntity);
+            }
 
-        if (!CollectionUtils.isEmpty(inputEntities)) {
-            modelServiceEntity.setChildren(inputEntities);
-        }
+            if (!CollectionUtils.isEmpty(inputEntities)) {
+                modelServiceEntity.setChildren(inputEntities);
+            }
+            return modelServiceEntity;
+        }).exceptionally(ex -> {
+            log.error("Error occurs while fetching model detail and setting model input entities with modelId: {}", modelId, ex);
+            return modelServiceEntity;
+        });
     }
 
     public ModelOutputSchemaResponse fetchModelDetail(String modelId) {
