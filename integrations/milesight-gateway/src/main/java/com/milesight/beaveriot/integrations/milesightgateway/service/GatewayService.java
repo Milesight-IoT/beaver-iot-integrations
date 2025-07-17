@@ -18,16 +18,13 @@ import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
 import com.milesight.beaveriot.eventbus.api.Event;
 import com.milesight.beaveriot.integrations.milesightgateway.entity.GatewayEntities;
 import com.milesight.beaveriot.integrations.milesightgateway.entity.MsGwIntegrationEntities;
-import com.milesight.beaveriot.integrations.milesightgateway.model.DeviceConnectStatus;
-import com.milesight.beaveriot.integrations.milesightgateway.model.GatewayDeviceData;
-import com.milesight.beaveriot.integrations.milesightgateway.model.GatewayDeviceOperation;
+import com.milesight.beaveriot.integrations.milesightgateway.model.*;
 import com.milesight.beaveriot.integrations.milesightgateway.model.request.FetchGatewayCredentialRequest;
 import com.milesight.beaveriot.integrations.milesightgateway.model.response.MqttCredentialResponse;
 import com.milesight.beaveriot.integrations.milesightgateway.mqtt.MsGwMqttUtil;
 import com.milesight.beaveriot.integrations.milesightgateway.mqtt.model.MqttResponse;
 import com.milesight.beaveriot.integrations.milesightgateway.util.GatewayRequester;
 import com.milesight.beaveriot.integrations.milesightgateway.model.api.DeviceListResponse;
-import com.milesight.beaveriot.integrations.milesightgateway.model.GatewayData;
 import com.milesight.beaveriot.integrations.milesightgateway.model.request.AddGatewayRequest;
 import com.milesight.beaveriot.integrations.milesightgateway.model.response.ConnectionValidateResponse;
 import com.milesight.beaveriot.integrations.milesightgateway.util.Constants;
@@ -118,7 +115,7 @@ public class GatewayService {
     public void validateGatewayInfo(String eui) {
         String gatewayEui = GatewayString.standardizeEUI(eui);
         if (getGatewayByEui(gatewayEui) != null) {
-            throw ServiceException.with(ErrorCode.PARAMETER_VALIDATION_FAILED.getErrorCode(), "Gateway device has existed: " + eui).build();
+            throw ServiceException.with(MilesightGatewayErrorCode.DUPLICATED_GATEWAY_EUI).args(Map.of("eui", eui)).build();
         }
     }
 
@@ -129,11 +126,11 @@ public class GatewayService {
         MqttResponse<DeviceListResponse> response = gatewayRequester.requestDeviceList(eui, 0, 1, null);
         DeviceListResponse responseData = response.getSuccessBody();
         if (ObjectUtils.isEmpty(responseData.getAppResult())) {
-            throw ServiceException.with(ErrorCode.PARAMETER_VALIDATION_FAILED.getErrorCode(), "Empty applications.").build();
+            throw ServiceException.with(MilesightGatewayErrorCode.GATEWAY_NO_APPLICATION).build();
         }
 
         if (ObjectUtils.isEmpty(responseData.getProfileResult())) {
-            throw ServiceException.with(ErrorCode.PARAMETER_VALIDATION_FAILED.getErrorCode(), "Empty profiles.").build();
+            throw ServiceException.with(MilesightGatewayErrorCode.GATEWAY_NO_DEVICE_PROFILE).build();
         }
 
         result.setAppResult(responseData.getAppResult());
@@ -224,7 +221,7 @@ public class GatewayService {
         Map<String, List<String>> gatewayRelation = msGwEntityService.getGatewayRelation();
 
         if (gatewayRelation.keySet().stream().anyMatch(gatewayEui -> gatewayEui.equals(newGatewayData.getEui()))) {
-            throw ServiceException.with(ErrorCode.PARAMETER_VALIDATION_FAILED.getErrorCode(), "Duplicated gateway EUI: " + newGatewayData.getEui()).build();
+            throw ServiceException.with(MilesightGatewayErrorCode.DUPLICATED_GATEWAY_EUI).args(Map.of("eui", newGatewayData.getEui())).build();
         }
 
         // build and add gateway device

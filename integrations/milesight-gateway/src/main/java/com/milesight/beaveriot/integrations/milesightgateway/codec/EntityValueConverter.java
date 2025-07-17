@@ -64,7 +64,6 @@ public class EntityValueConverter {
     private static void addNode(ObjectNode currentNode, String[] keys, int index, Object value) {
         String key = keys[index];
         if (index == keys.length - 1) {
-            // 如果是最后一个键，直接设置值
             if (key.matches(".*\\[\\d+\\]$")) {
                 String arrayKey = key.substring(0, key.indexOf('['));
                 int arrayIndex = Integer.parseInt(key.substring(key.indexOf('[') + 1, key.indexOf(']')));
@@ -77,7 +76,6 @@ public class EntityValueConverter {
                 currentNode.put(key, ResourceString.jsonInstance().valueToTree(value));
             }
         } else {
-            // 处理中间节点
             if (key.matches(".*\\[\\d+\\]$")) {
                 String arrayKey = key.substring(0, key.indexOf('['));
                 int arrayIndex = Integer.parseInt(key.substring(key.indexOf('[') + 1, key.indexOf(']')));

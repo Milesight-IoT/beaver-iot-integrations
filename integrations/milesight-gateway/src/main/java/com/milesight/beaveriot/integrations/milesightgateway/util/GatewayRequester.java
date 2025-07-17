@@ -1,9 +1,8 @@
 package com.milesight.beaveriot.integrations.milesightgateway.util;
 
-import com.milesight.beaveriot.base.enums.ErrorCode;
 import com.milesight.beaveriot.base.exception.ServiceException;
+import com.milesight.beaveriot.integrations.milesightgateway.model.MilesightGatewayErrorCode;
 import com.milesight.beaveriot.integrations.milesightgateway.model.api.AddDeviceRequest;
-import com.milesight.beaveriot.integrations.milesightgateway.model.api.CodecShortResponse;
 import com.milesight.beaveriot.integrations.milesightgateway.model.api.DeviceListItemFields;
 import com.milesight.beaveriot.integrations.milesightgateway.model.api.DeviceListResponse;
 import com.milesight.beaveriot.integrations.milesightgateway.mqtt.MsGwMqttClient;
@@ -46,7 +45,10 @@ public class GatewayRequester {
         MqttRequest req = buildDeviceListRequest(offset, limit, applicationId);
         MqttResponse<DeviceListResponse> response = msGwMqttClient.request(gatewayEui, req, DeviceListResponse.class);
         if (response.getErrorBody() != null) {
-            throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), response.getErrorBody().toString()).build();
+            throw ServiceException
+                    .with(MilesightGatewayErrorCode.GATEWAY_RESPOND_ERROR)
+                    .args(response.getErrorBody().toMap())
+                    .build();
         }
 
         return response;
@@ -58,7 +60,10 @@ public class GatewayRequester {
         req.setUrl("/api/urdevices?search=" + deviceEui + "&applicationID=" + applicationId);
         MqttResponse<DeviceListResponse> response = msGwMqttClient.request(gatewayId, req, DeviceListResponse.class);
         if (response.getErrorBody() != null) {
-            throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), response.getErrorBody().toString()).build();
+            throw ServiceException
+                    .with(MilesightGatewayErrorCode.GATEWAY_RESPOND_ERROR)
+                    .args(response.getErrorBody().toMap())
+                    .build();
         }
 
         return response.getSuccessBody()
@@ -80,7 +85,10 @@ public class GatewayRequester {
         req.setBody(itemData);
         MqttResponse<Void> response = msGwMqttClient.request(gatewayId, req, Void.class);
         if (response.getErrorBody() != null) {
-            throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), response.getErrorBody().toString()).build();
+            throw ServiceException
+                    .with(MilesightGatewayErrorCode.GATEWAY_RESPOND_ERROR)
+                    .args(response.getErrorBody().toMap())
+                    .build();
         }
     }
 
@@ -91,7 +99,10 @@ public class GatewayRequester {
         req.setBody(GatewayString.convertToMap(requestData));
         MqttResponse<Void> response = msGwMqttClient.request(gatewayId, req, null);
         if (response.getErrorBody() != null) {
-            throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), response.getErrorBody().toString()).build();
+            throw ServiceException
+                    .with(MilesightGatewayErrorCode.GATEWAY_RESPOND_ERROR)
+                    .args(Map.of("errors", List.of(response.getErrorBody().toMap())))
+                    .build();
         }
     }
 
@@ -104,7 +115,7 @@ public class GatewayRequester {
         }).toList();
 
         List<MqttResponse<Void>> responses = msGwMqttClient.batchRequest(gatewayEui, reqList, Void.class);
-        StringBuilder errorMessages = new StringBuilder();
+        List<Map<String, Object>> errors = new ArrayList<>();
         responses.forEach(response -> {
             if (response.getErrorBody() != null) {
                 if (response.getErrorBody().getCode().equals(5)) {
@@ -113,12 +124,15 @@ public class GatewayRequester {
                     return;
                 }
 
-                errorMessages.append(response.getErrorBody().toString());
+                errors.add(response.getErrorBody().toMap());
             }
         });
 
-        if (!errorMessages.isEmpty()) {
-            throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), errorMessages.toString()).build();
+        if (!errors.isEmpty()) {
+            throw ServiceException
+                    .with(MilesightGatewayErrorCode.GATEWAY_RESPOND_ERROR)
+                    .args(Map.of("errors", errors))
+                    .build();
         }
     }
 
@@ -145,18 +159,6 @@ public class GatewayRequester {
         });
 
         return result;
-    }
-
-    public CodecShortResponse requestCodecShortList(String gatewayEUI) {
-        MqttRequest req = new MqttRequest();
-        req.setMethod("GET");
-        req.setUrl("/api/payloadcodecs-short");
-        MqttResponse<CodecShortResponse> response = msGwMqttClient.request(gatewayEUI, req, CodecShortResponse.class);
-        if (response.getErrorBody() != null) {
-            throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), response.getErrorBody().toString()).build();
-        }
-
-        return response.getSuccessBody();
     }
 
     public void downlink(String gatewayEui, String deviceEui, Integer fPort, String data) {
