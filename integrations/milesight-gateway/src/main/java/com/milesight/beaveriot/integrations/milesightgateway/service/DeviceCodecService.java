@@ -186,8 +186,8 @@ public class DeviceCodecService {
 
                     codecData.setResourceInfo(resourceInfo);
 
-                    CompletableFuture<String> decoderScriptFuture = CompletableFuture.supplyAsync(() -> resourceRequester.requestJsonResource(resourceInfo.getDecoderScript()));
-                    CompletableFuture<String> encoderScriptFuture = CompletableFuture.supplyAsync(() -> resourceRequester.requestJsonResource(resourceInfo.getEncoderScript()));
+                    CompletableFuture<String> decoderScriptFuture = CompletableFuture.supplyAsync(() -> resourceRequester.requestResourceAsString(resourceInfo.getDecoderScript()));
+                    CompletableFuture<String> encoderScriptFuture = CompletableFuture.supplyAsync(() -> resourceRequester.requestResourceAsString(resourceInfo.getEncoderScript()));
                     CompletableFuture<DeviceDef> deviceDefFuture = CompletableFuture.supplyAsync(() -> resourceRequester.requestDeviceDef(resourceInfo.getCodec()));
                     codecData.setDecoderStr(decoderScriptFuture.join());
                     codecData.setEncoderStr(encoderScriptFuture.join());
