@@ -75,7 +75,7 @@ public class DeviceService {
         String deviceEUI = GatewayString.standardizeEUI(addDevice.getEui());
         String gatewayEUI = GatewayString.standardizeEUI(addDevice.getGatewayEUI());
         if (!getDevices(List.of(deviceEUI)).isEmpty()) {
-            throw ServiceException.with(ErrorCode.PARAMETER_VALIDATION_FAILED.getErrorCode(), "Duplicated device EUI: " + deviceEUI).build();
+            throw ServiceException.with(MilesightGatewayErrorCode.DUPLICATED_DEVICE_EUI).args(Map.of("eui", deviceEUI)).build();
         }
 
         GatewayDeviceData deviceData = new GatewayDeviceData();
@@ -134,7 +134,10 @@ public class DeviceService {
                 .filter(deviceListProfileItem -> deviceListProfileItem.getProfileName().equals(profileName))
                 .findFirst();
         if (profileItem.isEmpty()) {
-            throw ServiceException.with(ErrorCode.PARAMETER_VALIDATION_FAILED.getErrorCode(), "Unknown Profile " + profileName + " for Gateway " + gatewayEUI).build();
+            throw ServiceException.with(MilesightGatewayErrorCode.NO_VALID_PROFILE_FOR_DEVICE).args(Map.of(
+                    "gatewayEui", gatewayEUI,
+                    "profileName", profileName
+            )).build();
         }
         addDeviceRequest.setProfileID(profileItem.get().getProfileID());
 
@@ -158,13 +161,13 @@ public class DeviceService {
         return json.convertValue(device.getAdditional(), GatewayDeviceData.class);
     }
 
-    @DistributedLock(name = LockConstants.UPDATE_GATEWAY_DEVICE_ENUM_LOCK)
+    @DistributedLock(name = LockConstants.UPDATE_GATEWAY_DEVICE_ENUM_LOCK, waitForLock = "5s")
     public void manageGatewayDevices(String gatewayEUI, String deviceEUI, GatewayDeviceOperation op) {
         Map<String, List<String>> gatewayDeviceRelation = msGwEntityService.getGatewayRelation();
         List<String> deviceList = gatewayDeviceRelation.get(gatewayEUI);
         if (op == GatewayDeviceOperation.ADD) {
             if (deviceList.contains(deviceEUI)) {
-                throw ServiceException.with(ErrorCode.PARAMETER_VALIDATION_FAILED.getErrorCode(), "Duplicated device eui: " + deviceEUI).build();
+                throw ServiceException.with(MilesightGatewayErrorCode.DUPLICATED_DEVICE_EUI).args(Map.of("eui", deviceEUI)).build();
             }
 
             deviceList.add(0, deviceEUI);
