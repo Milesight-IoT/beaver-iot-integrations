@@ -38,7 +38,7 @@ public class CamThinkAiInferenceClient {
         String params = "page=1&page_size=9999";
         url = url + "?" + params;
         ClientResponse clientResponse = OkHttpUtil.get(url, getCommonHeaders());
-        validateResponse(clientResponse);
+        validateResponse(clientResponse, true);
         try {
             return JsonUtils.fromJSON(clientResponse.getData(), CamThinkModelListResponse.class);
         } catch (Exception e) {
@@ -51,7 +51,7 @@ public class CamThinkAiInferenceClient {
         String url = config.getModelDetailUrl();
         url = MessageFormat.format(url, modelId);
         ClientResponse clientResponse = OkHttpUtil.get(url, getCommonHeaders());
-        validateResponse(clientResponse);
+        validateResponse(clientResponse, false);
         try {
             return JsonUtils.fromJSON(clientResponse.getData(), CamThinkModelDetailResponse.class);
         } catch (Exception e) {
@@ -64,7 +64,7 @@ public class CamThinkAiInferenceClient {
         String url = config.getModelInferUrl();
         url = MessageFormat.format(url, modelId);
         ClientResponse clientResponse = OkHttpUtil.post(url, getCommonHeaders(), JsonUtils.toJSON(camThinkModelInferRequest));
-        validateResponse(clientResponse);
+        validateResponse(clientResponse, false);
         try {
             return JsonUtils.fromJSON(clientResponse.getData(), CamThinkModelInferResponse.class);
         } catch (Exception e) {
@@ -73,14 +73,16 @@ public class CamThinkAiInferenceClient {
         }
     }
 
-    private void validateResponse(ClientResponse clientResponse) {
+    private void validateResponse(ClientResponse clientResponse, boolean isUpdateApiStatus) {
         try {
             if (!clientResponse.isSuccessful() || clientResponse.getData() == null) {
                 throw buildServiceException(clientResponse);
             }
         } catch (ServiceException e) {
-            AnnotatedEntityWrapper<CamThinkAiInferenceConnectionPropertiesEntities> wrapper = new AnnotatedEntityWrapper<>();
-            wrapper.saveValue(CamThinkAiInferenceConnectionPropertiesEntities::getApiStatus, false).publishSync();
+            if (isUpdateApiStatus) {
+                AnnotatedEntityWrapper<CamThinkAiInferenceConnectionPropertiesEntities> wrapper = new AnnotatedEntityWrapper<>();
+                wrapper.saveValue(CamThinkAiInferenceConnectionPropertiesEntities::getApiStatus, false).publishSync();
+            }
             throw e;
         }
     }
