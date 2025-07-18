@@ -19,10 +19,24 @@ public class CamThinkAiInferenceServiceEntities extends ExchangePayload {
     @Entity(type = EntityType.SERVICE, name = "Refresh models")
     private RefreshModels refreshModels;
 
+    @Entity(type = EntityType.SERVICE, name = "Draw result image")
+    private DrawResultImage drawResultImage;
+
     @Entities
     public static class RefreshModels extends ExchangePayload {
     }
 
     public static class ModelInput extends ExchangePayload {
+    }
+
+    @EqualsAndHashCode(callSuper = true)
+    @Data
+    @Entities
+    public static class DrawResultImage extends ExchangePayload {
+        @Entity(type = EntityType.SERVICE, name = "Image base64")
+        private String imageBase64;
+
+        @Entity(type = EntityType.SERVICE, name = "Camthink infer response json")
+        private String camthinkInferResponseJson;
     }
 }
