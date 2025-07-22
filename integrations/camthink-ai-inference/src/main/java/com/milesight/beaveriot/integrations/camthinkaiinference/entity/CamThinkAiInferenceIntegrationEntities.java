@@ -18,10 +18,10 @@ import lombok.experimental.FieldNameConstants;
 @EqualsAndHashCode(callSuper = true)
 @IntegrationEntities
 public class CamThinkAiInferenceIntegrationEntities extends ExchangePayload {
-    @Entity(type = EntityType.PROPERTY, name = "CamThink Ai inference device image entity map")
+    @Entity(type = EntityType.PROPERTY, name = "CamThink Ai inference device image entity map", visible = false)
     private String deviceImageEntityMap;
 
-    @Entity(type = EntityType.PROPERTY, name = "CamThink Ai inference sync models")
+    @Entity(type = EntityType.PROPERTY, name = "CamThink Ai inference sync models", visible = false)
     private SyncModels syncModels;
 
     @Data
