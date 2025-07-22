@@ -16,9 +16,11 @@ import com.milesight.beaveriot.context.integration.model.ExchangePayload;
 import com.milesight.beaveriot.context.integration.model.event.ExchangeEvent;
 import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
 import com.milesight.beaveriot.eventbus.api.Event;
+import com.milesight.beaveriot.integration.msc.constant.MscErrorCode;
 import com.milesight.beaveriot.integration.msc.constant.MscIntegrationConstants;
 import com.milesight.beaveriot.integration.msc.entity.MscServiceEntities;
 import com.milesight.beaveriot.integration.msc.util.MscTslUtils;
+import com.milesight.cloud.sdk.client.model.DeviceInfoResponse;
 import com.milesight.cloud.sdk.client.model.DeviceSaveOrUpdateRequest;
 import com.milesight.cloud.sdk.client.model.GenericResponseBodyDeviceInfoResponse;
 import com.milesight.cloud.sdk.client.model.ThingSpec;
@@ -128,39 +130,40 @@ public class MscDeviceService {
     @SneakyThrows
     @EventSubscribe(payloadKeyExpression = "msc-integration.integration.add_device.*")
     public void onAddDevice(Event<MscServiceEntities.AddDevice> event) {
-        val deviceName = event.getPayload().getAddDeviceName();
         if (mscClientProvider == null || mscClientProvider.getMscClient() == null) {
             throw ServiceException
                     .with(ErrorCode.SERVER_ERROR.getErrorCode(), "Integration has not been initialized yet.")
                     .build();
         }
+
+        val deviceName = event.getPayload().getAddDeviceName();
         val identifier = event.getPayload().getSn().toUpperCase();
         val mscClient = mscClientProvider.getMscClient();
-        val addDeviceResponse = mscClient.device().attach(DeviceSaveOrUpdateRequest.builder()
-                        .name(deviceName)
-                        .snDevEUI(identifier)
-                        .autoProvision(false)
-                        .build())
-                .execute()
-                .body();
-        if (addDeviceResponse == null || addDeviceResponse.getData() == null
-                || addDeviceResponse.getData().getDeviceId() == null) {
+
+        try {
+            val addDeviceResponse = mscClient.device()
+                    .attach(DeviceSaveOrUpdateRequest.builder()
+                            .name(deviceName)
+                            .snDevEUI(identifier)
+                            .autoProvision(false)
+                            .build())
+                    .execute()
+                    .body();
+
+            val deviceId = Optional.ofNullable(addDeviceResponse)
+                    .map(GenericResponseBodyDeviceInfoResponse::getData)
+                    .map(DeviceInfoResponse::getDeviceId)
+                    .orElse(null);
+            log.info("Device '{}' added to MSC with id '{}'", deviceName, deviceId);
+
+            final String deviceIdStr = String.valueOf(deviceId);
+            val thingSpec = getThingSpec(deviceIdStr);
+
+            addLocalDevice(identifier, deviceName, deviceIdStr, thingSpec);
+        } catch (MscSdkException e) {
             log.warn("Add device failed: '{}' '{}'", deviceName, identifier);
-            val reason = Optional.ofNullable(addDeviceResponse)
-                    .map(GenericResponseBodyDeviceInfoResponse::getErrCode)
-                    .orElse("Unknown");
-            throw ServiceException
-                    .with(ErrorCode.SERVER_ERROR.getErrorCode(), "Add device to MSC failed. Reason: " + reason)
-                    .build();
+            throw MscErrorCode.wrap(e).build();
         }
-
-        val deviceId = addDeviceResponse.getData().getDeviceId();
-        log.info("Device '{}' added to MSC with id '{}'", deviceName, deviceId);
-
-        final String deviceIdStr = String.valueOf(deviceId);
-        val thingSpec = getThingSpec(deviceIdStr);
-
-        addLocalDevice(identifier, deviceName, deviceIdStr, thingSpec);
     }
 
     public Device addLocalDevice(String identifier, String deviceName, String deviceId, ThingSpec thingSpec) {
@@ -255,7 +258,7 @@ public class MscDeviceService {
                     .execute();
         } catch (MscApiException e) {
             if (!"device_not_found".equals(e.getErrorResponse().getErrCode())) {
-                throw e;
+                throw MscErrorCode.wrap(e).build();
             } else {
                 log.warn("Device '{}' ({}) not found in MSC", device.getIdentifier(), deviceId);
             }

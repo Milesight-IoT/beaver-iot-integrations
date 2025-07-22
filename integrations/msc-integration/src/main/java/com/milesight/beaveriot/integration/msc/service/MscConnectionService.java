@@ -15,6 +15,7 @@ import com.milesight.beaveriot.context.integration.model.ExchangePayload;
 import com.milesight.beaveriot.context.security.TenantContext;
 import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
 import com.milesight.beaveriot.eventbus.api.Event;
+import com.milesight.beaveriot.integration.msc.constant.MscErrorCode;
 import com.milesight.beaveriot.integration.msc.entity.MscConnectionPropertiesEntities;
 import com.milesight.beaveriot.integration.msc.model.IntegrationStatus;
 import com.milesight.beaveriot.pubsub.MessagePubSub;
@@ -23,7 +24,7 @@ import com.milesight.beaveriot.pubsub.api.message.RemoteBroadcastMessage;
 import com.milesight.cloud.sdk.client.retrofit2.RFC3339DateFormat;
 import com.milesight.msc.sdk.MscClient;
 import com.milesight.msc.sdk.config.Credentials;
-import com.milesight.msc.sdk.error.MscApiException;
+import com.milesight.msc.sdk.error.MscSdkException;
 import com.milesight.msc.sdk.utils.LongStringNumberDeserializer;
 import lombok.*;
 import lombok.extern.slf4j.*;
@@ -124,13 +125,16 @@ public class MscConnectionService implements IMscClientProvider {
         } catch (Exception e) {
             log.error("Error occurs while testing connection", e);
             updateConnectionStatus(IntegrationStatus.ERROR);
-            var errorMessage = "Connection failed.";
-            if (e instanceof MscApiException) {
-                errorMessage = errorMessage + " Response: " + e.getMessage();
+
+            if (e instanceof ServiceException serviceException) {
+                throw serviceException;
+            } else if (e instanceof MscSdkException mscSdkException) {
+                throw MscErrorCode.wrap(mscSdkException).build();
+            } else {
+                throw ServiceException
+                        .with(ErrorCode.SERVER_ERROR.getErrorCode(), "Connection failed.")
+                        .build();
             }
-            throw ServiceException
-                    .with(ErrorCode.SERVER_ERROR.getErrorCode(), errorMessage)
-                    .build();
         }
     }
 
