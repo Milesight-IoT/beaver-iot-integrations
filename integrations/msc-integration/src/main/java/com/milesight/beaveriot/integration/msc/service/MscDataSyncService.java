@@ -3,7 +3,6 @@ package com.milesight.beaveriot.integration.msc.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.milesight.beaveriot.base.annotations.shedlock.DistributedLock;
 import com.milesight.beaveriot.base.annotations.shedlock.LockScope;
-import com.milesight.beaveriot.base.enums.ErrorCode;
 import com.milesight.beaveriot.base.exception.ServiceException;
 import com.milesight.beaveriot.context.api.DeviceServiceProvider;
 import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
@@ -14,6 +13,7 @@ import com.milesight.beaveriot.context.security.SecurityUserContext;
 import com.milesight.beaveriot.context.security.TenantContext;
 import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
 import com.milesight.beaveriot.eventbus.api.Event;
+import com.milesight.beaveriot.integration.msc.constant.MscErrorCode;
 import com.milesight.beaveriot.integration.msc.constant.MscIntegrationConstants;
 import com.milesight.beaveriot.integration.msc.entity.MscConnectionPropertiesEntities;
 import com.milesight.beaveriot.integration.msc.entity.MscServiceEntities;
@@ -41,7 +41,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -113,15 +112,15 @@ public class MscDataSyncService {
                     syncAllDeviceData(delta);
                 } catch (Exception e) {
                     log.error("Error occurred while retrieving data from MSC.", e);
-                    if (e instanceof MscSdkException) {
-                        throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), e.getMessage()).build();
+                    if (e instanceof MscSdkException mscSdkException) {
+                        throw MscErrorCode.wrap(mscSdkException).build();
                     }
                 } finally {
                     lock.unlock();
                 }
             }, () -> {
                 log.info("Another task is running, skipping this task");
-                throw new RejectedExecutionException("Another task is running.");
+                throw ServiceException.with(MscErrorCode.MSC_ANOTHER_TASK_RUNNING).build();
             });
         });
     }
@@ -132,7 +131,7 @@ public class MscDataSyncService {
         val openApiStatus = entityValueServiceProvider.findValueByKey(
                 MscConnectionPropertiesEntities.getKey(MscConnectionPropertiesEntities.Fields.openapiStatus));
         if (!IntegrationStatus.READY.name().equalsIgnoreCase(String.valueOf(openApiStatus))) {
-            throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), "Connection is not ready.").build();
+            throw ServiceException.with(MscErrorCode.MSC_CONNECTION_NOT_READY).build();
         }
         runSyncTask(false).get();
     }
