@@ -83,7 +83,7 @@ public class MscConnectionPropertiesEntities extends ExchangePayload {
         @Entity
         private Boolean enabled;
 
-        @Entity(attributes = {@Attribute(minLength = 1)})
+        @Entity(attributes = {@Attribute(optional = true)})
         private String secretKey;
 
     }
@@ -104,7 +104,7 @@ public class MscConnectionPropertiesEntities extends ExchangePayload {
         @Entity
         private Boolean enabled;
 
-        @Entity(attributes = {@Attribute(min = 30, max = 86400)})
+        @Entity(attributes = {@Attribute(min = 30, max = 86400, optional = true)})
         private Integer period;
 
     }
