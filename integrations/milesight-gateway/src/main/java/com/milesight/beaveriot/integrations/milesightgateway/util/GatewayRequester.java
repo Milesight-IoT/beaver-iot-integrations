@@ -1,5 +1,7 @@
 package com.milesight.beaveriot.integrations.milesightgateway.util;
 
+import com.milesight.beaveriot.base.error.ErrorHolder;
+import com.milesight.beaveriot.base.exception.MultipleErrorException;
 import com.milesight.beaveriot.base.exception.ServiceException;
 import com.milesight.beaveriot.integrations.milesightgateway.model.MilesightGatewayErrorCode;
 import com.milesight.beaveriot.integrations.milesightgateway.model.api.AddDeviceRequest;
@@ -16,6 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * MilesightGatewayRequestor class.
@@ -101,7 +104,7 @@ public class GatewayRequester {
         if (response.getErrorBody() != null) {
             throw ServiceException
                     .with(MilesightGatewayErrorCode.GATEWAY_RESPOND_ERROR)
-                    .args(Map.of("errors", List.of(response.getErrorBody().toMap())))
+                    .args(response.getErrorBody().toMap())
                     .build();
         }
     }
@@ -129,10 +132,13 @@ public class GatewayRequester {
         });
 
         if (!errors.isEmpty()) {
-            throw ServiceException
-                    .with(MilesightGatewayErrorCode.GATEWAY_RESPOND_ERROR)
-                    .args(Map.of("errors", errors))
-                    .build();
+            throw MultipleErrorException.with(
+                    MilesightGatewayErrorCode.GATEWAY_RESPOND_ERROR.getErrorMessage(),
+                    ErrorHolder.of(errors.stream().map(error -> ServiceException
+                            .with(MilesightGatewayErrorCode.GATEWAY_RESPOND_ERROR)
+                            .args(error)
+                            .build()).collect(Collectors.toList()))
+            );
         }
     }
 
