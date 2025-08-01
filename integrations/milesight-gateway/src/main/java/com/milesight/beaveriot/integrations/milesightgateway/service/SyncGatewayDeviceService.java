@@ -33,6 +33,8 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+import static com.milesight.beaveriot.integrations.milesightgateway.mqtt.MsGwMqttClient.GATEWAY_REQUEST_BATCH_SIZE;
+
 /**
  * SyncGatewayDeviceService class.
  *
@@ -126,33 +128,42 @@ public class SyncGatewayDeviceService {
         String applicationId = gatewayService.getGatewayApplicationId(gateway);
 
         // batch reset device codec
-        List<CompletableFuture<UpdateGatewayDeviceResponse>> futures = request.getDevices().stream()
-                .map(syncRequest -> CompletableFuture.supplyAsync(() -> {
-                    Map<String, Object> deviceItemData = gatewayService.doUpdateGatewayDevice(gatewayEui, syncRequest.getEui(), applicationId, Map.of(
-                                    DeviceListItemFields.PAYLOAD_CODEC_ID, NONE_CODEC_ID,
-                                    DeviceListItemFields.PAYLOAD_NAME, ""
-                            ));
-                    UpdateGatewayDeviceResponse response = new UpdateGatewayDeviceResponse();
-                    if (ObjectUtils.isEmpty(deviceItemData)) {
-                        return response;
-                    }
+        List<UpdateGatewayDeviceResponse> deviceItemList = new ArrayList<>();
+        int offset = 0;
+        while (offset < request.getDevices().size()) {
+            int end = Math.min(request.getDevices().size(), offset + GATEWAY_REQUEST_BATCH_SIZE);
+            List<CompletableFuture<UpdateGatewayDeviceResponse>> futures = request.getDevices()
+                    .subList(offset, end)
+                    .stream()
+                    .map(syncRequest -> CompletableFuture.supplyAsync(() -> {
+                        Map<String, Object> deviceItemData = gatewayService.doUpdateGatewayDevice(gatewayEui, syncRequest.getEui(), applicationId, Map.of(
+                                DeviceListItemFields.PAYLOAD_CODEC_ID, NONE_CODEC_ID,
+                                DeviceListItemFields.PAYLOAD_NAME, ""
+                        ));
+                        UpdateGatewayDeviceResponse response = new UpdateGatewayDeviceResponse();
+                        if (ObjectUtils.isEmpty(deviceItemData)) {
+                            return response;
+                        }
 
-                    response.setDeviceName((String) deviceItemData.get(DeviceListItemFields.NAME));
-                    GatewayDeviceData deviceData = new GatewayDeviceData();
-                    deviceData.setEui(syncRequest.getEui());
-                    deviceData.setGatewayEUI(gatewayEui);
-                    deviceData.setDeviceModel(syncRequest.getModelId());
-                    deviceData.setFPort(GatewayString.jsonInstance().convertValue(deviceItemData.get(DeviceListItemFields.F_PORT), Long.class));
-                    deviceData.setAppKey((String) deviceItemData.get(DeviceListItemFields.APP_KEY));
-                    deviceData.setFrameCounterValidation(!(Boolean) deviceItemData.get(DeviceListItemFields.SKIP_F_CNT_CHECK));
-                    response.setDeviceData(deviceData);
-                    return response;
-                }, taskExecutor)).toList();
-        List<UpdateGatewayDeviceResponse> deviceItemList = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).thenApply(v ->
-                        futures.stream()
-                                .map(CompletableFuture::join)
-                                .filter(response -> StringUtils.hasText(response.getDeviceName()))
-                                .toList()).join();
+                        response.setDeviceName((String) deviceItemData.get(DeviceListItemFields.NAME));
+                        GatewayDeviceData deviceData = new GatewayDeviceData();
+                        deviceData.setEui(syncRequest.getEui());
+                        deviceData.setGatewayEUI(gatewayEui);
+                        deviceData.setDeviceModel(syncRequest.getModelId());
+                        deviceData.setFPort(GatewayString.jsonInstance().convertValue(deviceItemData.get(DeviceListItemFields.F_PORT), Long.class));
+                        deviceData.setAppKey((String) deviceItemData.get(DeviceListItemFields.APP_KEY));
+                        deviceData.setFrameCounterValidation(!(Boolean) deviceItemData.get(DeviceListItemFields.SKIP_F_CNT_CHECK));
+                        response.setDeviceData(deviceData);
+                        return response;
+                    }, taskExecutor)).toList();
+            List<UpdateGatewayDeviceResponse> responseList = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).thenApply(v ->
+                    futures.stream()
+                            .map(CompletableFuture::join)
+                            .filter(response -> StringUtils.hasText(response.getDeviceName()))
+                            .toList()).join();
+            deviceItemList.addAll(responseList);
+            offset = end;
+        }
 
         // get codecs
         Map<String, DeviceCodecData> deviceCodecDataMap = deviceCodecService.batchGetDeviceCodecData(deviceItemList.stream().map(updateGatewayDeviceResponse -> updateGatewayDeviceResponse.getDeviceData().getDeviceModel()).toList());

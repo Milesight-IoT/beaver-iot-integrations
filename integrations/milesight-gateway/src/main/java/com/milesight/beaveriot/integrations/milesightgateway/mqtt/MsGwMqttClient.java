@@ -57,7 +57,9 @@ import static com.milesight.beaveriot.integrations.milesightgateway.mqtt.MsGwMqt
 public class MsGwMqttClient {
     private final AtomicBoolean isInit = new AtomicBoolean(false);
 
-    private static final Integer REQUEST_TIMEOUT_SECONDS = 6;
+    private static final Integer REQUEST_TIMEOUT_SECONDS = 8;
+
+    public static final Integer GATEWAY_REQUEST_BATCH_SIZE = 3;
 
     @Autowired
     EntityValueServiceProvider entityValueServiceProvider;
@@ -265,14 +267,22 @@ public class MsGwMqttClient {
             return List.of();
         }
 
-        List<MqttResponse<T>> ret = new ArrayList<>();
-        List<CompletableFuture<MqttResponse<T>>> allFutures = req
-                .stream()
-                .map(r -> CompletableFuture.supplyAsync(() -> request(gatewayEui, r, responseType), taskExecutor))
-                .toList();
-        CompletableFuture<?>[] futuresArray = allFutures.toArray(new CompletableFuture<?>[0]);
-        CompletableFuture.allOf(futuresArray).join();
-        allFutures.forEach(f -> ret.add(f.join()));
-        return ret;
+        final List<MqttResponse<T>> result = new ArrayList<>();
+
+        int offset = 0;
+        while (offset < req.size()) {
+            int end = Math.min(req.size(), offset + GATEWAY_REQUEST_BATCH_SIZE);
+            List<CompletableFuture<MqttResponse<T>>> allFutures = req
+                    .subList(offset, end)
+                    .stream()
+                    .map(r -> CompletableFuture.supplyAsync(() -> request(gatewayEui, r, responseType), taskExecutor))
+                    .toList();
+            CompletableFuture<?>[] futuresArray = allFutures.toArray(new CompletableFuture<?>[0]);
+            CompletableFuture.allOf(futuresArray).join();
+            allFutures.forEach(f -> result.add(f.join()));
+            offset = end;
+        }
+
+        return result;
     }
 }
