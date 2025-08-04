@@ -20,6 +20,7 @@ import com.milesight.beaveriot.integrations.milesightgateway.entity.GatewayEntit
 import com.milesight.beaveriot.integrations.milesightgateway.entity.MsGwIntegrationEntities;
 import com.milesight.beaveriot.integrations.milesightgateway.model.*;
 import com.milesight.beaveriot.integrations.milesightgateway.model.request.FetchGatewayCredentialRequest;
+import com.milesight.beaveriot.integrations.milesightgateway.model.response.GatewayDeviceListItem;
 import com.milesight.beaveriot.integrations.milesightgateway.model.response.MqttCredentialResponse;
 import com.milesight.beaveriot.integrations.milesightgateway.mqtt.MsGwMqttUtil;
 import com.milesight.beaveriot.integrations.milesightgateway.mqtt.model.MqttResponse;
@@ -402,5 +403,32 @@ public class GatewayService {
 
     private GatewayService self() {
         return (GatewayService) AopContext.currentProxy();
+    }
+
+    public List<GatewayDeviceListItem> getGatewayDevices(String eui) {
+        List<String> deviceEuiList = msGwEntityService.getGatewayRelation().get(GatewayString.standardizeEUI(eui));
+        if (deviceEuiList == null) {
+            return List.of();
+        }
+
+        Set<String> foundEui = new HashSet<>();
+        List<GatewayDeviceListItem> result = deviceService.getDevices(deviceEuiList).stream().map(device -> {
+            GatewayDeviceListItem item = new GatewayDeviceListItem();
+            item.setId(device.getId().toString());
+            item.setKey(device.getKey());
+            item.setEui(device.getIdentifier());
+            item.setName(device.getName());
+            item.setCreatedAt(device.getCreatedAt());
+            foundEui.add(device.getIdentifier());
+            return item;
+        }).sorted(Comparator.comparingLong(GatewayDeviceListItem::getCreatedAt).reversed()).toList();
+
+        // resolve dirty data
+        deviceEuiList.forEach(deviceEui -> {
+            if (!foundEui.contains(deviceEui)) {
+                deviceService.manageGatewayDevices(eui, deviceEui, GatewayDeviceOperation.DELETE);
+            }
+        });
+        return result;
     }
 }

@@ -22,8 +22,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.ObjectUtils;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -112,20 +110,7 @@ public class MilesightGatewayController {
 
     @GetMapping("/gateways/{gatewayEUI}/devices")
     public ResponseBody<List<GatewayDeviceListItem>> getGatewayDevices(@PathVariable("gatewayEUI") String eui) {
-        List<String> deviceEuiList = msGwEntityService.getGatewayRelation().get(GatewayString.standardizeEUI(eui));
-        if (deviceEuiList == null) {
-            return ResponseBuilder.success(List.of());
-        }
-
-        return ResponseBuilder.success(deviceService.getDevices(deviceEuiList).stream().map(device -> {
-            GatewayDeviceListItem item = new GatewayDeviceListItem();
-            item.setId(device.getId().toString());
-            item.setKey(device.getKey());
-            item.setEui(device.getIdentifier());
-            item.setName(device.getName());
-            item.setCreatedAt(device.getCreatedAt());
-            return item;
-        }).sorted(Comparator.comparingLong(GatewayDeviceListItem::getCreatedAt).reversed()).toList());
+        return ResponseBuilder.success(gatewayService.getGatewayDevices(eui));
     }
 
     @GetMapping("/gateways/{gatewayEUI}/sync-devices")
