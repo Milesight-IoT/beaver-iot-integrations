@@ -1,6 +1,7 @@
 package com.milesight.beaveriot.integrations.camthinkaiinference.entity;
 
 import com.milesight.beaveriot.context.integration.enums.EntityValueType;
+import com.milesight.beaveriot.context.integration.model.AttributeBuilder;
 import com.milesight.beaveriot.context.integration.model.Entity;
 import com.milesight.beaveriot.context.integration.model.EntityBuilder;
 import com.milesight.beaveriot.integrations.camthinkaiinference.constant.Constants;
@@ -54,7 +55,9 @@ public class ModelServiceInputEntityTemplate {
     }
 
     private String convertFormat() {
-        if (format.contains("uri")) {
+        if (format.contains("uri") && format.contains("base64")) {
+            return Constants.ATTRIBUTE_FORMAT_IMAGE;
+        } else if (format.contains("uri")) {
             return Constants.ATTRIBUTE_FORMAT_IMAGE_URL;
         } else if (format.contains("base64")) {
             return Constants.ATTRIBUTE_FORMAT_IMAGE_BASE64;
@@ -65,22 +68,19 @@ public class ModelServiceInputEntityTemplate {
 
     private Map<String, Object> buildAttributes() {
         Map<String, Object> attributes = new HashMap<>();
-        attributes.put("optional", !required);
+        attributes.put(AttributeBuilder.ATTRIBUTE_OPTIONAL, !required);
         if (format != null) {
             String convertFormat = convertFormat();
-            attributes.put("format", convertFormat);
-            if (convertFormat.equals(Constants.ATTRIBUTE_FORMAT_IMAGE_URL)) {
-                attributes.put("max_length", Constants.IMAGE_URL_MAX_LENGTH);
-            }
+            attributes.put(AttributeBuilder.ATTRIBUTE_FORMAT, convertFormat);
         }
         if (defaultValue != null) {
-            attributes.put("default_value", defaultValue);
+            attributes.put(AttributeBuilder.ATTRIBUTE_DEFAULT_VALUE, defaultValue);
         }
         if (minimum != null) {
-            attributes.put("min", minimum);
+            attributes.put(AttributeBuilder.ATTRIBUTE_MIN, minimum);
         }
         if (maximum != null) {
-            attributes.put("max", maximum);
+            attributes.put(AttributeBuilder.ATTRIBUTE_MAX, maximum);
         }
         return attributes;
     }
