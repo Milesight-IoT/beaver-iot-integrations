@@ -122,6 +122,11 @@ public class MqttDeviceTemplateService {
             throw ServiceException.with(ServerErrorCode.TEMPLATE_NAME_EXISTS.getErrorCode(), ServerErrorCode.TEMPLATE_NAME_EXISTS.getErrorMessage()).build();
         }
 
+        Long topicRelatedDeviceTemplateId = DataCenter.getTemplateIdByTopic(updateDeviceTemplateRequest.getTopic());
+        if (topicRelatedDeviceTemplateId != null && !id.equals(topicRelatedDeviceTemplateId)) {
+            throw ServiceException.with(ServerErrorCode.TOPIC_EXISTS.getErrorCode(), ServerErrorCode.TOPIC_EXISTS.getErrorMessage()).build();
+        }
+
         String topic = updateDeviceTemplateRequest.getTopic();
         deviceTemplate.setName(updateDeviceTemplateRequest.getName());
         deviceTemplate.setContent(updateDeviceTemplateRequest.getContent());
