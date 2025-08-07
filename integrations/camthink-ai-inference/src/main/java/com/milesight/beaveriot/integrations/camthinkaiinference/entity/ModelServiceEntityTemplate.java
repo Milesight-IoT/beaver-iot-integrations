@@ -16,7 +16,6 @@ import java.text.MessageFormat;
 public class ModelServiceEntityTemplate {
     private String modelId;
     private String name;
-    private String version;
     private String description;
     private String engineType;
 

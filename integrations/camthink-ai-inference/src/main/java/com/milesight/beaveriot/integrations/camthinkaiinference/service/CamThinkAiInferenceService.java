@@ -518,8 +518,7 @@ public class CamThinkAiInferenceService {
                 ModelServiceEntityTemplate modelServiceEntityTemplate = ModelServiceEntityTemplate.builder()
                         .modelId(modelData.getId())
                         .name(modelData.getName())
-                        .version(modelData.getVersion())
-                        .description(modelData.getDescription())
+                        .description(modelData.getRemark())
                         .engineType(modelData.getEngineType())
                         .build();
                 Entity modelServiceEntity = modelServiceEntityTemplate.toEntity();

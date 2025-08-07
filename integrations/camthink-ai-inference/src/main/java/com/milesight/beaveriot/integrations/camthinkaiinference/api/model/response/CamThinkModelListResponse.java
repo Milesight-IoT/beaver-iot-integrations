@@ -16,8 +16,7 @@ public class CamThinkModelListResponse extends CamThinkResponse<List<CamThinkMod
     public static class ModelData {
         private String id;
         private String name;
-        private String version;
-        private String description;
+        private String remark;
         private String engineType;
     }
 }
