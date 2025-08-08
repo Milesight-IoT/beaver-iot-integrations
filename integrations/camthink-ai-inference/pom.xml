@@ -10,13 +10,37 @@
     </parent>
 
     <artifactId>camthink-ai-inference</artifactId>
+    <name>camthink-ai-inference</name>
+    <description>Provide AI models and reasoning capabilities required for various scenarios, supporting device-bound AI model inference.</description>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <okhttp3.version>4.12.0</okhttp3.version>
+        <deploy.skip>true</deploy.skip>
     </properties>
+
+    <scm>
+        <url>https://github.com/milesight-iot/beaver-iot-integrations</url>
+    </scm>
+    <organization>
+        <name>Milesight</name>
+        <url>https://www.milesight.com</url>
+    </organization>
+    <developers>
+        <developer>
+            <id>luxb</id>
+            <name>luxb</name>
+            <email>luxb@milesight.com</email>
+        </developer>
+    </developers>
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>https://opensource.org/license/MIT</url>
+        </license>
+    </licenses>
 
     <dependencies>
         <dependency>
