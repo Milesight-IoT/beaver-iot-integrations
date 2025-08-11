@@ -486,10 +486,12 @@ public class CamThinkAiInferenceService {
             long start = System.currentTimeMillis();
             CamThinkModelListResponse camThinkModelListResponse = camThinkAiInferenceClient.getModels();
             if (camThinkModelListResponse == null) {
+                throwServiceNotReachableException();
                 return;
             }
 
             if (CollectionUtils.isEmpty(camThinkModelListResponse.getData())) {
+                throwServiceNotReachableException();
                 return;
             }
 
@@ -551,6 +553,12 @@ public class CamThinkAiInferenceService {
                         return null;
                     });
         }
+    }
+
+    private void throwServiceNotReachableException() {
+        AnnotatedEntityWrapper<CamThinkAiInferenceConnectionPropertiesEntities> wrapper = new AnnotatedEntityWrapper<>();
+        wrapper.saveValue(CamThinkAiInferenceConnectionPropertiesEntities::getApiStatus, false).publishSync();
+        throw ServiceException.with(ServerErrorCode.SERVER_NOT_REACHABLE.getErrorCode(), ServerErrorCode.SERVER_NOT_REACHABLE.getErrorMessage()).build();
     }
 
     private CompletableFuture<Entity> fetchAndSetModelInputEntities(Entity modelServiceEntity, String modelId) {

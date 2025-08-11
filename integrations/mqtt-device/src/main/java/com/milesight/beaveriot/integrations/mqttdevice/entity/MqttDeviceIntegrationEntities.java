@@ -9,6 +9,7 @@ import com.milesight.beaveriot.context.integration.entity.annotation.Integration
 import com.milesight.beaveriot.context.integration.enums.AccessMod;
 import com.milesight.beaveriot.context.integration.enums.EntityType;
 import com.milesight.beaveriot.context.integration.model.ExchangePayload;
+import com.milesight.beaveriot.context.support.IdentifierValidator;
 import com.milesight.beaveriot.integrations.mqttdevice.support.DataCenter;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -41,7 +42,7 @@ public class MqttDeviceIntegrationEntities extends ExchangePayload {
     @EqualsAndHashCode(callSuper = true)
     @Entities
     public static class AddDevice extends ExchangePayload implements AddDeviceAware {
-        @Entity(name = "deviceId", identifier = ADD_DEVICE_DEVICE_ID_IDENTIFIER)
+        @Entity(name = "deviceId", identifier = ADD_DEVICE_DEVICE_ID_IDENTIFIER, attributes = @Attribute(format = "REGEX:" + IdentifierValidator.regex, maxLength = 64))
         private String deviceId;
 
         @Entity(name = "template", identifier = ADD_DEVICE_TEMPLATE_IDENTIFIER, attributes = @Attribute(enumClass = EmptyEnum.class))
