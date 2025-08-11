@@ -18,7 +18,6 @@
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <okhttp3.version>4.12.0</okhttp3.version>
-        <deploy.skip>true</deploy.skip>
     </properties>
 
     <scm>
@@ -75,19 +74,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-            </plugin>
-
-            <!-- Override the parent config. Do not push this integration to the central repo -->
-            <plugin>
-                <groupId>org.sonatype.central</groupId>
-                <artifactId>central-publishing-maven-plugin</artifactId>
-                <version>0.6.0</version>
-                <executions>
-                    <execution>
-                        <id>injected-central-publishing</id>
-                        <phase>none</phase>
-                    </execution>
-                </executions>
             </plugin>
         </plugins>
     </build>
