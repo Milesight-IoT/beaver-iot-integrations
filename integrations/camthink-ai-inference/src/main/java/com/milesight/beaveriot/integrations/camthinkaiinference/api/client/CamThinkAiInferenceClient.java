@@ -52,7 +52,7 @@ public class CamThinkAiInferenceClient {
     }
 
     public CamThinkModelListResponse testGetModels() {
-        return getModels(1, 1, false);
+        return getModels(1, 10, false);
     }
 
     public CamThinkModelListResponse getModels() {
