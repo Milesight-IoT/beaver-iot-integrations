@@ -15,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 
 import java.text.MessageFormat;
 import java.util.Map;
@@ -33,12 +34,37 @@ public class CamThinkAiInferenceClient {
         return Map.of("X-Access-Token", config.getToken());
     }
 
+    public boolean testConnection() {
+        try {
+            CamThinkModelListResponse camThinkModelListResponse = testGetModels();
+            if (camThinkModelListResponse == null) {
+                throw ServiceException.with(ServerErrorCode.SERVER_NOT_REACHABLE.getErrorCode(), ServerErrorCode.SERVER_NOT_REACHABLE.getErrorMessage()).build();
+            }
+
+            if (CollectionUtils.isEmpty(camThinkModelListResponse.getData())) {
+                throw ServiceException.with(ServerErrorCode.SERVER_NOT_REACHABLE.getErrorCode(), ServerErrorCode.SERVER_NOT_REACHABLE.getErrorMessage()).build();
+            }
+        } catch (Exception e) {
+            log.warn("[Not reachable]" + e.getMessage());
+            return false;
+        }
+        return true;
+    }
+
+    public CamThinkModelListResponse testGetModels() {
+        return getModels(1, 1, false);
+    }
+
     public CamThinkModelListResponse getModels() {
+        return getModels(1, 9999, true);
+    }
+
+    public CamThinkModelListResponse getModels(int page, int pageSize, boolean isUpdateApiStatus) {
         String url = config.getModelsUrl();
-        String params = "page=1&page_size=9999";
+        String params = "page=" + page + "&page_size=" + pageSize;
         url = url + "?" + params;
         ClientResponse clientResponse = OkHttpUtil.get(url, getCommonHeaders());
-        validateResponse(clientResponse, Config.URL_MODELS, true);
+        validateResponse(clientResponse, Config.URL_MODELS, isUpdateApiStatus);
         try {
             return JsonUtils.fromJSON(clientResponse.getData(), CamThinkModelListResponse.class);
         } catch (Exception e) {
@@ -140,26 +166,5 @@ public class CamThinkAiInferenceClient {
             builder.detailMessage(detailMessage);
         }
         return builder.build();
-    }
-
-    public boolean testConnection() {
-        String baseUrl = config.getBaseUrl();
-        boolean apiStatus;
-        try {
-            apiStatus = validBaseUrl(baseUrl);
-        } catch (Exception e) {
-            log.warn("[Not reachable]: " + baseUrl);
-            apiStatus = false;
-        }
-        return apiStatus;
-    }
-
-    private boolean validBaseUrl(String url) {
-        try {
-            ClientResponse clientResponse = OkHttpUtil.get(url, getCommonHeaders());
-            return clientResponse != null && clientResponse.isSuccessful();
-        } catch (Exception e) {
-            return false;
-        }
     }
 }
