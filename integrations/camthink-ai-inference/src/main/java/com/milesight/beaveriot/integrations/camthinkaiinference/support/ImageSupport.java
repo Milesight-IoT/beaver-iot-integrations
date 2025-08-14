@@ -6,6 +6,9 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.MessageFormat;
 import java.time.Duration;
 import java.util.Base64;
@@ -43,6 +46,34 @@ public class ImageSupport {
             result.setImageSuffix(fileExtension);
             return result;
         }
+        return result;
+    }
+
+    @SuppressWarnings("unused")
+    public static ImageResult getImageBase64FromPath(String filePath) throws Exception {
+        ImageResult result = new ImageResult();
+
+        Path path = Paths.get(filePath);
+        if (!Files.exists(path)) {
+            throw new IllegalArgumentException("File does not exist: " + filePath);
+        }
+        if (!Files.isReadable(path)) {
+            throw new IllegalArgumentException("File cannot be read: " + filePath);
+        }
+
+        byte[] imageBytes = Files.readAllBytes(path);
+
+        String mimeType = Files.probeContentType(path);
+        if (mimeType == null || !mimeType.startsWith("image/")) {
+            mimeType = "image/jpeg";
+        }
+
+        String fileExtension = getFileExtensionFromMimeType(mimeType);
+
+        String imageBase64 = Base64.getEncoder().encodeToString(imageBytes);
+        result.setImageBase64(MessageFormat.format(IMAGE_BASE64_HEADER_FORMAT, mimeType) + imageBase64);
+        result.setImageSuffix(fileExtension);
+
         return result;
     }
 

@@ -18,8 +18,8 @@ import java.util.List;
  **/
 @Data
 public class ImageDrawPathAction implements ImageDrawAction {
-    private final static float DEFAULT_LINE_WIDTH = 2.0f;
-    private static final int DEFAULT_POINT_DIAMETER = 10;
+    private final static float DEFAULT_LINE_WIDTH = 1.0f;
+    private static final int DEFAULT_POINT_DIAMETER = 8;
     private final static String LINE_COLOR_FIELD = "line";
     private final static String POINT_COLOR_FIELD = "point";
     private Map<Integer, Point> pointMap;

@@ -4,13 +4,16 @@ import com.milesight.beaveriot.integrations.camthinkaiinference.support.image.co
 import com.milesight.beaveriot.integrations.camthinkaiinference.support.image.intefaces.ImageDrawAction;
 import lombok.Data;
 
+import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.stream.ImageOutputStream;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.text.MessageFormat;
-import java.util.ArrayList;
-import java.util.Base64;
+import java.util.*;
 import java.util.List;
 
 /**
@@ -19,9 +22,13 @@ import java.util.List;
  **/
 @Data
 public class ImageDrawEngine {
-    public static final String IMAGE_BASE64_HEADER_FORMAT = "data:image/{0};base64";
-    public static final String DEFAULT_IMAGE_SUFFIX = "jpeg";
-    public static final String DEFAULT_IMAGE_BASE64_HEADER = MessageFormat.format(IMAGE_BASE64_HEADER_FORMAT, DEFAULT_IMAGE_SUFFIX);
+    private static final String IMAGE_BASE64_HEADER_FORMAT = "data:image/{0};base64";
+    private static final String IMAGE_SUFFIX_JPEG = "jpeg";
+    private static final String IMAGE_SUFFIX_JPG = "jpg";
+    private static final Set<String> IMAGE_JPEG_SET = Set.of(IMAGE_SUFFIX_JPEG, IMAGE_SUFFIX_JPG);
+    private static final float JPEG_COMPRESSION_QUALITY = 1.0f;
+    private static final String DEFAULT_IMAGE_SUFFIX = IMAGE_SUFFIX_JPEG;
+    private static final String DEFAULT_IMAGE_BASE64_HEADER = MessageFormat.format(IMAGE_BASE64_HEADER_FORMAT, DEFAULT_IMAGE_SUFFIX);
     private ImageDrawConfig config;
     private BufferedImage image;
     private Graphics2D g2d;
@@ -48,6 +55,9 @@ public class ImageDrawEngine {
         image = new BufferedImage(
                 originImage.getWidth(), originImage.getHeight(), BufferedImage.TYPE_INT_RGB);
         g2d = image.createGraphics();
+
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
         g2d.drawImage(originImage, 0, 0, null);
 
@@ -79,7 +89,24 @@ public class ImageDrawEngine {
         } else {
             imageSuffix = getImageSuffixFromImageBase64Header(imageBase64Header);
         }
-        ImageIO.write(image, imageSuffix, bos);
+
+        if (IMAGE_JPEG_SET.contains(imageSuffix.toLowerCase())) {
+            Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName(IMAGE_SUFFIX_JPEG);
+            if (writers.hasNext()) {
+                ImageWriter writer = writers.next();
+                try (ImageOutputStream ios = ImageIO.createImageOutputStream(bos)) {
+                    writer.setOutput(ios);
+                    ImageWriteParam param = writer.getDefaultWriteParam();
+                    param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+                    param.setCompressionQuality(JPEG_COMPRESSION_QUALITY);
+                    writer.write(null, new IIOImage(image, null, null), param);
+                } finally {
+                    writer.dispose();
+                }
+            }
+        } else {
+            ImageIO.write(image, imageSuffix, bos);
+        }
 
         outputBase64Data = Base64.getEncoder().encodeToString(bos.toByteArray());
         return this;
@@ -95,6 +122,7 @@ public class ImageDrawEngine {
                 composeImageBase64(imageBase64Header, outputBase64Data);
     }
 
+    @SuppressWarnings("unused")
     public static String convertImageToBase64(String filePath) throws IOException {
         File file = new File(filePath);
         String base64Data;
