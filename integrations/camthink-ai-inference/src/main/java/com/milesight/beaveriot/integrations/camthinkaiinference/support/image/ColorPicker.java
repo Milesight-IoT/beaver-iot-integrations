@@ -36,6 +36,7 @@ public class ColorPicker {
 
     private static final Random RANDOM = new Random();
 
+    @SuppressWarnings("unused")
     public static Color randomColor() {
         return COLORS[RANDOM.nextInt(COLORS.length)];
     }
