@@ -420,7 +420,7 @@ public class CamThinkAiInferenceService {
         if (conf == null) {
             return "";
         }
-        return String.format("%s:%.2f", cls, conf);
+        return String.format("%s (%.2f)", cls, conf);
     }
 
     private static EventResponse getEventResponse(Object responseObj) {
