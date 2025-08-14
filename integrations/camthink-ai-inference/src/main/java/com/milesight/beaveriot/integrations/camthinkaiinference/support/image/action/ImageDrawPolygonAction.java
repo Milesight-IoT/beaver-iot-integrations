@@ -30,7 +30,7 @@ public class ImageDrawPolygonAction implements ImageDrawAction {
 
     @Override
     public Map<String, ColorPicker> getColorPickerMap() {
-        return Map.of(DEFAULT_COLOR_FIELD, new ColorPicker(1));
+        return Map.of(DEFAULT_COLOR_FIELD, new ColorPicker());
     }
 
     @Override
