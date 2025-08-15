@@ -19,6 +19,7 @@ public class ImageDrawRectangleAction implements ImageDrawAction {
     private final static float FONT_SIZE = 20.0f;
     private final static int FONT_BOX_PADDING_LEFT_AND_RIGHT = 6;
     private final static int FONT_BOX_PADDING_TOP_AND_BOTTOM = 4;
+    private final static float FONT_BOX_TRANSPARENCY = 1.0f;
     private int x;
     private int y;
     private int width;
@@ -60,7 +61,8 @@ public class ImageDrawRectangleAction implements ImageDrawAction {
         int textHeight = fontMetrics.getHeight();
         int descent = fontMetrics.getDescent();
 
-        g2d.setColor(color);
+        Color textBoxColor = new Color(color.getRed(), color.getGreen(), color.getBlue(), (int) (255 * FONT_BOX_TRANSPARENCY));
+        g2d.setColor(textBoxColor);
         int outsideTextWidth = textWidth + 2 * FONT_BOX_PADDING_LEFT_AND_RIGHT;
         int outsideTextHeight = textHeight + 2 * FONT_BOX_PADDING_TOP_AND_BOTTOM;
         int textFillRectWidth = outsideTextWidth - (int) DEFAULT_LINE_WIDTH;

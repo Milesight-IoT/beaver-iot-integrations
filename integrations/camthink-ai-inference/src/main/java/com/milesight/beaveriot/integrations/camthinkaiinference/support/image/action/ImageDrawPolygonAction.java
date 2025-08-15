@@ -16,6 +16,7 @@ import java.util.Map;
 public class ImageDrawPolygonAction implements ImageDrawAction {
     private final static float DEFAULT_LINE_WIDTH = 1.0f;
     private final static String DEFAULT_COLOR_FIELD = "default";
+    private final static float BORDER_TRANSPARENCY = 0.3f;
     private final static float FILL_TRANSPARENCY = 0.26f;
     private Polygon polygon;
 
@@ -42,7 +43,8 @@ public class ImageDrawPolygonAction implements ImageDrawAction {
         g2d.setColor(fillColor);
         g2d.fill(polygon);
 
-        g2d.setColor(color);
+        Color borderColor = new Color(color.getRed(), color.getGreen(), color.getBlue(), (int) (255 * BORDER_TRANSPARENCY));
+        g2d.setColor(borderColor);
         g2d.setStroke(new BasicStroke(DEFAULT_LINE_WIDTH));
         g2d.draw(polygon);
     }
