@@ -326,29 +326,29 @@ public class CamThinkAiInferenceService {
 
     private String drawResultImage(String imageBase64, CamThinkModelInferResponse camThinkModelInferResponse) throws Exception {
         if (camThinkModelInferResponse.getData() == null) {
-            return "";
+            return imageBase64;
         }
 
         if (camThinkModelInferResponse.getData().getOutputs() == null) {
-            return "";
+            return imageBase64;
         }
 
         if (camThinkModelInferResponse.getData().getOutputs().get(CamThinkModelInferResponse.ModelInferData.FIELD_DATA) == null) {
-            return "";
+            return imageBase64;
         }
         String dataJson = JsonUtils.toJSON(camThinkModelInferResponse.getData().getOutputs().get(CamThinkModelInferResponse.ModelInferData.FIELD_DATA));
         List<CamThinkModelInferResponse.ModelInferData.OutputData> data = JsonUtils.fromJSON(dataJson, new TypeReference<>() {});
         if(CollectionUtils.isEmpty(data)) {
-            return "";
+            return imageBase64;
         }
 
         CamThinkModelInferResponse.ModelInferData.OutputData outputData = data.get(0);
         if (CollectionUtils.isEmpty(outputData.getDetections())) {
-            return "";
+            return imageBase64;
         }
 
         if (StringUtils.isEmpty(imageBase64)) {
-            return "";
+            return imageBase64;
         }
 
         ImageDrawEngine engine = new ImageDrawEngine(ImageDrawConfig.getDefault());
