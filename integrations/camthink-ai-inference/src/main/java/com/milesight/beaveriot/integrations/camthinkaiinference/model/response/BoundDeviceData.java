@@ -13,6 +13,7 @@ import lombok.EqualsAndHashCode;
 public class BoundDeviceData extends InferHistory {
     private String deviceId;
     private String deviceName;
+    private String currentModelName;
     private Long createAt;
     private String inferHistoryEntityId;
     private String inferHistoryEntityKey;

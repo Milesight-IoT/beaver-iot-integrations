@@ -277,7 +277,7 @@ public class CamThinkAiInferenceController {
         boundDeviceData.setDeviceName(device.getName());
 
         String modelId = (String) entityValueServiceProvider.findValueByKey(EntitySupport.getDeviceEntityKey(device.getKey(), Constants.IDENTIFIER_MODEL_ID));
-        boundDeviceData.setModelName(modelMap.get(modelId));
+        boundDeviceData.setCurrentModelName(modelMap.get(modelId));
 
         String imageEntityKey = DataCenter.getImageEntityKeyByDeviceId(device.getId());
         String originImage = (String) entityValueServiceProvider.findValueByKey(imageEntityKey);
