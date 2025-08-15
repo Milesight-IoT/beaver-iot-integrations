@@ -9,7 +9,6 @@ import com.milesight.beaveriot.context.api.EntityServiceProvider;
 import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
 import com.milesight.beaveriot.context.integration.enums.AttachTargetType;
 import com.milesight.beaveriot.context.integration.enums.EntityValueType;
-import com.milesight.beaveriot.context.integration.model.AttributeBuilder;
 import com.milesight.beaveriot.context.integration.model.Device;
 import com.milesight.beaveriot.context.integration.model.Entity;
 import com.milesight.beaveriot.context.integration.model.ExchangePayload;
@@ -625,23 +624,8 @@ public class CamThinkAiInferenceService {
 
             String modelKey = ModelServiceEntityTemplate.getModelKey(modelId);
             Entity modelServiceEntity = entityServiceProvider.findByKey(modelKey);
-            setImageEntityMaxLength(modelServiceEntity.getChildren());
             modelOutputSchemaResponse.setInputEntities(modelServiceEntity.getChildren());
         }
         return modelOutputSchemaResponse;
-    }
-
-    private void setImageEntityMaxLength(List<Entity> childrenEntity) {
-        if (childrenEntity == null) {
-            return;
-        }
-
-        childrenEntity.forEach(entity -> {
-            String format = entity.getAttributeStringValue(Constants.ATTRIBUTE_KEY_FORMAT);
-            if (Constants.ATTRIBUTE_FORMAT_IMAGE.equals(format) || Constants.ATTRIBUTE_FORMAT_IMAGE_URL.equals(format)) {
-                Map<String, Object> attributes = entity.getAttributes();
-                attributes.put(AttributeBuilder.ATTRIBUTE_MAX_LENGTH, Constants.IMAGE_URL_MAX_LENGTH);
-            }
-        });
     }
 }
