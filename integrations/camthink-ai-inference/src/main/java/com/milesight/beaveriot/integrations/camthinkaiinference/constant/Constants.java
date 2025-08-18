@@ -23,5 +23,4 @@ public class Constants {
     public static final String ENTITY_KEY_FORMAT = "{0}.{1}";
     public static final String CHILDREN_ENTITY_KEY_FORMAT = "{0}.{1}.{2}";
     public static final Long SYNC_MODELS_PERIOD_SECONDS = 1800L;
-    public static final Integer IMAGE_URL_MAX_LENGTH = 256;
 }

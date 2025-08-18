@@ -45,8 +45,8 @@ public class ImageDrawPathAction implements ImageDrawAction {
     @Override
     public Map<String, ColorPicker> getColorPickerMap() {
         return Map.of(
-                LINE_COLOR_FIELD, new ColorPicker(4),
-                POINT_COLOR_FIELD, new ColorPicker()
+                LINE_COLOR_FIELD, new ColorPicker(),
+                POINT_COLOR_FIELD, new ColorPicker(4)
         );
     }
 
@@ -55,7 +55,8 @@ public class ImageDrawPathAction implements ImageDrawAction {
         g2d.setStroke(new BasicStroke(DEFAULT_LINE_WIDTH));
 
         ColorPicker lineColorPicker = colorManager.getColorPicker(this.getClass(), LINE_COLOR_FIELD);
-        g2d.setColor(lineColorPicker.nextColor());
+        Color lineColor = lineColorPicker.nextColor();
+        g2d.setColor(lineColor);
         for (Line line : lineList) {
             Point startPoint = pointMap.get(line.getStartPointId());
             Point endPoint = pointMap.get(line.getEndPointId());
@@ -68,7 +69,11 @@ public class ImageDrawPathAction implements ImageDrawAction {
 
         ColorPicker pointColorPicker = colorManager.getColorPicker(this.getClass(), POINT_COLOR_FIELD);
         for (Point point : pointMap.values()) {
-            g2d.setColor(pointColorPicker.nextColor());
+            Color pointColor = pointColorPicker.nextColor();
+            if (pointColor.equals(lineColor)) {
+                pointColor = pointColorPicker.nextColor();
+            }
+            g2d.setColor(pointColor);
             g2d.fillOval((int)point.getX() - DEFAULT_POINT_DIAMETER / 2, (int)point.getY() - DEFAULT_POINT_DIAMETER / 2, DEFAULT_POINT_DIAMETER, DEFAULT_POINT_DIAMETER);
         }
     }

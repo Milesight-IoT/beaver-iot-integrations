@@ -9,7 +9,6 @@ import com.milesight.beaveriot.context.api.EntityServiceProvider;
 import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
 import com.milesight.beaveriot.context.integration.enums.AttachTargetType;
 import com.milesight.beaveriot.context.integration.enums.EntityValueType;
-import com.milesight.beaveriot.context.integration.model.AttributeBuilder;
 import com.milesight.beaveriot.context.integration.model.Device;
 import com.milesight.beaveriot.context.integration.model.Entity;
 import com.milesight.beaveriot.context.integration.model.ExchangePayload;
@@ -326,29 +325,29 @@ public class CamThinkAiInferenceService {
 
     private String drawResultImage(String imageBase64, CamThinkModelInferResponse camThinkModelInferResponse) throws Exception {
         if (camThinkModelInferResponse.getData() == null) {
-            return "";
+            return imageBase64;
         }
 
         if (camThinkModelInferResponse.getData().getOutputs() == null) {
-            return "";
+            return imageBase64;
         }
 
         if (camThinkModelInferResponse.getData().getOutputs().get(CamThinkModelInferResponse.ModelInferData.FIELD_DATA) == null) {
-            return "";
+            return imageBase64;
         }
         String dataJson = JsonUtils.toJSON(camThinkModelInferResponse.getData().getOutputs().get(CamThinkModelInferResponse.ModelInferData.FIELD_DATA));
         List<CamThinkModelInferResponse.ModelInferData.OutputData> data = JsonUtils.fromJSON(dataJson, new TypeReference<>() {});
         if(CollectionUtils.isEmpty(data)) {
-            return "";
+            return imageBase64;
         }
 
         CamThinkModelInferResponse.ModelInferData.OutputData outputData = data.get(0);
         if (CollectionUtils.isEmpty(outputData.getDetections())) {
-            return "";
+            return imageBase64;
         }
 
         if (StringUtils.isEmpty(imageBase64)) {
-            return "";
+            return imageBase64;
         }
 
         ImageDrawEngine engine = new ImageDrawEngine(ImageDrawConfig.getDefault());
@@ -625,23 +624,8 @@ public class CamThinkAiInferenceService {
 
             String modelKey = ModelServiceEntityTemplate.getModelKey(modelId);
             Entity modelServiceEntity = entityServiceProvider.findByKey(modelKey);
-            setImageEntityMaxLength(modelServiceEntity.getChildren());
             modelOutputSchemaResponse.setInputEntities(modelServiceEntity.getChildren());
         }
         return modelOutputSchemaResponse;
-    }
-
-    private void setImageEntityMaxLength(List<Entity> childrenEntity) {
-        if (childrenEntity == null) {
-            return;
-        }
-
-        childrenEntity.forEach(entity -> {
-            String format = entity.getAttributeStringValue(Constants.ATTRIBUTE_KEY_FORMAT);
-            if (Constants.ATTRIBUTE_FORMAT_IMAGE.equals(format) || Constants.ATTRIBUTE_FORMAT_IMAGE_URL.equals(format)) {
-                Map<String, Object> attributes = entity.getAttributes();
-                attributes.put(AttributeBuilder.ATTRIBUTE_MAX_LENGTH, Constants.IMAGE_URL_MAX_LENGTH);
-            }
-        });
     }
 }
