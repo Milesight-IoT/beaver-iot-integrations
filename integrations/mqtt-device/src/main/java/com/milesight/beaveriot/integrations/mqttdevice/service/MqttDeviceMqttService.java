@@ -53,7 +53,9 @@ public class MqttDeviceMqttService {
                     Device device = result.getDevice();
                     ExchangePayload payload = result.getPayload();
                     if (device != null) {
-                        deviceServiceProvider.save(device);
+                        if (deviceServiceProvider.findByKey(device.getKey()) == null) {
+                            deviceServiceProvider.save(device);
+                        }
                         if (payload != null) {
                             entityValueServiceProvider.saveValuesAndPublishAsync(payload);
                         }
