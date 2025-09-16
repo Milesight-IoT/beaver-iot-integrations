@@ -85,7 +85,7 @@ public class MqttDeviceService {
 
     @DistributedLock(name = LockConstants.SYNC_DEVICE_TEMPLATE_LOCK)
     public void syncTemplates() {
-        List<DeviceTemplate> deviceTemplates = deviceTemplateServiceProvider.findAll(IntegrationConstants.SYSTEM_INTEGRATION_ID);
+        List<DeviceTemplate> deviceTemplates = deviceTemplateServiceProvider.findAllCustom(IntegrationConstants.SYSTEM_INTEGRATION_ID);
         Map<String, String> templates;
         if (CollectionUtils.isEmpty(deviceTemplates)) {
             templates = Maps.newLinkedHashMap();

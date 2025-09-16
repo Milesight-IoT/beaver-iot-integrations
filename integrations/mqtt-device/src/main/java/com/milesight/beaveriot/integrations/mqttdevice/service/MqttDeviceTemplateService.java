@@ -91,7 +91,7 @@ public class MqttDeviceTemplateService {
     }
 
     public Page<DeviceTemplateResponseData> searchDeviceTemplate(SearchDeviceTemplateRequest searchDeviceTemplateRequest) {
-        Page<DeviceTemplateResponseData> deviceTemplateResponseDataPage = deviceTemplateServiceProvider.search(searchDeviceTemplateRequest);
+        Page<DeviceTemplateResponseData> deviceTemplateResponseDataPage = deviceTemplateServiceProvider.searchCustom(searchDeviceTemplateRequest);
         return deviceTemplateResponseDataPage.map(deviceTemplateResponseData -> DeviceTemplateInfoResponse.build(deviceTemplateResponseData, DataCenter.getTopic(Long.parseLong(deviceTemplateResponseData.getId()))));
     }
 
