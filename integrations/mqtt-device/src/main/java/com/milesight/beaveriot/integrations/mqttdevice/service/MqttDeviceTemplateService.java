@@ -10,7 +10,6 @@ import com.milesight.beaveriot.context.integration.model.event.ExchangeEvent;
 import com.milesight.beaveriot.context.model.DeviceTemplateModel;
 import com.milesight.beaveriot.context.model.request.SearchDeviceTemplateRequest;
 import com.milesight.beaveriot.context.model.response.DeviceTemplateInputResult;
-import com.milesight.beaveriot.context.model.response.DeviceTemplateOutputResult;
 import com.milesight.beaveriot.context.model.response.DeviceTemplateResponseData;
 import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
 import com.milesight.beaveriot.eventbus.api.Event;
@@ -99,10 +98,6 @@ public class MqttDeviceTemplateService {
         return inputAndGetTestResponse(DataCenter.INTEGRATION_ID, id, testDeviceTemplateRequest.getTestData());
     }
 
-    public DeviceTemplateOutputResult output(String deviceKey, ExchangePayload payload) {
-        return deviceTemplateParserProvider.output(deviceKey, payload);
-    }
-
     private void flattenDeviceEntities(List<Entity> deviceEntities, Map<String, Entity> flatDeviceEntityMap) {
         for (Entity entity : deviceEntities) {
             flatDeviceEntityMap.put(entity.getKey(), entity);
@@ -183,6 +178,7 @@ public class MqttDeviceTemplateService {
         return deviceTemplateResponseData;
     }
 
+    @SuppressWarnings("unused")
     @EventSubscribe(payloadKeyExpression = DataCenter.INTEGRATION_ID + ".integration." + MqttDeviceServiceEntities.DATA_INPUT_IDENTIFIER + ".*", eventType = ExchangeEvent.EventType.CALL_SERVICE)
     public EventResponse onDataInput(Event<MqttDeviceServiceEntities.DataInput> event) {
         MqttDeviceServiceEntities.DataInput dataInput = event.getPayload();
