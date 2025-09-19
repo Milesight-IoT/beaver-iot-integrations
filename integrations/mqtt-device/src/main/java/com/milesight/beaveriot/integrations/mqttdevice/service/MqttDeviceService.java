@@ -12,9 +12,11 @@ import com.milesight.beaveriot.context.integration.model.event.ExchangeEvent;
 import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
 import com.milesight.beaveriot.eventbus.api.Event;
 import com.milesight.beaveriot.integrations.mqttdevice.constants.LockConstants;
+import com.milesight.beaveriot.integrations.mqttdevice.constants.MqttDeviceConstants;
 import com.milesight.beaveriot.integrations.mqttdevice.entity.MqttDeviceIntegrationEntities;
 import com.milesight.beaveriot.integrations.mqttdevice.entity.MqttDeviceServiceEntities;
 import com.milesight.beaveriot.integrations.mqttdevice.support.DataCenter;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
@@ -34,12 +36,18 @@ public class MqttDeviceService {
     private final DeviceTemplateServiceProvider deviceTemplateServiceProvider;
     private final DeviceTemplateParserProvider deviceTemplateParserProvider;
     private final EntityServiceProvider entityServiceProvider;
+    private final MqttDeviceTemplateService mqttDeviceTemplateService;
 
-    public MqttDeviceService(DeviceServiceProvider deviceServiceProvider, DeviceTemplateServiceProvider deviceTemplateServiceProvider, DeviceTemplateParserProvider deviceTemplateParserProvider, EntityServiceProvider entityServiceProvider) {
+    public MqttDeviceService(DeviceServiceProvider deviceServiceProvider,
+                             DeviceTemplateServiceProvider deviceTemplateServiceProvider,
+                             DeviceTemplateParserProvider deviceTemplateParserProvider,
+                             EntityServiceProvider entityServiceProvider,
+                             @Lazy MqttDeviceTemplateService mqttDeviceTemplateService) {
         this.deviceServiceProvider = deviceServiceProvider;
         this.deviceTemplateServiceProvider = deviceTemplateServiceProvider;
         this.deviceTemplateParserProvider = deviceTemplateParserProvider;
         this.entityServiceProvider = entityServiceProvider;
+        this.mqttDeviceTemplateService = mqttDeviceTemplateService;
     }
 
     @EventSubscribe(payloadKeyExpression = DataCenter.INTEGRATION_ID + ".integration." + MqttDeviceIntegrationEntities.ADD_DEVICE_IDENTIFIER + ".*", eventType = ExchangeEvent.EventType.CALL_SERVICE)
@@ -105,5 +113,15 @@ public class MqttDeviceService {
         Entity dataInputTemplateEntity = getDataInputTemplateEntity();
         dataInputTemplateEntity.getAttributes().put(AttributeBuilder.ATTRIBUTE_ENUM, templates);
         entityServiceProvider.save(dataInputTemplateEntity);
+    }
+
+    public long getDeviceOfflineTimeout(Device device) {
+        String templateKey = device.getTemplate();
+        DeviceTemplate deviceTemplate = deviceTemplateServiceProvider.findByKey(templateKey);
+        if (deviceTemplate == null) {
+            return MqttDeviceConstants.DEFAULT_DEVICE_OFFLINE_TIMEOUT;
+        }
+
+        return mqttDeviceTemplateService.getDeviceOfflineTimeout(deviceTemplate.getId());
     }
 }

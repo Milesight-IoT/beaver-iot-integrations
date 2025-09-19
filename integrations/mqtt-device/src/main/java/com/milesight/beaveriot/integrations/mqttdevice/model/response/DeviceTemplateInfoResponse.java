@@ -1,6 +1,9 @@
 package com.milesight.beaveriot.integrations.mqttdevice.model.response;
 
 import com.milesight.beaveriot.context.model.response.DeviceTemplateResponseData;
+import com.milesight.beaveriot.context.support.SpringContext;
+import com.milesight.beaveriot.integrations.mqttdevice.service.MqttDeviceTemplateService;
+import com.milesight.beaveriot.integrations.mqttdevice.support.DataCenter;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.springframework.beans.BeanUtils;
@@ -13,13 +16,18 @@ import org.springframework.beans.BeanUtils;
 @Data
 public class DeviceTemplateInfoResponse extends DeviceTemplateResponseData {
     private String topic;
+    private long deviceOfflineTimeout;
 
-    protected DeviceTemplateInfoResponse(DeviceTemplateResponseData deviceTemplateResponseData, String topic) {
+    protected DeviceTemplateInfoResponse(DeviceTemplateResponseData deviceTemplateResponseData) {
         BeanUtils.copyProperties(deviceTemplateResponseData, this);
-        this.topic = topic;
+
+        Long deviceTemplateId = Long.parseLong(deviceTemplateResponseData.getId());
+        topic = DataCenter.getTopic(deviceTemplateId);
+        MqttDeviceTemplateService mqttDeviceTemplateService = SpringContext.getBean(MqttDeviceTemplateService.class);
+        deviceOfflineTimeout = mqttDeviceTemplateService.getDeviceOfflineTimeout(deviceTemplateId);
     }
 
-    public static DeviceTemplateInfoResponse build(DeviceTemplateResponseData deviceTemplateResponseData, String topic) {
-        return new DeviceTemplateInfoResponse(deviceTemplateResponseData, topic);
+    public static DeviceTemplateInfoResponse build(DeviceTemplateResponseData deviceTemplateResponseData) {
+        return new DeviceTemplateInfoResponse(deviceTemplateResponseData);
     }
 }

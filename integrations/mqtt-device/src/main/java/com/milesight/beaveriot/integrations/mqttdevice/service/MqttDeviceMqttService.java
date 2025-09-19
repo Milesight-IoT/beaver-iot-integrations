@@ -2,10 +2,7 @@ package com.milesight.beaveriot.integrations.mqttdevice.service;
 
 import com.milesight.beaveriot.base.enums.ErrorCode;
 import com.milesight.beaveriot.base.exception.ServiceException;
-import com.milesight.beaveriot.context.api.DeviceServiceProvider;
-import com.milesight.beaveriot.context.api.DeviceTemplateParserProvider;
-import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
-import com.milesight.beaveriot.context.api.MqttPubSubServiceProvider;
+import com.milesight.beaveriot.context.api.*;
 import com.milesight.beaveriot.context.integration.model.Device;
 import com.milesight.beaveriot.context.integration.model.ExchangePayload;
 import com.milesight.beaveriot.context.model.response.DeviceTemplateInputResult;
@@ -29,13 +26,15 @@ public class MqttDeviceMqttService {
     private final DeviceTemplateParserProvider deviceTemplateParserProvider;
     private final DeviceServiceProvider deviceServiceProvider;
     private final EntityValueServiceProvider entityValueServiceProvider;
+    private final DeviceStatusServiceProvider deviceStatusServiceProvider;
     private final ExecutorService jsonDataHandleService;
 
-    public MqttDeviceMqttService(MqttPubSubServiceProvider mqttPubSubServiceProvider, DeviceTemplateParserProvider deviceTemplateParserProvider, DeviceServiceProvider deviceServiceProvider, EntityValueServiceProvider entityValueServiceProvider) {
+    public MqttDeviceMqttService(MqttPubSubServiceProvider mqttPubSubServiceProvider, DeviceTemplateParserProvider deviceTemplateParserProvider, DeviceServiceProvider deviceServiceProvider, EntityValueServiceProvider entityValueServiceProvider, DeviceStatusServiceProvider deviceStatusServiceProvider) {
         this.mqttPubSubServiceProvider = mqttPubSubServiceProvider;
         this.deviceTemplateParserProvider = deviceTemplateParserProvider;
         this.deviceServiceProvider = deviceServiceProvider;
         this.entityValueServiceProvider = entityValueServiceProvider;
+        this.deviceStatusServiceProvider = deviceStatusServiceProvider;
         this.jsonDataHandleService = Executors.newCachedThreadPool();
     }
 
@@ -58,6 +57,7 @@ public class MqttDeviceMqttService {
                         }
                         if (payload != null) {
                             entityValueServiceProvider.saveValuesAndPublishAsync(payload);
+                            deviceStatusServiceProvider.online(device);
                         }
                     }
                 });

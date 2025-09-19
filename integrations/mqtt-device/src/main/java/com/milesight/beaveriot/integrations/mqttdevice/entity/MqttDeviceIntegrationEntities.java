@@ -23,6 +23,7 @@ import lombok.EqualsAndHashCode;
 @IntegrationEntities
 public class MqttDeviceIntegrationEntities extends ExchangePayload {
     public static final String TOPIC_MAP_IDENTIFIER = "topic-map";
+    public static final String DEVICE_TEMPLATE_ADDITIONAL_DATA_MAP_IDENTIFIER = "device-template-additional-data-map";
     public static final String ADD_DEVICE_IDENTIFIER = "add-device";
     public static final String DELETE_DEVICE_IDENTIFIER = "delete-device";
     public static final String ADD_DEVICE_DEVICE_ID_IDENTIFIER = "device_id";
@@ -31,6 +32,9 @@ public class MqttDeviceIntegrationEntities extends ExchangePayload {
 
     @Entity(type = EntityType.PROPERTY, identifier = TOPIC_MAP_IDENTIFIER, accessMod = AccessMod.R, visible = false)
     private String topicMap;
+
+    @Entity(type = EntityType.PROPERTY, identifier = DEVICE_TEMPLATE_ADDITIONAL_DATA_MAP_IDENTIFIER, accessMod = AccessMod.R, visible = false)
+    private String deviceTemplateAdditionalDataMap;
 
     @Entity(type = EntityType.SERVICE, identifier = ADD_DEVICE_IDENTIFIER, visible = false)
     private AddDevice addDevice;
