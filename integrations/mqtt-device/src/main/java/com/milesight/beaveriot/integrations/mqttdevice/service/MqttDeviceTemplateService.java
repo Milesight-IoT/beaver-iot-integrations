@@ -10,13 +10,14 @@ import com.milesight.beaveriot.context.integration.model.event.ExchangeEvent;
 import com.milesight.beaveriot.context.model.DeviceTemplateModel;
 import com.milesight.beaveriot.context.model.request.SearchDeviceTemplateRequest;
 import com.milesight.beaveriot.context.model.response.DeviceTemplateInputResult;
-import com.milesight.beaveriot.context.model.response.DeviceTemplateOutputResult;
 import com.milesight.beaveriot.context.model.response.DeviceTemplateResponseData;
 import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
 import com.milesight.beaveriot.eventbus.api.Event;
 import com.milesight.beaveriot.eventbus.api.EventResponse;
+import com.milesight.beaveriot.integrations.mqttdevice.constants.MqttDeviceConstants;
 import com.milesight.beaveriot.integrations.mqttdevice.entity.MqttDeviceServiceEntities;
 import com.milesight.beaveriot.integrations.mqttdevice.enums.ServerErrorCode;
+import com.milesight.beaveriot.integrations.mqttdevice.model.DeviceTemplateAdditionalData;
 import com.milesight.beaveriot.integrations.mqttdevice.model.request.*;
 import com.milesight.beaveriot.integrations.mqttdevice.model.response.DeviceTemplateDefaultContentResponse;
 import com.milesight.beaveriot.integrations.mqttdevice.model.response.DeviceTemplateDetailResponse;
@@ -46,7 +47,12 @@ public class MqttDeviceTemplateService {
     private final DeviceServiceProvider deviceServiceProvider;
     private final EntityValueServiceProvider entityValueServiceProvider;
 
-    public MqttDeviceTemplateService(IntegrationServiceProvider integrationServiceProvider, DeviceTemplateServiceProvider deviceTemplateServiceProvider, DeviceTemplateParserProvider deviceTemplateParserProvider, MqttDeviceService mqttDeviceService, DeviceServiceProvider deviceServiceProvider, EntityValueServiceProvider entityValueServiceProvider) {
+    public MqttDeviceTemplateService(IntegrationServiceProvider integrationServiceProvider,
+                                     DeviceTemplateServiceProvider deviceTemplateServiceProvider,
+                                     DeviceTemplateParserProvider deviceTemplateParserProvider,
+                                     MqttDeviceService mqttDeviceService,
+                                     DeviceServiceProvider deviceServiceProvider,
+                                     EntityValueServiceProvider entityValueServiceProvider) {
         this.integrationServiceProvider = integrationServiceProvider;
         this.deviceTemplateServiceProvider = deviceTemplateServiceProvider;
         this.deviceTemplateParserProvider = deviceTemplateParserProvider;
@@ -57,7 +63,11 @@ public class MqttDeviceTemplateService {
 
     public void createDeviceTemplate(CreateDeviceTemplateRequest createDeviceTemplateRequest) {
         if (isDeviceTemplateNameExists(createDeviceTemplateRequest.getName())) {
-            throw ServiceException.with(ServerErrorCode.TEMPLATE_NAME_EXISTS.getErrorCode(), ServerErrorCode.TEMPLATE_NAME_EXISTS.getErrorMessage()).build();
+            throw ServiceException.with(ServerErrorCode.TEMPLATE_NAME_EXISTS).build();
+        }
+
+        if (isDeviceOfflineTimeoutOutOfRange(createDeviceTemplateRequest.getDeviceOfflineTimeout())) {
+            throw ServiceException.with(ServerErrorCode.DEVICE_OFFLINE_TIMEOUT_OUT_OF_RANGE).build();
         }
 
         DeviceTemplate deviceTemplate = new DeviceTemplateBuilder(IntegrationConstants.SYSTEM_INTEGRATION_ID)
@@ -73,6 +83,7 @@ public class MqttDeviceTemplateService {
         }
         deviceTemplateServiceProvider.save(deviceTemplate);
         DataCenter.putTopic(topic, deviceTemplate.getId());
+        saveDeviceOfflineTimeout(deviceTemplate.getId(), createDeviceTemplateRequest.getDeviceOfflineTimeout());
         mqttDeviceService.syncTemplates();
     }
 
@@ -90,17 +101,17 @@ public class MqttDeviceTemplateService {
         return false;
     }
 
+    private boolean isDeviceOfflineTimeoutOutOfRange(long deviceOfflineTimeout) {
+        return deviceOfflineTimeout < MqttDeviceConstants.MIN_DEVICE_OFFLINE_TIMEOUT || deviceOfflineTimeout > MqttDeviceConstants.MAX_DEVICE_OFFLINE_TIMEOUT;
+    }
+
     public Page<DeviceTemplateResponseData> searchDeviceTemplate(SearchDeviceTemplateRequest searchDeviceTemplateRequest) {
-        Page<DeviceTemplateResponseData> deviceTemplateResponseDataPage = deviceTemplateServiceProvider.search(searchDeviceTemplateRequest);
-        return deviceTemplateResponseDataPage.map(deviceTemplateResponseData -> DeviceTemplateInfoResponse.build(deviceTemplateResponseData, DataCenter.getTopic(Long.parseLong(deviceTemplateResponseData.getId()))));
+        Page<DeviceTemplateResponseData> deviceTemplateResponseDataPage = deviceTemplateServiceProvider.searchCustom(searchDeviceTemplateRequest);
+        return deviceTemplateResponseDataPage.map(DeviceTemplateInfoResponse::build);
     }
 
     public DeviceTemplateTestResponse testDeviceTemplate(Long id, TestDeviceTemplateRequest testDeviceTemplateRequest) {
         return inputAndGetTestResponse(DataCenter.INTEGRATION_ID, id, testDeviceTemplateRequest.getTestData());
-    }
-
-    public DeviceTemplateOutputResult output(String deviceKey, ExchangePayload payload) {
-        return deviceTemplateParserProvider.output(deviceKey, payload);
     }
 
     private void flattenDeviceEntities(List<Entity> deviceEntities, Map<String, Entity> flatDeviceEntityMap) {
@@ -119,12 +130,16 @@ public class MqttDeviceTemplateService {
         }
 
         if (!deviceTemplate.getName().equals(updateDeviceTemplateRequest.getName()) && isDeviceTemplateNameExists(updateDeviceTemplateRequest.getName())) {
-            throw ServiceException.with(ServerErrorCode.TEMPLATE_NAME_EXISTS.getErrorCode(), ServerErrorCode.TEMPLATE_NAME_EXISTS.getErrorMessage()).build();
+            throw ServiceException.with(ServerErrorCode.TEMPLATE_NAME_EXISTS).build();
         }
 
         Long topicRelatedDeviceTemplateId = DataCenter.getTemplateIdByTopic(updateDeviceTemplateRequest.getTopic());
         if (topicRelatedDeviceTemplateId != null && !id.equals(topicRelatedDeviceTemplateId)) {
-            throw ServiceException.with(ServerErrorCode.TOPIC_EXISTS.getErrorCode(), ServerErrorCode.TOPIC_EXISTS.getErrorMessage()).build();
+            throw ServiceException.with(ServerErrorCode.TOPIC_EXISTS).build();
+        }
+
+        if (isDeviceOfflineTimeoutOutOfRange(updateDeviceTemplateRequest.getDeviceOfflineTimeout())) {
+            throw ServiceException.with(ServerErrorCode.DEVICE_OFFLINE_TIMEOUT_OUT_OF_RANGE).build();
         }
 
         String topic = updateDeviceTemplateRequest.getTopic();
@@ -138,6 +153,7 @@ public class MqttDeviceTemplateService {
             DataCenter.removeTopic(oldTopic);
         }
         DataCenter.putTopic(topic, id);
+        saveDeviceOfflineTimeout(id, updateDeviceTemplateRequest.getDeviceOfflineTimeout());
         mqttDeviceService.syncTemplates();
     }
 
@@ -145,16 +161,17 @@ public class MqttDeviceTemplateService {
         if (!CollectionUtils.isEmpty(batchDeleteDeviceTemplateRequest.getIdList())) {
             batchDeleteDeviceTemplateRequest.getIdList().stream().map(Long::parseLong).toList().forEach(id -> {
                 DataCenter.removeTopicByTemplateId(id);
+                removeDeviceTemplateAdditionalData(id);
                 deviceTemplateServiceProvider.deleteById(id);
             });
             mqttDeviceService.syncTemplates();
         }
     }
 
-    public DeviceTemplateDetailResponse getDeviceDetail(@PathVariable("id") Long id) {
+    public DeviceTemplateDetailResponse getDeviceTemplateDetail(@PathVariable("id") Long id) {
         DeviceTemplate deviceTemplate = deviceTemplateServiceProvider.findById(id);
         DeviceTemplateModel deviceTemplateModel = deviceTemplateParserProvider.parse(deviceTemplate.getContent());
-        return DeviceTemplateDetailResponse.build(convertToResponseData(deviceTemplate), DataCenter.getTopic(id),
+        return DeviceTemplateDetailResponse.build(convertToResponseData(deviceTemplate),
                 deviceTemplateModel.getDefinition() == null ? null : deviceTemplateModel.getDefinition().getInput(),
                 deviceTemplateModel.getDefinition() ==  null ? null : deviceTemplateModel.getDefinition().getOutput(),
                 deviceTemplateModel.getInitialEntities());
@@ -183,6 +200,7 @@ public class MqttDeviceTemplateService {
         return deviceTemplateResponseData;
     }
 
+    @SuppressWarnings("unused")
     @EventSubscribe(payloadKeyExpression = DataCenter.INTEGRATION_ID + ".integration." + MqttDeviceServiceEntities.DATA_INPUT_IDENTIFIER + ".*", eventType = ExchangeEvent.EventType.CALL_SERVICE)
     public EventResponse onDataInput(Event<MqttDeviceServiceEntities.DataInput> event) {
         MqttDeviceServiceEntities.DataInput dataInput = event.getPayload();
@@ -237,5 +255,23 @@ public class MqttDeviceTemplateService {
             }
         }
         return testResponse;
+    }
+
+    public void saveDeviceOfflineTimeout(Long deviceTemplateId, long deviceOfflineTimeout) {
+        DeviceTemplateAdditionalData deviceTemplateAdditionalData = DataCenter.getDeviceTemplateAdditionalData(deviceTemplateId);
+        if (deviceTemplateAdditionalData == null) {
+            deviceTemplateAdditionalData = new DeviceTemplateAdditionalData();
+        }
+        deviceTemplateAdditionalData.setDeviceOfflineTimeout(deviceOfflineTimeout);
+        DataCenter.saveDeviceTemplateAdditionalData(deviceTemplateId, deviceTemplateAdditionalData);
+    }
+
+    public long getDeviceOfflineTimeout(Long deviceTemplateId) {
+        DeviceTemplateAdditionalData deviceTemplateAdditionalData = DataCenter.getDeviceTemplateAdditionalData(deviceTemplateId);
+        return deviceTemplateAdditionalData == null ? MqttDeviceConstants.DEFAULT_DEVICE_OFFLINE_TIMEOUT : deviceTemplateAdditionalData.getDeviceOfflineTimeout();
+    }
+
+    public void removeDeviceTemplateAdditionalData(Long deviceTemplateId) {
+        DataCenter.removeDeviceTemplateAdditionalData(deviceTemplateId);
     }
 }

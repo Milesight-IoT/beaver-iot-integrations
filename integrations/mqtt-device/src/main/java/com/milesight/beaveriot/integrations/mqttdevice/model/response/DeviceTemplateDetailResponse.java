@@ -23,11 +23,11 @@ public class DeviceTemplateDetailResponse extends DeviceTemplateInfoResponse {
     private DeviceTemplateModel.Definition.Output outputSchema;
     private List<Entity> entitySchema;
 
-    protected DeviceTemplateDetailResponse(DeviceTemplateResponseData deviceTemplateResponseData, String topic,
+    protected DeviceTemplateDetailResponse(DeviceTemplateResponseData deviceTemplateResponseData,
                                            DeviceTemplateModel.Definition.Input inputSchema,
                                            DeviceTemplateModel.Definition.Output outputSchema,
                                            List<EntityConfig> entityConfigs) {
-        super(deviceTemplateResponseData, topic);
+        super(deviceTemplateResponseData);
         this.inputSchema = inputSchema;
         this.outputSchema = outputSchema;
         if (entityConfigs != null) {
@@ -42,10 +42,10 @@ public class DeviceTemplateDetailResponse extends DeviceTemplateInfoResponse {
         }
     }
 
-    public static DeviceTemplateDetailResponse build(DeviceTemplateResponseData deviceTemplateResponseData, String topic,
+    public static DeviceTemplateDetailResponse build(DeviceTemplateResponseData deviceTemplateResponseData,
                                                      DeviceTemplateModel.Definition.Input inputSchema,
                                                      DeviceTemplateModel.Definition.Output outputSchema,
                                                      List<EntityConfig> entityConfigs) {
-        return new DeviceTemplateDetailResponse(deviceTemplateResponseData, topic, inputSchema, outputSchema, entityConfigs);
+        return new DeviceTemplateDetailResponse(deviceTemplateResponseData, inputSchema, outputSchema, entityConfigs);
     }
 }

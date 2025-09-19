@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.milesight.beaveriot.base.utils.JsonUtils;
 import com.milesight.beaveriot.context.integration.wrapper.AnnotatedEntityWrapper;
 import com.milesight.beaveriot.integrations.mqttdevice.entity.MqttDeviceIntegrationEntities;
+import com.milesight.beaveriot.integrations.mqttdevice.model.DeviceTemplateAdditionalData;
 
 import java.util.Map;
 
@@ -63,5 +64,34 @@ public class DataCenter {
         String topicMapStr = JsonUtils.toJSON(topicMap);
         AnnotatedEntityWrapper<MqttDeviceIntegrationEntities> entitiesWrapper = new AnnotatedEntityWrapper<>();
         entitiesWrapper.saveValue(MqttDeviceIntegrationEntities::getTopicMap, topicMapStr).publishSync();
+    }
+
+    private static Map<Long, DeviceTemplateAdditionalData> loadDeviceTemplateAdditionalDataMap() {
+        AnnotatedEntityWrapper<MqttDeviceIntegrationEntities> entitiesWrapper = new AnnotatedEntityWrapper<>();
+        String deviceTemplateAdditionalDataMapStr = (String) entitiesWrapper.getValue(MqttDeviceIntegrationEntities::getDeviceTemplateAdditionalDataMap).orElse("{}");
+        return JsonUtils.fromJSON(deviceTemplateAdditionalDataMapStr, new TypeReference<>() {});
+    }
+
+    public static DeviceTemplateAdditionalData getDeviceTemplateAdditionalData(Long deviceTemplateId) {
+        Map<Long, DeviceTemplateAdditionalData> deviceTemplateAdditionalDataMap = loadDeviceTemplateAdditionalDataMap();
+        return deviceTemplateAdditionalDataMap.get(deviceTemplateId);
+    }
+
+    public static void saveDeviceTemplateAdditionalData(Long deviceTemplateId, DeviceTemplateAdditionalData deviceTemplateAdditionalData) {
+        Map<Long, DeviceTemplateAdditionalData> deviceTemplateAdditionalDataMap = loadDeviceTemplateAdditionalDataMap();
+        deviceTemplateAdditionalDataMap.put(deviceTemplateId, deviceTemplateAdditionalData);
+        saveDeviceTemplateAdditionalDataMap(deviceTemplateAdditionalDataMap);
+    }
+
+    public static void saveDeviceTemplateAdditionalDataMap(Map<Long, DeviceTemplateAdditionalData> deviceTemplateAdditionalDataMap) {
+        String deviceTemplateAdditionalDataMapStr = JsonUtils.toJSON(deviceTemplateAdditionalDataMap);
+        AnnotatedEntityWrapper<MqttDeviceIntegrationEntities> entitiesWrapper = new AnnotatedEntityWrapper<>();
+        entitiesWrapper.saveValue(MqttDeviceIntegrationEntities::getDeviceTemplateAdditionalDataMap, deviceTemplateAdditionalDataMapStr).publishSync();
+    }
+
+    public static void removeDeviceTemplateAdditionalData(Long deviceTemplateId) {
+        Map<Long, DeviceTemplateAdditionalData> deviceTemplateAdditionalDataMap = loadDeviceTemplateAdditionalDataMap();
+        deviceTemplateAdditionalDataMap.remove(deviceTemplateId);
+        saveDeviceTemplateAdditionalDataMap(deviceTemplateAdditionalDataMap);
     }
 }

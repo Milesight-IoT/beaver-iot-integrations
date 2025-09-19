@@ -61,8 +61,8 @@ public class MqttDeviceTemplateController {
     }
 
     @GetMapping("/{id}")
-    public ResponseBody<DeviceTemplateDetailResponse> getDeviceDetail(@PathVariable("id") Long id) {
-        return ResponseBuilder.success(mqttDeviceTemplateService.getDeviceDetail(id));
+    public ResponseBody<DeviceTemplateDetailResponse> getDeviceTemplateDetail(@PathVariable("id") Long id) {
+        return ResponseBuilder.success(mqttDeviceTemplateService.getDeviceTemplateDetail(id));
     }
 
     @PostMapping("/batch-delete")

@@ -11,7 +11,8 @@ public enum ServerErrorCode implements ErrorCodeSpec {
     INTEGRATION_NOT_FOUND(HttpStatus.NOT_FOUND.value(), "integration_not_found", "integration not found"),
     TEMPLATE_NOT_FOUND(HttpStatus.NOT_FOUND.value(), "template_not_found", "template not found"),
     TEMPLATE_NAME_EXISTS(HttpStatus.BAD_REQUEST.value(), "template_name_exists", "template name exists"),
-    TOPIC_EXISTS(HttpStatus.BAD_REQUEST.value(), "topic_exists", "topic exists")
+    TOPIC_EXISTS(HttpStatus.BAD_REQUEST.value(), "topic_exists", "topic exists"),
+    DEVICE_OFFLINE_TIMEOUT_OUT_OF_RANGE(HttpStatus.BAD_REQUEST.value(), "device_offline_timeout_out_of_range", "device offline timeout out of range")
     ;
 
     private final String errorCode;
