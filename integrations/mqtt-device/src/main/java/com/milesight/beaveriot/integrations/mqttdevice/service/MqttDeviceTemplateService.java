@@ -30,6 +30,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.PathVariable;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -269,6 +270,21 @@ public class MqttDeviceTemplateService {
     public long getDeviceOfflineTimeout(Long deviceTemplateId) {
         DeviceTemplateAdditionalData deviceTemplateAdditionalData = DataCenter.getDeviceTemplateAdditionalData(deviceTemplateId);
         return deviceTemplateAdditionalData == null ? MqttDeviceConstants.DEFAULT_DEVICE_OFFLINE_TIMEOUT : deviceTemplateAdditionalData.getDeviceOfflineTimeout();
+    }
+
+    public Map<Long, Long> getDeviceOfflineTimeouts(List<Long> deviceTemplateIds) {
+        if (CollectionUtils.isEmpty(deviceTemplateIds)) {
+            return Collections.emptyMap();
+        }
+
+        Map<Long, Long> deviceOfflineTimeouts = new HashMap<>();
+        Map<Long, DeviceTemplateAdditionalData> deviceTemplateAdditionalDataMap = DataCenter.loadDeviceTemplateAdditionalDataMap();
+        for (Long deviceTemplateId : deviceTemplateIds) {
+            DeviceTemplateAdditionalData deviceTemplateAdditionalData = deviceTemplateAdditionalDataMap.get(deviceTemplateId);
+            long deviceOfflineTimeout = deviceTemplateAdditionalData == null ? MqttDeviceConstants.DEFAULT_DEVICE_OFFLINE_TIMEOUT : deviceTemplateAdditionalData.getDeviceOfflineTimeout();
+            deviceOfflineTimeouts.put(deviceTemplateId, deviceOfflineTimeout);
+        }
+        return deviceOfflineTimeouts;
     }
 
     public void removeDeviceTemplateAdditionalData(Long deviceTemplateId) {
