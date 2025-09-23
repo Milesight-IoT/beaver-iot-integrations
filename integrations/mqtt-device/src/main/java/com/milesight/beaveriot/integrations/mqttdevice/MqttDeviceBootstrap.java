@@ -55,7 +55,7 @@ public class MqttDeviceBootstrap implements IntegrationBootstrap {
     @Override
     public void onEnabled(String tenantId, Integration integrationConfig) {
         mqttDeviceService.syncTemplates();
-        deviceStatusServiceProvider.register(integrationConfig.getId(), device -> mqttDeviceService.getDeviceOfflineTimeout(device) * 60);
+        deviceStatusServiceProvider.register(integrationConfig.getId(), mqttDeviceService::getDeviceOfflineTimeout, mqttDeviceService::getDeviceOfflineTimeouts);
         IntegrationBootstrap.super.onEnabled(tenantId, integrationConfig);
     }
 }

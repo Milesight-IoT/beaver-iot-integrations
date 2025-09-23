@@ -50,6 +50,7 @@ public class MqttDeviceService {
         this.mqttDeviceTemplateService = mqttDeviceTemplateService;
     }
 
+    @SuppressWarnings("unused")
     @EventSubscribe(payloadKeyExpression = DataCenter.INTEGRATION_ID + ".integration." + MqttDeviceIntegrationEntities.ADD_DEVICE_IDENTIFIER + ".*", eventType = ExchangeEvent.EventType.CALL_SERVICE)
     public void onAddDevice(Event<MqttDeviceIntegrationEntities.AddDevice> event) {
         MqttDeviceIntegrationEntities.AddDevice addDevice = event.getPayload();
@@ -62,6 +63,7 @@ public class MqttDeviceService {
         deviceServiceProvider.save(device);
     }
 
+    @SuppressWarnings("unused")
     @EventSubscribe(payloadKeyExpression = DataCenter.INTEGRATION_ID + ".integration." + MqttDeviceIntegrationEntities.DELETE_DEVICE_IDENTIFIER, eventType = ExchangeEvent.EventType.CALL_SERVICE)
     public void onDeleteDevice(Event<MqttDeviceIntegrationEntities.DeleteDevice> event) {
         Device device = event.getPayload().getDeletedDevice();
@@ -122,6 +124,36 @@ public class MqttDeviceService {
             return MqttDeviceConstants.DEFAULT_DEVICE_OFFLINE_TIMEOUT;
         }
 
-        return mqttDeviceTemplateService.getDeviceOfflineTimeout(deviceTemplate.getId());
+        // Provided unit: minutes
+        long deviceOfflineTimeout = mqttDeviceTemplateService.getDeviceOfflineTimeout(deviceTemplate.getId());
+        // Required unit: seconds
+        return deviceOfflineTimeout * 60;
+    }
+
+    public Map<Long, Long> getDeviceOfflineTimeouts(List<Device> devices) {
+        List<String> templateKeys = devices.stream().map(Device::getTemplate).toList();
+        List<DeviceTemplate> deviceTemplates = deviceTemplateServiceProvider.findByKeys(templateKeys);
+        Map<String, Long> templateKeyIdMap = deviceTemplates.stream().collect(Collectors.toMap(DeviceTemplate::getKey, DeviceTemplate::getId));
+        List<Long> deviceTemplateIds = deviceTemplates.stream().map(DeviceTemplate::getId).toList();
+        Map<Long, Long> templateDeviceOfflineTimeouts = mqttDeviceTemplateService.getDeviceOfflineTimeouts(deviceTemplateIds);
+        Map<Long, Long> deviceOfflineTimeouts = new HashMap<>();
+        for (Device device: devices) {
+            Long deviceId = device.getId();
+            String templateKey = device.getTemplate();
+            Long deviceTemplateId = templateKeyIdMap.get(templateKey);
+            Long deviceOfflineTimeout = null;
+            if (deviceTemplateId != null) {
+                deviceOfflineTimeout = templateDeviceOfflineTimeouts.get(deviceTemplateId);
+            }
+
+            // Provided unit: minutes
+            if (deviceOfflineTimeout == null) {
+                deviceOfflineTimeout = MqttDeviceConstants.DEFAULT_DEVICE_OFFLINE_TIMEOUT;
+            }
+
+            // Required unit: seconds
+            deviceOfflineTimeouts.put(deviceId, deviceOfflineTimeout * 60);
+        }
+        return deviceOfflineTimeouts;
     }
 }

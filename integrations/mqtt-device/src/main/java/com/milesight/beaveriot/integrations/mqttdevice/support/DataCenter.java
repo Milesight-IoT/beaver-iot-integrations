@@ -66,7 +66,7 @@ public class DataCenter {
         entitiesWrapper.saveValue(MqttDeviceIntegrationEntities::getTopicMap, topicMapStr).publishSync();
     }
 
-    private static Map<Long, DeviceTemplateAdditionalData> loadDeviceTemplateAdditionalDataMap() {
+    public static Map<Long, DeviceTemplateAdditionalData> loadDeviceTemplateAdditionalDataMap() {
         AnnotatedEntityWrapper<MqttDeviceIntegrationEntities> entitiesWrapper = new AnnotatedEntityWrapper<>();
         String deviceTemplateAdditionalDataMapStr = (String) entitiesWrapper.getValue(MqttDeviceIntegrationEntities::getDeviceTemplateAdditionalDataMap).orElse("{}");
         return JsonUtils.fromJSON(deviceTemplateAdditionalDataMapStr, new TypeReference<>() {});
