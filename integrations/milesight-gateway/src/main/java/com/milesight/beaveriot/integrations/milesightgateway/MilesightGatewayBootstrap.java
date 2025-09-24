@@ -64,22 +64,14 @@ public class MilesightGatewayBootstrap implements IntegrationBootstrap {
         gatewayService.syncGatewayListToAddDeviceGatewayEuiList();
         deviceModelService.syncDeviceModelListToAdd();
         this.registerStatusManager();
-        blueprintLibrarySyncerProvider.addListener(library -> {
-            if (library.getSyncStatus().equals(BlueprintLibrarySyncStatus.SYNCED)) {
-                deviceModelService.syncDeviceModelListToAdd();
-            }
-        });
+        blueprintLibrarySyncerProvider.addListener(library -> deviceModelService.syncDeviceModelListToAdd());
     }
 
     private void registerStatusManager() {
-        deviceStatusServiceProvider.register(Constants.INTEGRATION_ID, device -> {
-            String deviceEui = GatewayString.getDeviceIdentifierByKey(device.getKey());
-            if (GatewayString.isGatewayIdentifier(deviceEui)) {
-                return null;
-            }
-
-            return deviceService.getDeviceOfflineTimeout(device);
-        });
+        deviceStatusServiceProvider.register(Constants.INTEGRATION_ID,
+                device -> deviceService.getDeviceOfflineTimeout(device),
+                devices -> deviceService.getDeviceOfflineTimeouts(devices)
+        );
     }
 
     @Override

@@ -306,13 +306,35 @@ public class DeviceService {
     }
 
     public Long getDeviceOfflineTimeout(Device device) {
-        Optional<Entity> offlineTimeoutEntity = device.getEntities().stream().filter(entity -> entity.getIdentifier().equals(Constants.OFFLINE_TIMEOUT_ENTITY_IDENTIFIER)).findFirst();
-        if (offlineTimeoutEntity.isEmpty()) {
-            return Constants.DEFAULT_DEVICE_OFFLINE_TIMEOUT * 60;
+        return getDeviceOfflineTimeouts(List.of(device)).get(device.getId());
+    }
+
+    public Map<Long, Long> getDeviceOfflineTimeouts(List<Device> devices) {
+        Map<Long, Long> result = new HashMap<>();
+        Map<Long, String> deviceEntityKey = new HashMap<>();
+        devices.forEach(device -> {
+            String deviceEui = GatewayString.getDeviceIdentifierByKey(device.getKey());
+            if (GatewayString.isGatewayIdentifier(deviceEui)) {
+                return;
+            }
+
+            device.getEntities()
+                    .stream()
+                    .filter(entity -> entity.getIdentifier().equals(Constants.OFFLINE_TIMEOUT_ENTITY_IDENTIFIER))
+                    .findFirst()
+                    .ifPresentOrElse(
+                        entity -> deviceEntityKey.put(device.getId(), entity.getKey()),
+                        () -> result.put(device.getId(), Constants.DEFAULT_DEVICE_OFFLINE_TIMEOUT * 60)
+                    );
+        });
+
+        if (deviceEntityKey.isEmpty()) {
+            return result;
         }
 
-        Long offlineTimeout = (Long) entityValueServiceProvider.findValueByKey(offlineTimeoutEntity.get().getKey());
-        return Objects.requireNonNullElse(offlineTimeout, Constants.DEFAULT_DEVICE_OFFLINE_TIMEOUT) * 60;
+        Map<String, Object> offlineTimeouts = entityValueServiceProvider.findValuesByKeys(deviceEntityKey.values().stream().toList());
+        deviceEntityKey.forEach((deviceId, entityKey) -> result.put(deviceId, (Long) Objects.requireNonNullElse(offlineTimeouts.get(entityKey), Constants.DEFAULT_DEVICE_OFFLINE_TIMEOUT) * 60));
+        return result;
     }
 
     private DeviceService self() {
