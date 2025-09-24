@@ -5,10 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.milesight.beaveriot.base.annotations.shedlock.DistributedLock;
 import com.milesight.beaveriot.base.enums.ErrorCode;
 import com.milesight.beaveriot.base.exception.ServiceException;
-import com.milesight.beaveriot.context.api.CredentialsServiceProvider;
-import com.milesight.beaveriot.context.api.DeviceServiceProvider;
-import com.milesight.beaveriot.context.api.EntityServiceProvider;
-import com.milesight.beaveriot.context.api.MqttPubSubServiceProvider;
+import com.milesight.beaveriot.context.api.*;
 import com.milesight.beaveriot.context.integration.enums.CredentialsType;
 import com.milesight.beaveriot.context.integration.model.*;
 import com.milesight.beaveriot.context.integration.model.event.DeviceEvent;
@@ -16,7 +13,6 @@ import com.milesight.beaveriot.context.integration.model.event.ExchangeEvent;
 import com.milesight.beaveriot.context.integration.wrapper.AnnotatedTemplateEntityWrapper;
 import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
 import com.milesight.beaveriot.eventbus.api.Event;
-import com.milesight.beaveriot.integrations.milesightgateway.entity.GatewayEntities;
 import com.milesight.beaveriot.integrations.milesightgateway.entity.MsGwIntegrationEntities;
 import com.milesight.beaveriot.integrations.milesightgateway.model.*;
 import com.milesight.beaveriot.integrations.milesightgateway.model.request.FetchGatewayCredentialRequest;
@@ -77,6 +73,9 @@ public class GatewayService {
 
     @Autowired
     TaskExecutor taskExecutor;
+
+    @Autowired
+    DeviceStatusServiceProvider deviceStatusServiceProvider;
 
     private final ObjectMapper json = GatewayString.jsonInstance();
 
@@ -230,10 +229,9 @@ public class GatewayService {
                 .name(request.getName())
                 .identifier(GatewayString.getGatewayIdentifier(newGatewayData.getEui()))
                 .additional(json.convertValue(newGatewayData, new TypeReference<>() {}))
-                .entities(new AnnotatedTemplateEntityBuilder(INTEGRATION_ID, newGatewayData.getEui()).build(GatewayEntities.class))
                 .build();
         deviceServiceProvider.save(gateway);
-        new AnnotatedTemplateEntityWrapper<GatewayEntities>(gateway.getIdentifier()).saveValue(GatewayEntities::getStatus, DeviceConnectStatus.ONLINE);
+        deviceStatusServiceProvider.online(gateway);
 
         // add to relation
 

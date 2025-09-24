@@ -3,16 +3,15 @@ package com.milesight.beaveriot.integrations.milesightgateway;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.milesight.beaveriot.base.response.ResponseBody;
 import com.milesight.beaveriot.base.response.ResponseBuilder;
+import com.milesight.beaveriot.context.api.DeviceStatusServiceProvider;
 import com.milesight.beaveriot.context.api.EntityServiceProvider;
 import com.milesight.beaveriot.context.integration.model.AttributeBuilder;
 import com.milesight.beaveriot.context.integration.model.Device;
 import com.milesight.beaveriot.context.integration.model.Entity;
 import com.milesight.beaveriot.integrations.milesightgateway.entity.MsGwIntegrationEntities;
-import com.milesight.beaveriot.integrations.milesightgateway.model.DeviceConnectStatus;
 import com.milesight.beaveriot.integrations.milesightgateway.model.GatewayData;
 import com.milesight.beaveriot.integrations.milesightgateway.model.request.*;
 import com.milesight.beaveriot.integrations.milesightgateway.model.response.*;
-import com.milesight.beaveriot.integrations.milesightgateway.service.DeviceService;
 import com.milesight.beaveriot.integrations.milesightgateway.service.GatewayService;
 import com.milesight.beaveriot.integrations.milesightgateway.service.MsGwEntityService;
 import com.milesight.beaveriot.integrations.milesightgateway.service.SyncGatewayDeviceService;
@@ -39,9 +38,6 @@ public class MilesightGatewayController {
     GatewayService gatewayService;
 
     @Autowired
-    DeviceService deviceService;
-
-    @Autowired
     MsGwEntityService msGwEntityService;
 
     @Autowired
@@ -49,6 +45,9 @@ public class MilesightGatewayController {
 
     @Autowired
     EntityServiceProvider entityServiceProvider;
+
+    @Autowired
+    DeviceStatusServiceProvider deviceStatusServiceProvider;
 
     @GetMapping("/gateways")
     public ResponseBody<GatewayListResponse> getGateways() {
@@ -59,14 +58,13 @@ public class MilesightGatewayController {
             return ResponseBuilder.success(response);
         }
 
-        Map<String, DeviceConnectStatus> gatewayStatusMap = msGwEntityService.getGatewayStatus(gateways.stream().map(Device::getIdentifier).toList());
         response.setGateways(gateways.stream().map(gateway -> {
             GatewayListItem listItem = new GatewayListItem();
             listItem.setName(gateway.getName());
             listItem.setDeviceId(gateway.getId().toString());
             listItem.setDeviceKey(gateway.getKey());
-            DeviceConnectStatus status = gatewayStatusMap.get(gateway.getIdentifier());
-            listItem.setStatus(status == null ? DeviceConnectStatus.ONLINE : status);
+            String status = deviceStatusServiceProvider.status(gateway);
+            listItem.setStatus(status == null ? Constants.STATUS_ONLINE : status);
 
             List<String> deviceEuiList = gatewayDeviceRelation.get(gatewayService.getGatewayEui(gateway));
             listItem.setDeviceCount(deviceEuiList == null ? 0 : deviceEuiList.size());

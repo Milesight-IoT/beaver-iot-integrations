@@ -1,25 +1,24 @@
 package com.milesight.beaveriot.integrations.milesightgateway.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.milesight.beaveriot.base.annotations.shedlock.DistributedLock;
 import com.milesight.beaveriot.base.enums.ErrorCode;
 import com.milesight.beaveriot.base.exception.ServiceException;
 import com.milesight.beaveriot.context.api.DeviceServiceProvider;
+import com.milesight.beaveriot.context.api.DeviceTemplateParserProvider;
 import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
+import com.milesight.beaveriot.context.integration.enums.AccessMod;
 import com.milesight.beaveriot.context.integration.enums.EntityValueType;
 import com.milesight.beaveriot.context.integration.model.Device;
-import com.milesight.beaveriot.context.integration.model.DeviceBuilder;
 import com.milesight.beaveriot.context.integration.model.Entity;
+import com.milesight.beaveriot.context.integration.model.EntityBuilder;
 import com.milesight.beaveriot.context.integration.model.ExchangePayload;
 import com.milesight.beaveriot.context.integration.model.event.ExchangeEvent;
+import com.milesight.beaveriot.context.model.response.DeviceTemplateOutputResult;
 import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
 import com.milesight.beaveriot.eventbus.api.Event;
-import com.milesight.beaveriot.integrations.milesightgateway.codec.CodecExecutor;
-import com.milesight.beaveriot.integrations.milesightgateway.codec.EntityValueConverter;
 import com.milesight.beaveriot.integrations.milesightgateway.entity.MsGwIntegrationEntities;
-import com.milesight.beaveriot.integrations.milesightgateway.codec.DeviceHelper;
 import com.milesight.beaveriot.integrations.milesightgateway.model.*;
 import com.milesight.beaveriot.integrations.milesightgateway.model.api.AddDeviceRequest;
 import com.milesight.beaveriot.integrations.milesightgateway.model.api.DeviceListProfileItem;
@@ -40,6 +39,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * DeviceService class.
@@ -54,24 +54,41 @@ public class DeviceService {
     DeviceServiceProvider deviceServiceProvider;
 
     @Autowired
-    DeviceCodecService deviceCodecService;
-
-    @Autowired
     MsGwEntityService msGwEntityService;
 
     @Autowired
     GatewayRequester gatewayRequester;
 
     @Autowired
-    EntityValueServiceProvider entityValueServiceProvider;
+    EntityManager entityManager;
 
     @Autowired
-    EntityManager entityManager;
+    DeviceTemplateParserProvider deviceTemplateParserProvider;
+
+    @Autowired
+    EntityValueServiceProvider entityValueServiceProvider;
 
     private final ObjectMapper json = GatewayString.jsonInstance();
 
+    public List<Device> getAllDevices() {
+        return deviceServiceProvider.findAll(Constants.INTEGRATION_ID);
+    }
+
     public List<Device> getDevices(List<String> euiList) {
         return deviceServiceProvider.findByIdentifiers(euiList, Constants.INTEGRATION_ID);
+    }
+
+    public Entity generateOfflineTimeoutEntity(String deviceKey) {
+        return new EntityBuilder(Constants.INTEGRATION_ID, deviceKey)
+                .identifier(Constants.OFFLINE_TIMEOUT_ENTITY_IDENTIFIER)
+                .property(Constants.OFFLINE_TIMEOUT_ENTITY_NAME, AccessMod.RW)
+                .valueType(EntityValueType.LONG)
+                .attributes(Map.of(
+                        "min", Constants.OFFLINE_TIMEOUT_ENTITY_MIN_VALUE,
+                        "max", Constants.OFFLINE_TIMEOUT_ENTITY_MAX_VALUE,
+                        "unit", Constants.OFFLINE_TIMEOUT_ENTITY_UNIT
+                ))
+                .build();
     }
 
     @EventSubscribe(payloadKeyExpression = Constants.INTEGRATION_ID + ".integration.add-device.*", eventType = ExchangeEvent.EventType.CALL_SERVICE)
@@ -100,66 +117,78 @@ public class DeviceService {
 
         // get device model
         String deviceModelId = addDevice.getDeviceModel();
-        DeviceCodecData codecData = deviceCodecService.batchGetDeviceCodecData(List.of(deviceModelId)).getOrDefault(deviceModelId, null);
-        if (codecData == null) {
-            throw ServiceException.with(ErrorCode.PARAMETER_VALIDATION_FAILED.getErrorCode(), "Cannot find codec for: " + deviceModelId).build();
-        }
-
+        DeviceModelIdentifier modelIdentifier = DeviceModelIdentifier.of(deviceModelId);
         deviceData.setDeviceModel(deviceModelId);
         deviceData.setFPort(addDevice.getFPort());
         deviceData.setFrameCounterValidation(addDevice.getFrameCounterValidation());
         deviceData.setAppKey(addDevice.getAppKey());
 
-        Device device = new DeviceBuilder(Constants.INTEGRATION_ID)
-                .name(deviceName)
-                .identifier(deviceEUI)
-                .additional(json.convertValue(deviceData, new TypeReference<>() {}))
-                .build();
-        DeviceHelper.UpdateResourceResult updateResourceResult = DeviceHelper.updateResourceInfo(device, codecData.getDef());
+        final DeviceService self = self();
+        AtomicReference<String> timeoutEntityKey = new AtomicReference<>();
 
-        // request gateway
-        AddDeviceRequest addDeviceRequest = new AddDeviceRequest();
-        addDeviceRequest.setName(deviceName);
-        addDeviceRequest.setDevEUI(deviceEUI);
-        addDeviceRequest.setFPort(addDevice.getFPort());
-        addDeviceRequest.setDescription("From Beaver IoT");
-        if (StringUtils.hasText(addDevice.getAppKey())) {
-            addDeviceRequest.setAppKey(addDevice.getAppKey());
-        } else {
-            addDeviceRequest.setAppKey(Constants.DEFAULT_APP_KEY);
-        }
+        deviceTemplateParserProvider.createDevice(
+                Constants.INTEGRATION_ID,
+                modelIdentifier.getVendorId(),
+                modelIdentifier.getModelId(),
+                GatewayString.standardizeEUI(deviceData.getEui()),
+                deviceName,
+                (device, metadata) -> {
+                    List<Entity> entities = new ArrayList<>(device.getEntities());
+                    Entity timeoutEntity = generateOfflineTimeoutEntity(device.getKey());
+                    entities.add(timeoutEntity);
+                    timeoutEntityKey.set(timeoutEntity.getKey());
+                    device.setEntities(entities);
+                    device.setAdditional(json.convertValue(deviceData, new TypeReference<>() {}));
 
-        addDeviceRequest.setSkipFCntCheck(!addDevice.getFrameCounterValidation());
-        addDeviceRequest.setApplicationID(gatewayData.getApplicationId());
-        String profileName = codecData.getResourceInfo().getDeviceProfile().get(0);
+                    // request gateway
+                    AddDeviceRequest addDeviceRequest = new AddDeviceRequest();
+                    addDeviceRequest.setName(deviceName);
+                    addDeviceRequest.setDevEUI(deviceEUI);
+                    addDeviceRequest.setFPort(addDevice.getFPort());
+                    addDeviceRequest.setDescription("From Beaver IoT");
+                    if (StringUtils.hasText(addDevice.getAppKey())) {
+                        addDeviceRequest.setAppKey(addDevice.getAppKey());
+                    } else {
+                        addDeviceRequest.setAppKey(Constants.DEFAULT_APP_KEY);
+                    }
 
-        Optional<DeviceListProfileItem> profileItem = deviceListResponseMqttResponse
-                .getSuccessBody()
-                .getProfileResult()
-                .stream()
-                .filter(deviceListProfileItem -> deviceListProfileItem.getProfileName().equals(profileName))
-                .findFirst();
-        if (profileItem.isEmpty()) {
-            throw ServiceException.with(MilesightGatewayErrorCode.NO_VALID_PROFILE_FOR_DEVICE).args(Map.of(
-                    "gatewayEui", gatewayEUI,
-                    "profileName", profileName
-            )).build();
-        }
-        addDeviceRequest.setProfileID(profileItem.get().getProfileID());
+                    addDeviceRequest.setSkipFCntCheck(!addDevice.getFrameCounterValidation());
+                    addDeviceRequest.setApplicationID(gatewayData.getApplicationId());
+                    if (metadata == null || metadata.get(Constants.LORA_CLASS_METADATA_KEY) == null) {
+                        throw ServiceException.with(MilesightGatewayErrorCode.TEMPLATE_MISSING_LORA_PROFILE).args(Map.of(
+                                "deviceModelId", deviceModelId
+                        )).build();
+                    }
 
-        self().manageGatewayDevices(gatewayEUI, deviceEUI, GatewayDeviceOperation.ADD);
-        try {
-            gatewayRequester.requestAddDevice(gatewayEUI, addDeviceRequest);
-            deviceServiceProvider.save(device);
-        } catch (Exception e) {
-            self().manageGatewayDevices(gatewayEUI, deviceEUI, GatewayDeviceOperation.DELETE);
-            throw e;
-        }
+                    String profileName = (String) metadata.get(Constants.LORA_CLASS_METADATA_KEY);
 
-        // save script
+                    Optional<DeviceListProfileItem> profileItem = deviceListResponseMqttResponse
+                            .getSuccessBody()
+                            .getProfileResult()
+                            .stream()
+                            .filter(deviceListProfileItem -> deviceListProfileItem.getProfileName().equals(profileName))
+                            .findFirst();
+                    if (profileItem.isEmpty()) {
+                        throw ServiceException.with(MilesightGatewayErrorCode.NO_VALID_PROFILE_FOR_DEVICE).args(Map.of(
+                                "gatewayEui", gatewayEUI,
+                                "profileName", profileName
+                        )).build();
+                    }
+                    addDeviceRequest.setProfileID(profileItem.get().getProfileID());
+
+                    self.manageGatewayDevices(gatewayEUI, deviceEUI, GatewayDeviceOperation.ADD);
+                    try {
+                        gatewayRequester.requestAddDevice(gatewayEUI, addDeviceRequest);
+                    } catch (Exception e) {
+                        self.manageGatewayDevices(gatewayEUI, deviceEUI, GatewayDeviceOperation.DELETE);
+                        throw e;
+                    }
+
+                    return true;
+                });
+
         entityValueServiceProvider.saveLatestValues(ExchangePayload.create(Map.of(
-                updateResourceResult.getDecoderEntity().getKey(), codecData.getDecoderStr(),
-                updateResourceResult.getEncoderEntity().getKey(), codecData.getEncoderStr()
+                timeoutEntityKey.get(), addDevice.getOfflineTimeout()
         )));
     }
 
@@ -222,25 +251,18 @@ public class DeviceService {
 
         // downlink one by one
         devicePayloadMap.forEach((deviceEui, payload) -> {
-            JsonNode jsonData = EntityValueConverter.convertToJson(payload.getDeviceKey(), payload.getPayload());
-            log.debug("Downlink json data: " + jsonData);
-
-            String encoderScript = msGwEntityService.getDeviceEncoderScript(deviceEui);
-            if (!StringUtils.hasText(encoderScript)) {
-                log.warn("Encode Script not found: " + deviceEui);
-                return;
-            }
-
             int fPort = payload.getFPort().intValue();
 
-            String encodedData = CodecExecutor.runEncode(encoderScript, fPort, jsonData);
+            DeviceTemplateOutputResult outputResult = deviceTemplateParserProvider.output(payload.getDeviceKey(), ExchangePayload.create(payload.getPayload()), Map.of("fPort", fPort));
+            byte[] byteData = (byte[]) outputResult.getOutput();
+
+            String encodedData = Base64.getEncoder().encodeToString(byteData);
             log.debug("Downlink encoded data: " + encodedData);
             if (!StringUtils.hasText(encodedData)) {
                 return;
             }
 
             gatewayRequester.downlink(payload.getGatewayEui(), deviceEui, fPort, encodedData);
-
         });
     }
 
@@ -275,6 +297,20 @@ public class DeviceService {
             devicePayload.getPayload().put(entityKey, value);
         });
         return devicePayloadMap;
+    }
+
+    public Long getDeviceOfflineTimeout(Device device) {
+        Optional<Entity> offlineTimeoutEntity = device.getEntities().stream().filter(entity -> entity.getIdentifier().equals(Constants.OFFLINE_TIMEOUT_ENTITY_IDENTIFIER)).findFirst();
+        if (offlineTimeoutEntity.isEmpty()) {
+            return Constants.DEFAULT_DEVICE_OFFLINE_TIMEOUT;
+        }
+
+        Long offlineTimeout = (Long) entityValueServiceProvider.findValueByKey(offlineTimeoutEntity.get().getKey());
+        if (offlineTimeout == null) {
+            return Constants.DEFAULT_DEVICE_OFFLINE_TIMEOUT;
+        }
+
+        return offlineTimeout;
     }
 
     private DeviceService self() {

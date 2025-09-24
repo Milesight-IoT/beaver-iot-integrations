@@ -6,12 +6,11 @@ import com.milesight.beaveriot.base.annotations.shedlock.DistributedLock;
 import com.milesight.beaveriot.base.enums.ErrorCode;
 import com.milesight.beaveriot.base.exception.ServiceException;
 import com.milesight.beaveriot.context.api.DeviceServiceProvider;
+import com.milesight.beaveriot.context.api.DeviceTemplateParserProvider;
 import com.milesight.beaveriot.context.integration.model.Device;
 import com.milesight.beaveriot.context.integration.model.DeviceBuilder;
 import com.milesight.beaveriot.context.integration.wrapper.EntityWrapper;
-import com.milesight.beaveriot.integrations.milesightgateway.codec.DeviceHelper;
-import com.milesight.beaveriot.integrations.milesightgateway.model.DeviceCodecData;
-import com.milesight.beaveriot.integrations.milesightgateway.model.DeviceModelData;
+import com.milesight.beaveriot.integrations.milesightgateway.model.DeviceModelIdentifier;
 import com.milesight.beaveriot.integrations.milesightgateway.model.GatewayDeviceData;
 import com.milesight.beaveriot.integrations.milesightgateway.model.GatewayDeviceOperation;
 import com.milesight.beaveriot.integrations.milesightgateway.model.api.DeviceListItemFields;
@@ -54,16 +53,16 @@ public class SyncGatewayDeviceService {
     DeviceService deviceService;
 
     @Autowired
-    DeviceCodecService deviceCodecService;
-
-    @Autowired
-    DeviceServiceProvider deviceServiceProvider;
+    DeviceModelService deviceModelService;
 
     @Autowired
     MsGwEntityService msGwEntityService;
 
     @Autowired
     TaskExecutor taskExecutor;
+
+    @Autowired
+    DeviceTemplateParserProvider deviceTemplateParserProvider;
 
     private static final ObjectMapper json = GatewayString.jsonInstance();
 
@@ -86,15 +85,7 @@ public class SyncGatewayDeviceService {
             existedDeviceEuiSet.addAll(existedDeviceEui);
         }
 
-        DeviceModelData deviceModelData =  msGwEntityService.getDeviceModelData();
-        if (deviceModelData.getVendorInfoList() == null) {
-            throw ServiceException.with(ErrorCode.PARAMETER_VALIDATION_FAILED.getErrorCode(), "Please synchronize your codec repo first!").build();
-        }
-
-        Map<String, String> modelNameToId = deviceModelData.getVendorInfoList().stream()
-                .flatMap(vendorInfo -> vendorInfo.getDeviceInfoList().stream().map(deviceInfo -> new DeviceModelData.VendorDeviceInfo(vendorInfo, deviceInfo)))
-                .collect(Collectors.toMap(DeviceModelData.VendorDeviceInfo::getDeviceName, DeviceModelData::getDeviceModelId, (prev, cur) -> prev));
-
+        Map<String, String> modelNameToId = deviceModelService.getDeviceModelNameToId();
         return deviceDataMap.stream()
                 .filter(deviceData -> {
                     String eui = (String) deviceData.get(DeviceListItemFields.DEV_EUI);
@@ -165,26 +156,22 @@ public class SyncGatewayDeviceService {
             offset = end;
         }
 
-        // get codecs
-        Map<String, DeviceCodecData> deviceCodecDataMap = deviceCodecService.batchGetDeviceCodecData(deviceItemList.stream().map(updateGatewayDeviceResponse -> updateGatewayDeviceResponse.getDeviceData().getDeviceModel()).toList());
-
         // save devices
         deviceItemList.forEach(deviceItem -> {
             GatewayDeviceData deviceData = deviceItem.getDeviceData();
-            Device device = new DeviceBuilder(Constants.INTEGRATION_ID)
-                    .name(deviceItem.getDeviceName())
-                    .identifier(GatewayString.standardizeEUI(deviceData.getEui()))
-                    .additional(json.convertValue(deviceData, new TypeReference<>() {}))
-                    .build();
-            DeviceCodecData codecData = deviceCodecDataMap.get(deviceData.getDeviceModel());
-            DeviceHelper.UpdateResourceResult updateResourceResult = DeviceHelper.updateResourceInfo(device, codecData.getDef());
+            DeviceModelIdentifier deviceModelIdentifier = DeviceModelIdentifier.of(deviceData.getDeviceModel());
             // save device
             deviceService.manageGatewayDevices(deviceData.getGatewayEUI(), deviceData.getEui(), GatewayDeviceOperation.ADD);
-            deviceServiceProvider.save(device);
-
-            // save script
-            new EntityWrapper(updateResourceResult.getDecoderEntity()).saveValue(codecData.getDecoderStr());
-            new EntityWrapper(updateResourceResult.getEncoderEntity()).saveValue(codecData.getEncoderStr());
+            deviceTemplateParserProvider.createDevice(
+                    Constants.INTEGRATION_ID,
+                    deviceModelIdentifier.getVendorId(),
+                    deviceModelIdentifier.getModelId(),
+                    GatewayString.standardizeEUI(deviceData.getEui()),
+                    deviceItem.getDeviceName(),
+                    (device, metadata) -> {
+                        device.setAdditional(json.convertValue(deviceData, new TypeReference<>() {}));
+                        return true;
+                    });
         });
     }
 }
