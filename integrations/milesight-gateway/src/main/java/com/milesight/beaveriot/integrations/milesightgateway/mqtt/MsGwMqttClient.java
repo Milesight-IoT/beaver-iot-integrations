@@ -76,6 +76,9 @@ public class MsGwMqttClient {
     @Autowired
     DeviceStatusServiceProvider deviceStatusServiceProvider;
 
+    @Autowired
+    MsGwEntityService msGwEntityService;
+
     private final Map<String, CompletableFuture<MqttRawResponse>> pendingRequests = new ConcurrentHashMap<>();
 
     private final ObjectMapper json = GatewayString.jsonInstance();
@@ -184,6 +187,11 @@ public class MsGwMqttClient {
                 deviceStatusServiceProvider.online(gateway);
             } else if (status.equals(Constants.STATUS_OFFLINE)) {
                 deviceStatusServiceProvider.offline(gateway);
+                List<String> deviceEuiList = msGwEntityService.getGatewayRelation().get(GatewayString.standardizeEUI(eui));
+                if (deviceEuiList != null && !deviceEuiList.isEmpty()) {
+                    deviceServiceProvider.findByIdentifiers(deviceEuiList, Constants.INTEGRATION_ID).forEach(deviceStatusServiceProvider::offline);
+                }
+
             } else {
                 throw new IllegalArgumentException("Unknown device status: " + status);
             }

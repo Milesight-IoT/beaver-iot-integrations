@@ -1,8 +1,10 @@
 package com.milesight.beaveriot.integrations.milesightgateway;
 
+import com.milesight.beaveriot.context.api.BlueprintLibrarySyncerProvider;
 import com.milesight.beaveriot.context.api.DeviceStatusServiceProvider;
 import com.milesight.beaveriot.context.integration.bootstrap.IntegrationBootstrap;
 import com.milesight.beaveriot.context.integration.model.Integration;
+import com.milesight.beaveriot.context.model.BlueprintLibrarySyncStatus;
 import com.milesight.beaveriot.integrations.milesightgateway.legacy.VersionUpgradeService;
 import com.milesight.beaveriot.integrations.milesightgateway.mqtt.MsGwMqttClient;
 import com.milesight.beaveriot.integrations.milesightgateway.service.DeviceModelService;
@@ -42,6 +44,9 @@ public class MilesightGatewayBootstrap implements IntegrationBootstrap {
     @Autowired
     VersionUpgradeService versionUpgradeService;
 
+    @Autowired
+    BlueprintLibrarySyncerProvider blueprintLibrarySyncerProvider;
+
     @Override
     public void onPrepared(Integration integration) {
         // do nothing
@@ -59,6 +64,11 @@ public class MilesightGatewayBootstrap implements IntegrationBootstrap {
         gatewayService.syncGatewayListToAddDeviceGatewayEuiList();
         deviceModelService.syncDeviceModelListToAdd();
         this.registerStatusManager();
+        blueprintLibrarySyncerProvider.addListener(library -> {
+            if (library.getSyncStatus().equals(BlueprintLibrarySyncStatus.SYNCED)) {
+                deviceModelService.syncDeviceModelListToAdd();
+            }
+        });
     }
 
     private void registerStatusManager() {

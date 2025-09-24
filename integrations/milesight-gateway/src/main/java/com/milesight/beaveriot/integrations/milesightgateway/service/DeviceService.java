@@ -275,6 +275,12 @@ public class DeviceService {
         // split by device
         allPayloads.forEach((String entityKey, Object entityValue) -> {
             Entity entity = entityMap.get(entityKey);
+
+            // do not process common entity payload
+            if (entity.getFullIdentifier().startsWith("@")) {
+                return;
+            }
+
             String deviceKey = entity.getDeviceKey();
             String deviceEui = GatewayString.getDeviceIdentifierByKey(deviceKey);
             if (GatewayString.isGatewayIdentifier(deviceEui)) {
@@ -302,15 +308,11 @@ public class DeviceService {
     public Long getDeviceOfflineTimeout(Device device) {
         Optional<Entity> offlineTimeoutEntity = device.getEntities().stream().filter(entity -> entity.getIdentifier().equals(Constants.OFFLINE_TIMEOUT_ENTITY_IDENTIFIER)).findFirst();
         if (offlineTimeoutEntity.isEmpty()) {
-            return Constants.DEFAULT_DEVICE_OFFLINE_TIMEOUT;
+            return Constants.DEFAULT_DEVICE_OFFLINE_TIMEOUT * 60;
         }
 
         Long offlineTimeout = (Long) entityValueServiceProvider.findValueByKey(offlineTimeoutEntity.get().getKey());
-        if (offlineTimeout == null) {
-            return Constants.DEFAULT_DEVICE_OFFLINE_TIMEOUT;
-        }
-
-        return offlineTimeout;
+        return Objects.requireNonNullElse(offlineTimeout, Constants.DEFAULT_DEVICE_OFFLINE_TIMEOUT) * 60;
     }
 
     private DeviceService self() {

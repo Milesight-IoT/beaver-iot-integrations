@@ -62,4 +62,6 @@ public class DeviceModelService {
         deviceModelNameEntity.setAttributes(attributes);
         entityServiceProvider.save(deviceModelNameEntity);
     }
+
+
 }
