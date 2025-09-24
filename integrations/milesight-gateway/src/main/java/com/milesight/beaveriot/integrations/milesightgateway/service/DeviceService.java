@@ -36,6 +36,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.StringUtils;
 
 import java.util.*;
@@ -177,12 +179,9 @@ public class DeviceService {
                     addDeviceRequest.setProfileID(profileItem.get().getProfileID());
 
                     self.manageGatewayDevices(gatewayEUI, deviceEUI, GatewayDeviceOperation.ADD);
-                    try {
-                        gatewayRequester.requestAddDevice(gatewayEUI, addDeviceRequest);
-                    } catch (Exception e) {
-                        self.manageGatewayDevices(gatewayEUI, deviceEUI, GatewayDeviceOperation.DELETE);
-                        throw e;
-                    }
+                    this.registerTransactionRollback(() -> self.manageGatewayDevices(gatewayEUI, deviceEUI, GatewayDeviceOperation.DELETE));
+                    gatewayRequester.requestAddDevice(gatewayEUI, addDeviceRequest);
+                    this.registerTransactionRollback(() -> gatewayRequester.requestDeleteDevice(gatewayEUI, List.of(deviceEUI)));
 
                     return true;
                 });
@@ -190,6 +189,18 @@ public class DeviceService {
         entityValueServiceProvider.saveLatestValues(ExchangePayload.create(Map.of(
                 timeoutEntityKey.get(), addDevice.getOfflineTimeout()
         )));
+    }
+
+    private void registerTransactionRollback(Runnable runnable)  {
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                TransactionSynchronization.super.afterCompletion(status);
+                if  (status == TransactionSynchronization.STATUS_ROLLED_BACK) {
+                    runnable.run();
+                }
+            }
+        });
     }
 
     public GatewayDeviceData getDeviceData(Device device) {
