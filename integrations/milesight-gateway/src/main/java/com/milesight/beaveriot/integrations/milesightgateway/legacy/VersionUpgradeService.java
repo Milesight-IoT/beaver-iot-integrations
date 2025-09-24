@@ -78,10 +78,10 @@ public class VersionUpgradeService {
             entityServiceProvider.deleteByKey(entity.getKey());
             Entity newStatusEntity = statusEntityTemplate.toEntity(Constants.INTEGRATION_ID, gateway.getKey());
             entityServiceProvider.save(newStatusEntity);
-            if (statusValue != null && statusValue.equals(Constants.STATUS_ONLINE)) {
-                entityValueServiceProvider.saveLatestValues(ExchangePayload.create(Map.of(newStatusEntity.getKey(), Constants.STATUS_ONLINE)));
+            if (statusValue != null && statusValue.equals(DeviceStatus.ONLINE.name())) {
+                entityValueServiceProvider.saveLatestValues(ExchangePayload.create(Map.of(newStatusEntity.getKey(), DeviceStatus.ONLINE.name())));
             } else {
-                entityValueServiceProvider.saveLatestValues(ExchangePayload.create(Map.of(newStatusEntity.getKey(), Constants.STATUS_OFFLINE)));
+                entityValueServiceProvider.saveLatestValues(ExchangePayload.create(Map.of(newStatusEntity.getKey(), DeviceStatus.OFFLINE.name())));
             }
         });
     }

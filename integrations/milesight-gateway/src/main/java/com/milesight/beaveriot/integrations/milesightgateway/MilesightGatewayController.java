@@ -7,6 +7,7 @@ import com.milesight.beaveriot.context.api.DeviceStatusServiceProvider;
 import com.milesight.beaveriot.context.api.EntityServiceProvider;
 import com.milesight.beaveriot.context.integration.model.AttributeBuilder;
 import com.milesight.beaveriot.context.integration.model.Device;
+import com.milesight.beaveriot.context.integration.model.DeviceStatus;
 import com.milesight.beaveriot.context.integration.model.Entity;
 import com.milesight.beaveriot.integrations.milesightgateway.entity.MsGwIntegrationEntities;
 import com.milesight.beaveriot.integrations.milesightgateway.model.GatewayData;
@@ -63,8 +64,8 @@ public class MilesightGatewayController {
             listItem.setName(gateway.getName());
             listItem.setDeviceId(gateway.getId().toString());
             listItem.setDeviceKey(gateway.getKey());
-            String status = deviceStatusServiceProvider.status(gateway);
-            listItem.setStatus(status == null ? Constants.STATUS_ONLINE : status);
+            DeviceStatus status = deviceStatusServiceProvider.status(gateway);
+            listItem.setStatus(status == null ? DeviceStatus.ONLINE.name() : status.name());
 
             List<String> deviceEuiList = gatewayDeviceRelation.get(gatewayService.getGatewayEui(gateway));
             listItem.setDeviceCount(deviceEuiList == null ? 0 : deviceEuiList.size());
