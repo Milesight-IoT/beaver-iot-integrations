@@ -25,10 +25,6 @@ public class Constants {
 
     public static final String GATEWAY_MQTT_RESPONSE_SCOPE = "response";
 
-    public static final String STATUS_ONLINE = "ONLINE";
-
-    public static final String STATUS_OFFLINE = "OFFLINE";
-
     public static final Integer CLIENT_ID_RANDOM_LENGTH = 6;
 
     public static final String OFFLINE_TIMEOUT_ENTITY_IDENTIFIER = "ms-offline-timeout";

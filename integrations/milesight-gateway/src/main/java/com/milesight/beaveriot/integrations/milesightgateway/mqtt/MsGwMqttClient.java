@@ -7,6 +7,7 @@ import com.milesight.beaveriot.base.enums.ErrorCode;
 import com.milesight.beaveriot.base.exception.ServiceException;
 import com.milesight.beaveriot.context.api.*;
 import com.milesight.beaveriot.context.integration.model.Device;
+import com.milesight.beaveriot.context.integration.model.DeviceStatus;
 import com.milesight.beaveriot.context.integration.wrapper.AnnotatedEntityWrapper;
 import com.milesight.beaveriot.context.model.response.DeviceTemplateInputResult;
 import com.milesight.beaveriot.context.mqtt.enums.MqttQos;
@@ -117,7 +118,7 @@ public class MsGwMqttClient {
             log.error(e.getMessage());
         }
 
-        updateGatewayStatus(gatewayEui, Constants.STATUS_ONLINE, System.currentTimeMillis());
+        updateGatewayStatus(gatewayEui, DeviceStatus.ONLINE, System.currentTimeMillis());
     }
 
     private void onResponse(String gatewayEui, String message, MqttMessage mqttMessage) {
@@ -136,18 +137,18 @@ public class MsGwMqttClient {
             log.error("read response error", e);
         }
 
-        updateGatewayStatus(gatewayEui, Constants.STATUS_ONLINE, System.currentTimeMillis());
+        updateGatewayStatus(gatewayEui, DeviceStatus.ONLINE, System.currentTimeMillis());
     }
 
     private void onGatewayConnect(MqttConnectEvent event) {
-        updateGatewayStatusFromClientId(event.getClientId(), Constants.STATUS_ONLINE, event.getTs());
+        updateGatewayStatusFromClientId(event.getClientId(), DeviceStatus.ONLINE, event.getTs());
     }
 
     private void onGatewayDisconnect(MqttDisconnectEvent event) {
-        updateGatewayStatusFromClientId(event.getClientId(), Constants.STATUS_OFFLINE, event.getTs());
+        updateGatewayStatusFromClientId(event.getClientId(), DeviceStatus.OFFLINE, event.getTs());
     }
 
-    private void updateGatewayStatusFromClientId(String clientId, String status, Long ts) {
+    private void updateGatewayStatusFromClientId(String clientId, DeviceStatus status, Long ts) {
         String eui = GatewayString.parseGatewayEuiFromClientId(clientId);
         if (eui == null) {
             return;
@@ -156,7 +157,7 @@ public class MsGwMqttClient {
         updateGatewayStatus(eui, status, ts);
     }
 
-    private void updateGatewayStatus(String eui, String status, Long ts) {
+    private void updateGatewayStatus(String eui, DeviceStatus status, Long ts) {
         SimpleLock lock = lockProvider.lock(ScopedLockConfiguration.builder(LockScope.TENANT)
                 .name(LockConstants.UPDATE_GATEWAY_STATUS_LOCK_PREFIX + ":" + eui)
                 .lockAtMostFor(Duration.ofSeconds(5))
@@ -174,18 +175,18 @@ public class MsGwMqttClient {
                 return;
             }
 
-            String curStatus = deviceStatusServiceProvider.status(gateway);
+            DeviceStatus curStatus = deviceStatusServiceProvider.status(gateway);
             if (curStatus == null) {
-                curStatus = Constants.STATUS_ONLINE;
+                curStatus = DeviceStatus.ONLINE;
             }
 
             if (status.equals(curStatus)) {
                 return;
             }
 
-            if (status.equals(Constants.STATUS_ONLINE)) {
+            if (status.equals(DeviceStatus.ONLINE)) {
                 deviceStatusServiceProvider.online(gateway);
-            } else if (status.equals(Constants.STATUS_OFFLINE)) {
+            } else if (status.equals(DeviceStatus.OFFLINE)) {
                 deviceStatusServiceProvider.offline(gateway);
                 List<String> deviceEuiList = msGwEntityService.getGatewayRelation().get(GatewayString.standardizeEUI(eui));
                 if (deviceEuiList != null && !deviceEuiList.isEmpty()) {
