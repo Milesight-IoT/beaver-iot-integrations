@@ -5,20 +5,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.milesight.beaveriot.base.annotations.shedlock.LockScope;
 import com.milesight.beaveriot.base.enums.ErrorCode;
 import com.milesight.beaveriot.base.exception.ServiceException;
-import com.milesight.beaveriot.context.api.DeviceServiceProvider;
-import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
-import com.milesight.beaveriot.context.api.MqttPubSubServiceProvider;
+import com.milesight.beaveriot.context.api.*;
 import com.milesight.beaveriot.context.integration.model.Device;
-import com.milesight.beaveriot.context.integration.model.ExchangePayload;
 import com.milesight.beaveriot.context.integration.wrapper.AnnotatedEntityWrapper;
+import com.milesight.beaveriot.context.model.response.DeviceTemplateInputResult;
 import com.milesight.beaveriot.context.mqtt.enums.MqttQos;
 import com.milesight.beaveriot.context.mqtt.model.MqttConnectEvent;
 import com.milesight.beaveriot.context.mqtt.model.MqttDisconnectEvent;
 import com.milesight.beaveriot.context.mqtt.model.MqttMessage;
-import com.milesight.beaveriot.integrations.milesightgateway.codec.CodecExecutor;
-import com.milesight.beaveriot.integrations.milesightgateway.codec.EntityValueConverter;
 import com.milesight.beaveriot.integrations.milesightgateway.entity.MsGwIntegrationEntities;
-import com.milesight.beaveriot.integrations.milesightgateway.model.DeviceConnectStatus;
 import com.milesight.beaveriot.integrations.milesightgateway.model.MilesightGatewayErrorCode;
 import com.milesight.beaveriot.integrations.milesightgateway.service.MsGwEntityService;
 import com.milesight.beaveriot.integrations.milesightgateway.util.Constants;
@@ -40,7 +35,6 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.milesight.beaveriot.integrations.milesightgateway.util.GatewayString;
-import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 
 import static com.milesight.beaveriot.integrations.milesightgateway.mqtt.MsGwMqttUtil.getMqttTopic;
@@ -68,9 +62,6 @@ public class MsGwMqttClient {
     MqttPubSubServiceProvider mqttServiceProvider;
 
     @Autowired
-    MsGwEntityService msGwEntityService;
-
-    @Autowired
     DeviceServiceProvider deviceServiceProvider;
 
     @Autowired
@@ -78,6 +69,15 @@ public class MsGwMqttClient {
 
     @Autowired
     LockProvider lockProvider;
+
+    @Autowired
+    DeviceTemplateParserProvider deviceTemplateParserProvider;
+
+    @Autowired
+    DeviceStatusServiceProvider deviceStatusServiceProvider;
+
+    @Autowired
+    MsGwEntityService msGwEntityService;
 
     private final Map<String, CompletableFuture<MqttRawResponse>> pendingRequests = new ConcurrentHashMap<>();
 
@@ -106,36 +106,18 @@ public class MsGwMqttClient {
             MqttUplinkData uplinkData = json.readValue(message, MqttUplinkData.class);
             String deviceEui = GatewayString.standardizeEUI(uplinkData.getDevEUI());
 
-            // decode uplink data
-            String decoderScript = msGwEntityService.getDeviceDecoderScript(deviceEui);
-            if (!StringUtils.hasText(decoderScript)) {
-                log.warn("Decode Script not found: " + deviceEui);
-                return;
-            }
-
             byte[] binData = Base64.getDecoder().decode(uplinkData.getData());
-            int[] intArray = new int[binData.length];
-            for (int i = 0; i < binData.length; i++) {
-                intArray[i] = binData[i] & 0xFF;
-            }
-
-            String decodeResult = CodecExecutor.runDecode(decoderScript, uplinkData.getFPort(), intArray);
-            log.debug("decoded {}", decodeResult);
-
-            // save uplink data to entity
             String deviceKey = GatewayString.getDeviceKey(deviceEui);
-            Map<String, Object> entityValueMap = EntityValueConverter.convertToEntityKeyMap(deviceKey, json.readTree(decodeResult));
-            log.debug("entity value map {}", entityValueMap);
-            if (ObjectUtils.isEmpty(entityValueMap)) {
-                return;
-            }
+            DeviceTemplateInputResult inputResult = deviceTemplateParserProvider.input(deviceKey, binData, Map.of("fPort", uplinkData.getFPort()));
 
-            entityValueServiceProvider.saveValuesAndPublishAsync(ExchangePayload.create(entityValueMap), "DEVICE_UPLINK");
+            log.debug("Payload: {}", inputResult.getPayload());
+            entityValueServiceProvider.saveValuesAndPublishAsync(inputResult.getPayload(), "DEVICE_UPLINK");
+            deviceStatusServiceProvider.online(inputResult.getDevice());
         } catch (JsonProcessingException e) {
             log.error(e.getMessage());
         }
 
-        updateGatewayStatus(gatewayEui, DeviceConnectStatus.ONLINE, System.currentTimeMillis());
+        updateGatewayStatus(gatewayEui, Constants.STATUS_ONLINE, System.currentTimeMillis());
     }
 
     private void onResponse(String gatewayEui, String message, MqttMessage mqttMessage) {
@@ -154,18 +136,18 @@ public class MsGwMqttClient {
             log.error("read response error", e);
         }
 
-        updateGatewayStatus(gatewayEui, DeviceConnectStatus.ONLINE, System.currentTimeMillis());
+        updateGatewayStatus(gatewayEui, Constants.STATUS_ONLINE, System.currentTimeMillis());
     }
 
     private void onGatewayConnect(MqttConnectEvent event) {
-        updateGatewayStatusFromClientId(event.getClientId(), DeviceConnectStatus.ONLINE, event.getTs());
+        updateGatewayStatusFromClientId(event.getClientId(), Constants.STATUS_ONLINE, event.getTs());
     }
 
     private void onGatewayDisconnect(MqttDisconnectEvent event) {
-        updateGatewayStatusFromClientId(event.getClientId(), DeviceConnectStatus.OFFLINE, event.getTs());
+        updateGatewayStatusFromClientId(event.getClientId(), Constants.STATUS_OFFLINE, event.getTs());
     }
 
-    private void updateGatewayStatusFromClientId(String clientId, DeviceConnectStatus status, Long ts) {
+    private void updateGatewayStatusFromClientId(String clientId, String status, Long ts) {
         String eui = GatewayString.parseGatewayEuiFromClientId(clientId);
         if (eui == null) {
             return;
@@ -174,7 +156,7 @@ public class MsGwMqttClient {
         updateGatewayStatus(eui, status, ts);
     }
 
-    private void updateGatewayStatus(String eui, DeviceConnectStatus status, Long ts) {
+    private void updateGatewayStatus(String eui, String status, Long ts) {
         SimpleLock lock = lockProvider.lock(ScopedLockConfiguration.builder(LockScope.TENANT)
                 .name(LockConstants.UPDATE_GATEWAY_STATUS_LOCK_PREFIX + ":" + eui)
                 .lockAtMostFor(Duration.ofSeconds(5))
@@ -187,25 +169,35 @@ public class MsGwMqttClient {
 
         try {
             String identifier = GatewayString.getGatewayIdentifier(eui);
-            DeviceConnectStatus curStatus = msGwEntityService.getGatewayStatus(List.of(identifier)).get(identifier);
+            Device gateway = deviceServiceProvider.findByIdentifier(identifier, Constants.INTEGRATION_ID);
+            if (gateway == null) {
+                return;
+            }
+
+            String curStatus = deviceStatusServiceProvider.status(gateway);
             if (curStatus == null) {
-                curStatus = DeviceConnectStatus.ONLINE;
+                curStatus = Constants.STATUS_ONLINE;
             }
 
             if (status.equals(curStatus)) {
                 return;
             }
 
-            Device gateway = deviceServiceProvider.findByIdentifier(identifier, Constants.INTEGRATION_ID);
-            if (gateway == null) {
-                return;
+            if (status.equals(Constants.STATUS_ONLINE)) {
+                deviceStatusServiceProvider.online(gateway);
+            } else if (status.equals(Constants.STATUS_OFFLINE)) {
+                deviceStatusServiceProvider.offline(gateway);
+                List<String> deviceEuiList = msGwEntityService.getGatewayRelation().get(GatewayString.standardizeEUI(eui));
+                if (deviceEuiList != null && !deviceEuiList.isEmpty()) {
+                    deviceServiceProvider.findByIdentifiers(deviceEuiList, Constants.INTEGRATION_ID).forEach(deviceStatusServiceProvider::offline);
+                }
+
+            } else {
+                throw new IllegalArgumentException("Unknown device status: " + status);
             }
 
-            entityValueServiceProvider.saveValuesAndPublishAsync(ExchangePayload.create(Map.of(
-                    GatewayString.getGatewayStatusKey(identifier), status.name()
-            )));
             new AnnotatedEntityWrapper<MsGwIntegrationEntities.GatewayStatusEvent>().saveValues(Map.of(
-                    MsGwIntegrationEntities.GatewayStatusEvent::getStatus, status.name(),
+                    MsGwIntegrationEntities.GatewayStatusEvent::getStatus, status,
                     MsGwIntegrationEntities.GatewayStatusEvent::getGatewayName, gateway.getName(),
                     MsGwIntegrationEntities.GatewayStatusEvent::getEui, eui,
                     MsGwIntegrationEntities.GatewayStatusEvent::getStatusTimestamp, ts

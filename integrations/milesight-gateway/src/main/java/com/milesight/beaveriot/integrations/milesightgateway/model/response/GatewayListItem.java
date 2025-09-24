@@ -1,7 +1,5 @@
 package com.milesight.beaveriot.integrations.milesightgateway.model.response;
 
-import com.milesight.beaveriot.integrations.milesightgateway.entity.GatewayEntities;
-import com.milesight.beaveriot.integrations.milesightgateway.model.DeviceConnectStatus;
 import lombok.Data;
 
 /**
@@ -18,7 +16,7 @@ public class GatewayListItem {
 
     private String name;
 
-    private DeviceConnectStatus status;
+    private String status;
 
     private String credentialId;
 

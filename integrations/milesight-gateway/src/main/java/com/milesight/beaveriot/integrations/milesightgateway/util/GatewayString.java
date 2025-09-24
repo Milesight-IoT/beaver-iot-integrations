@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
-import com.milesight.beaveriot.integrations.milesightgateway.entity.GatewayEntities;
 
 import java.security.SecureRandom;
 import java.util.Map;
@@ -47,10 +46,6 @@ public class GatewayString {
 
     public static String getGatewayKey(String gatewayEui) {
         return Constants.INTEGRATION_ID + "." + "device" + "." + getGatewayIdentifier(gatewayEui);
-    }
-
-    public static String getGatewayStatusKey(String gatewayIdentifier) {
-        return Constants.INTEGRATION_ID + "." + "device" + "." + gatewayIdentifier + "." + GatewayEntities.STATUS_KEY;
     }
 
     public static String parseGatewayIdentifier(String key) {

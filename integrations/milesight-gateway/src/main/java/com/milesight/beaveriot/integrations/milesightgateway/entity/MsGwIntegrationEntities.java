@@ -1,5 +1,6 @@
 package com.milesight.beaveriot.integrations.milesightgateway.entity;
 
+import com.milesight.beaveriot.base.enums.EnumCode;
 import com.milesight.beaveriot.context.integration.context.AddDeviceAware;
 import com.milesight.beaveriot.context.integration.context.DeleteDeviceAware;
 import com.milesight.beaveriot.context.integration.entity.annotation.Attribute;
@@ -9,7 +10,6 @@ import com.milesight.beaveriot.context.integration.entity.annotation.Integration
 import com.milesight.beaveriot.context.integration.enums.AccessMod;
 import com.milesight.beaveriot.context.integration.enums.EntityType;
 import com.milesight.beaveriot.context.integration.model.ExchangePayload;
-import com.milesight.beaveriot.integrations.milesightgateway.model.DeviceConnectStatus;
 import com.milesight.beaveriot.integrations.milesightgateway.util.Constants;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -34,24 +34,9 @@ public class MsGwIntegrationEntities extends ExchangePayload {
 
     public static final String ADD_DEVICE_GATEWAY_DEVICE_MODEL_KEY = Constants.INTEGRATION_ID + ".integration." + ADD_DEVICE_IDENTIFIER + "." + ADD_DEVICE_GATEWAY_DEVICE_MODEL_IDENTIFIER;
 
-    public static final String SYNC_DEVICE_CODEC_IDENTIFIER = "sync-device-codec";
-
-    public static final String SYNC_DEVICE_CODEC_KEY = Constants.INTEGRATION_ID + ".integration." + SYNC_DEVICE_CODEC_IDENTIFIER;
-
-    public static final String MODEL_REPO_URL_IDENTIFIER = "model-repo-url";
-
-    public static final String MODEL_REPO_URL_KEY = Constants.INTEGRATION_ID + ".integration." + MODEL_REPO_URL_IDENTIFIER;
-
     public static final String GATEWAY_DEVICE_RELATION_IDENTIFIER = "gateway-device-relation";
 
     public static final String GATEWAY_DEVICE_RELATION_KEY = Constants.INTEGRATION_ID + ".integration." + GATEWAY_DEVICE_RELATION_IDENTIFIER;
-
-    public static final String DEVICE_MODEL_DATA_IDENTIFIER = "device-model-data";
-
-    public static final String DEVICE_MODEL_DATA_KEY = Constants.INTEGRATION_ID + ".integration." + DEVICE_MODEL_DATA_IDENTIFIER;
-
-    @Entity(type = EntityType.SERVICE, name = "Synchronize Device Codec", identifier = SYNC_DEVICE_CODEC_IDENTIFIER)
-    private EmptyPayload syncDeviceCodec;
 
     @Entity(type = EntityType.SERVICE, name = "Add Device", identifier = ADD_DEVICE_IDENTIFIER, visible = false)
     private AddDevice addDevice;
@@ -64,12 +49,6 @@ public class MsGwIntegrationEntities extends ExchangePayload {
 
     @Entity(type = EntityType.PROPERTY, name = "Gateway Device Relation", identifier = GATEWAY_DEVICE_RELATION_IDENTIFIER, accessMod = AccessMod.R, visible = false)
     private String gatewayDeviceRelation;
-
-    @Entity(type = EntityType.PROPERTY, name = "Device Model Data", identifier = DEVICE_MODEL_DATA_IDENTIFIER, accessMod = AccessMod.R, visible = false)
-    private String deviceModelData;
-
-    @Entity(type = EntityType.PROPERTY, name = "Model Repository Url", identifier = MODEL_REPO_URL_IDENTIFIER, accessMod = AccessMod.RW, attributes = @Attribute(optional = true))
-    private String modelRepoUrl;
 
     @Data
     @EqualsAndHashCode(callSuper = true)
@@ -92,12 +71,14 @@ public class MsGwIntegrationEntities extends ExchangePayload {
 
         @Entity(name = "Application Key", identifier = "app-key", attributes = @Attribute(optional = true, lengthRange = "32", format = "HEX"))
         private String appKey;
-    }
 
-    @Data
-    @EqualsAndHashCode(callSuper = true)
-    @Entities
-    public static class EmptyPayload extends ExchangePayload {}
+        @Entity(name = "Offline Timeout", identifier = "offline-timeout", attributes = @Attribute(
+                min = Constants.OFFLINE_TIMEOUT_ENTITY_MIN_VALUE,
+                defaultValue = Constants.DEFAULT_DEVICE_OFFLINE_TIMEOUT_STR,
+                unit = Constants.OFFLINE_TIMEOUT_ENTITY_UNIT
+        ))
+        private Long offlineTimeout;
+    }
 
     @Data
     @EqualsAndHashCode(callSuper = true)
@@ -108,13 +89,17 @@ public class MsGwIntegrationEntities extends ExchangePayload {
     @EqualsAndHashCode(callSuper = true)
     @Entities
     public static class GatewayStatusEvent extends ExchangePayload {
+        public enum GatewayStatus {
+            ONLINE, OFFLINE;
+        }
+
         @Entity(name = "Device EUI")
         private String eui;
 
         @Entity(name = "Gateway Name", identifier = "gateway-name")
         private String gatewayName;
 
-        @Entity(name = "Gateway Status", attributes = @Attribute(enumClass = DeviceConnectStatus.class))
+        @Entity(name = "Gateway Status", attributes = @Attribute(enumClass = GatewayStatus.class))
         private String status;
 
         @Entity(name = "Status Timestamp")

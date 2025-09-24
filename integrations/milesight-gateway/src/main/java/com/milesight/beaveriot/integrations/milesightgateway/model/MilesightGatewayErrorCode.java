@@ -20,6 +20,7 @@ public enum MilesightGatewayErrorCode implements ErrorCodeSpec {
     DUPLICATED_DEVICE_EUI(HttpStatus.BAD_REQUEST.value(), "duplicated_device_eui", "Duplicated device eui.", null),
     GATEWAY_NO_APPLICATION(HttpStatus.BAD_REQUEST.value(), "gateway_no_application", "Gateway must have at least one application.", null),
     GATEWAY_NO_DEVICE_PROFILE(HttpStatus.BAD_REQUEST.value(), "gateway_no_device_profile", "Gateway must have at least one device profile.", null),
+    TEMPLATE_MISSING_LORA_PROFILE(HttpStatus.BAD_REQUEST.value(), "template_missing_device_profile", "Device template must have \"lora_device_profile_class\" in metadata.", null),
     NO_VALID_PROFILE_FOR_DEVICE(HttpStatus.BAD_REQUEST.value(), "no_valid_profile_for_device", "Gateway has no valid profile for the device", null),
     ;
 
