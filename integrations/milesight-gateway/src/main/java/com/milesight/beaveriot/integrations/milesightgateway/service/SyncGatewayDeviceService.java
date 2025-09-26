@@ -5,11 +5,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.milesight.beaveriot.base.annotations.shedlock.DistributedLock;
 import com.milesight.beaveriot.base.enums.ErrorCode;
 import com.milesight.beaveriot.base.exception.ServiceException;
-import com.milesight.beaveriot.context.api.DeviceServiceProvider;
 import com.milesight.beaveriot.context.api.DeviceTemplateParserProvider;
+import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
 import com.milesight.beaveriot.context.integration.model.Device;
-import com.milesight.beaveriot.context.integration.model.DeviceBuilder;
-import com.milesight.beaveriot.context.integration.wrapper.EntityWrapper;
+import com.milesight.beaveriot.context.integration.model.Entity;
+import com.milesight.beaveriot.context.integration.model.ExchangePayload;
 import com.milesight.beaveriot.integrations.milesightgateway.model.DeviceModelIdentifier;
 import com.milesight.beaveriot.integrations.milesightgateway.model.GatewayDeviceData;
 import com.milesight.beaveriot.integrations.milesightgateway.model.GatewayDeviceOperation;
@@ -30,7 +30,7 @@ import org.springframework.util.StringUtils;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static com.milesight.beaveriot.integrations.milesightgateway.mqtt.MsGwMqttClient.GATEWAY_REQUEST_BATCH_SIZE;
 
@@ -63,6 +63,9 @@ public class SyncGatewayDeviceService {
 
     @Autowired
     DeviceTemplateParserProvider deviceTemplateParserProvider;
+
+    @Autowired
+    EntityValueServiceProvider entityValueServiceProvider;
 
     private static final ObjectMapper json = GatewayString.jsonInstance();
 
@@ -162,6 +165,7 @@ public class SyncGatewayDeviceService {
             DeviceModelIdentifier deviceModelIdentifier = DeviceModelIdentifier.of(deviceData.getDeviceModel());
             // save device
             deviceService.manageGatewayDevices(deviceData.getGatewayEUI(), deviceData.getEui(), GatewayDeviceOperation.ADD);
+            AtomicReference<String> timeoutEntityKey = new AtomicReference<>();
             deviceTemplateParserProvider.createDevice(
                     Constants.INTEGRATION_ID,
                     deviceModelIdentifier.getVendorId(),
@@ -169,9 +173,17 @@ public class SyncGatewayDeviceService {
                     GatewayString.standardizeEUI(deviceData.getEui()),
                     deviceItem.getDeviceName(),
                     (device, metadata) -> {
+                        List<Entity> entities = new ArrayList<>(device.getEntities());
+                        Entity timeoutEntity = deviceService.generateOfflineTimeoutEntity(device.getKey());
+                        entities.add(timeoutEntity);
+                        timeoutEntityKey.set(timeoutEntity.getKey());
+                        device.setEntities(entities);
                         device.setAdditional(json.convertValue(deviceData, new TypeReference<>() {}));
                         return true;
                     });
+            entityValueServiceProvider.saveLatestValues(ExchangePayload.create(Map.of(
+                    timeoutEntityKey.get(), Constants.DEFAULT_DEVICE_OFFLINE_TIMEOUT
+            )));
         });
     }
 }

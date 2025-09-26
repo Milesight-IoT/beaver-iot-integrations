@@ -9,6 +9,7 @@ import com.milesight.beaveriot.context.integration.model.config.EntityConfig;
 import com.milesight.beaveriot.context.model.DeviceTemplateModel;
 import com.milesight.beaveriot.integrations.milesightgateway.model.DeviceModelIdentifier;
 import com.milesight.beaveriot.integrations.milesightgateway.model.GatewayDeviceData;
+import com.milesight.beaveriot.integrations.milesightgateway.service.DeviceService;
 import com.milesight.beaveriot.integrations.milesightgateway.util.Constants;
 import com.milesight.beaveriot.integrations.milesightgateway.util.GatewayString;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * VersionUpgradeService class.
@@ -41,6 +43,9 @@ public class VersionUpgradeService {
 
     @Autowired
     DeviceTemplateParserProvider deviceTemplateParserProvider;
+
+    @Autowired
+    DeviceService deviceService;
 
     private final ObjectMapper json = GatewayString.jsonInstance();
 
@@ -119,7 +124,11 @@ public class VersionUpgradeService {
             entity.setDeviceKey(node.getKey());
             upgradedEntityIdentifiers.add(entity.getIdentifier());
             return entity;
-        }).toList();
+        }).collect(Collectors.toList());
+
+        // add additional entities
+        Entity timeoutEntity = deviceService.generateOfflineTimeoutEntity(node.getKey());
+        upgradedEntities.add(timeoutEntity);
 
         // delete old entities
         node.getEntities().forEach(entity -> {
@@ -132,6 +141,11 @@ public class VersionUpgradeService {
         node.setEntities(upgradedEntities);
         node.setTemplate(deviceTemplate.getKey());
         deviceServiceProvider.save(node);
+
+        // init default entity value
+        entityValueServiceProvider.saveLatestValues(ExchangePayload.create(Map.of(
+                timeoutEntity.getKey(), Constants.DEFAULT_DEVICE_OFFLINE_TIMEOUT
+        )));
     }
 
     private void cleanIntegrationEntities() {
