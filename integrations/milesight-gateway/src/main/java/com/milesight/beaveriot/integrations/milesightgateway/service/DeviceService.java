@@ -262,18 +262,25 @@ public class DeviceService {
 
         // downlink one by one
         devicePayloadMap.forEach((deviceEui, payload) -> {
-            int fPort = payload.getFPort().intValue();
+            try {
+                int fPort = payload.getFPort().intValue();
+                log.debug("Received payload: " + payload.getPayload());
 
-            DeviceTemplateOutputResult outputResult = deviceTemplateParserProvider.output(payload.getDeviceKey(), ExchangePayload.create(payload.getPayload()), Map.of("fPort", fPort));
-            byte[] byteData = (byte[]) outputResult.getOutput();
+                DeviceTemplateOutputResult outputResult = deviceTemplateParserProvider.output(payload.getDeviceKey(), ExchangePayload.create(payload.getPayload()), Map.of("fPort", fPort));
+                if (outputResult.getOutput() instanceof byte[] byteData) {
+                    String encodedData = Base64.getEncoder().encodeToString(byteData);
+                    log.debug("Downlink encoded data: " + encodedData);
+                    if (!StringUtils.hasText(encodedData)) {
+                        return;
+                    }
 
-            String encodedData = Base64.getEncoder().encodeToString(byteData);
-            log.debug("Downlink encoded data: " + encodedData);
-            if (!StringUtils.hasText(encodedData)) {
-                return;
+                    gatewayRequester.downlink(payload.getGatewayEui(), deviceEui, fPort, encodedData);
+                } else {
+                    throw new RuntimeException("Encode data error");
+                }
+            } catch (Exception e) {
+                log.error("Gateway downlink data transmission failed", e);
             }
-
-            gatewayRequester.downlink(payload.getGatewayEui(), deviceEui, fPort, encodedData);
         });
     }
 
