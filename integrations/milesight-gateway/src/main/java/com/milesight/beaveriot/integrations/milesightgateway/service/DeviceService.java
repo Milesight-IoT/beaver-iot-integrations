@@ -261,27 +261,30 @@ public class DeviceService {
         // use default credential for now, so we don't fetch gateways for username or credential id.
 
         // downlink one by one
-        devicePayloadMap.forEach((deviceEui, payload) -> {
+        for (Map.Entry<String, DevicePayload> entry : devicePayloadMap.entrySet()) {
+            String deviceEui = entry.getKey();
+            DevicePayload payload = entry.getValue();
+            int fPort = payload.getFPort().intValue();
+            log.debug("Received payload: " + payload.getPayload());
+
+            DeviceTemplateOutputResult outputResult;
             try {
-                int fPort = payload.getFPort().intValue();
-                log.debug("Received payload: " + payload.getPayload());
-
-                DeviceTemplateOutputResult outputResult = deviceTemplateParserProvider.output(payload.getDeviceKey(), ExchangePayload.create(payload.getPayload()), Map.of("fPort", fPort));
-                if (outputResult.getOutput() instanceof byte[] byteData) {
-                    String encodedData = Base64.getEncoder().encodeToString(byteData);
-                    log.debug("Downlink encoded data: " + encodedData);
-                    if (!StringUtils.hasText(encodedData)) {
-                        return;
-                    }
-
-                    gatewayRequester.downlink(payload.getGatewayEui(), deviceEui, fPort, encodedData);
-                } else {
-                    throw new RuntimeException("Encode data error");
-                }
+                outputResult = deviceTemplateParserProvider.output(payload.getDeviceKey(), ExchangePayload.create(payload.getPayload()), Map.of("fPort", fPort));
             } catch (Exception e) {
-                log.error("Gateway downlink data transmission failed", e);
+                throw ServiceException.with(MilesightGatewayErrorCode.NS_GATEWAY_DEVICE_DATA_ENCODE_FAILED).build();
             }
-        });
+
+            if (!(outputResult.getOutput() instanceof byte[] byteData)) {
+                throw ServiceException.with(MilesightGatewayErrorCode.NS_GATEWAY_DEVICE_ENCODED_DATA_TYPE_INVALID).build();
+            }
+
+            String encodedData = Base64.getEncoder().encodeToString(byteData);
+            log.debug("Downlink encoded data: " + encodedData);
+            if (!StringUtils.hasText(encodedData)) {
+                continue;
+            }
+            gatewayRequester.downlink(payload.getGatewayEui(), deviceEui, fPort, encodedData);
+        }
     }
 
     private Map<String, DevicePayload> getDevicePayloadMap(ExchangeEvent event) {
