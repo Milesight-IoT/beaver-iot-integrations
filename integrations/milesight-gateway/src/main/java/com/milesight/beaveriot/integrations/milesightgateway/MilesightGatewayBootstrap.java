@@ -3,15 +3,14 @@ package com.milesight.beaveriot.integrations.milesightgateway;
 import com.milesight.beaveriot.context.api.BlueprintLibrarySyncerProvider;
 import com.milesight.beaveriot.context.api.DeviceStatusServiceProvider;
 import com.milesight.beaveriot.context.integration.bootstrap.IntegrationBootstrap;
+import com.milesight.beaveriot.context.integration.model.DeviceStatusConfig;
 import com.milesight.beaveriot.context.integration.model.Integration;
-import com.milesight.beaveriot.context.model.BlueprintLibrarySyncStatus;
 import com.milesight.beaveriot.integrations.milesightgateway.legacy.VersionUpgradeService;
 import com.milesight.beaveriot.integrations.milesightgateway.mqtt.MsGwMqttClient;
 import com.milesight.beaveriot.integrations.milesightgateway.service.DeviceModelService;
 import com.milesight.beaveriot.integrations.milesightgateway.service.DeviceService;
 import com.milesight.beaveriot.integrations.milesightgateway.service.GatewayService;
 import com.milesight.beaveriot.integrations.milesightgateway.util.Constants;
-import com.milesight.beaveriot.integrations.milesightgateway.util.GatewayString;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -68,10 +67,11 @@ public class MilesightGatewayBootstrap implements IntegrationBootstrap {
     }
 
     private void registerStatusManager() {
-        deviceStatusServiceProvider.register(Constants.INTEGRATION_ID,
-                device -> deviceService.getDeviceOfflineTimeout(device),
-                devices -> deviceService.getDeviceOfflineTimeouts(devices)
-        );
+        DeviceStatusConfig config = DeviceStatusConfig.builder()
+                        .offlineTimeoutFetcher(deviceService::getDeviceOfflineTimeout)
+                        .batchOfflineTimeoutFetcher(deviceService::getDeviceOfflineTimeouts)
+                        .build();
+        deviceStatusServiceProvider.register(Constants.INTEGRATION_ID, config);
     }
 
     @Override
