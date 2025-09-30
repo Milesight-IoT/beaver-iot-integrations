@@ -268,14 +268,15 @@ public class DeviceService {
             log.debug("Received payload: " + payload.getPayload());
 
             DeviceTemplateOutputResult outputResult;
+            byte[] byteData;
             try {
                 outputResult = deviceTemplateParserProvider.output(payload.getDeviceKey(), ExchangePayload.create(payload.getPayload()), Map.of("fPort", fPort));
+                if (!(outputResult.getOutput() instanceof byte[])) {
+                    throw ServiceException.with(MilesightGatewayErrorCode.NS_GATEWAY_DEVICE_ENCODED_DATA_TYPE_INVALID).build();
+                }
+                byteData = (byte[]) outputResult.getOutput();
             } catch (Exception e) {
-                throw ServiceException.with(MilesightGatewayErrorCode.NS_GATEWAY_DEVICE_DATA_ENCODE_FAILED).build();
-            }
-
-            if (!(outputResult.getOutput() instanceof byte[] byteData)) {
-                throw ServiceException.with(MilesightGatewayErrorCode.NS_GATEWAY_DEVICE_ENCODED_DATA_TYPE_INVALID).build();
+                throw ServiceException.with(MilesightGatewayErrorCode.NS_GATEWAY_DEVICE_DATA_ENCODE_FAILED).detailMessage(e.getMessage()).build();
             }
 
             String encodedData = Base64.getEncoder().encodeToString(byteData);
