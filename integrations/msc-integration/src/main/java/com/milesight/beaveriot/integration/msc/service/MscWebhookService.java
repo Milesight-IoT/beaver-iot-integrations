@@ -2,6 +2,7 @@ package com.milesight.beaveriot.integration.msc.service;
 
 import com.milesight.beaveriot.base.exception.ServiceException;
 import com.milesight.beaveriot.context.api.DeviceServiceProvider;
+import com.milesight.beaveriot.context.api.DeviceStatusServiceProvider;
 import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
 import com.milesight.beaveriot.context.integration.model.ExchangePayload;
 import com.milesight.beaveriot.context.security.TenantContext;
@@ -17,8 +18,15 @@ import com.milesight.beaveriot.pubsub.api.annotation.MessageListener;
 import com.milesight.beaveriot.pubsub.api.message.RemoteBroadcastMessage;
 import com.milesight.msc.sdk.utils.HMacUtils;
 import com.milesight.msc.sdk.utils.TimeUtils;
-import lombok.*;
-import lombok.extern.slf4j.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import lombok.NonNull;
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -52,6 +60,9 @@ public class MscWebhookService {
 
     @Autowired
     private MessagePubSub messagePubSub;
+
+    @Autowired
+    private DeviceStatusServiceProvider deviceStatusServiceProvider;
 
     public void init(String tenantId) {
         val webhookSettingsKey = MscConnectionPropertiesEntities.getKey(MscConnectionPropertiesEntities.Fields.webhook);
@@ -131,7 +142,7 @@ public class MscWebhookService {
                 return;
             }
 
-            if ("device_data".equalsIgnoreCase(eventType)) {
+            if ("DEVICE_DATA".equalsIgnoreCase(eventType)) {
                 try {
                     handleDeviceData(webhookPayload);
                 } catch (Exception e) {
@@ -159,21 +170,17 @@ public class MscWebhookService {
         }
         val client = mscClientProvider.getMscClient();
         val deviceData = client.getObjectMapper().convertValue(webhookPayload.getData(), WebhookPayload.DeviceData.class);
-        if (!"PROPERTY".equalsIgnoreCase(deviceData.getType())
-                && !"EVENT".equalsIgnoreCase(deviceData.getType())) {
-            log.debug("Not tsl property or event: {}", deviceData.getType());
-            return;
-        }
         val eventId = deviceData.getTslId();
         val data = deviceData.getPayload();
         val ts = deviceData.getTs() != null ? deviceData.getTs() : webhookPayload.getEventCreatedTime() * 1000;
+        val type = deviceData.getType();
         val profile = deviceData.getDeviceProfile();
-        if (data == null || profile == null) {
+        if (type == null || profile == null) {
             log.warn("Invalid data: {}", deviceData);
             return;
         }
 
-        val sn = deviceData.getDeviceProfile().getSn();
+        val sn = profile.getSn();
         val device = deviceServiceProvider.findByIdentifier(sn, MscIntegrationConstants.INTEGRATION_IDENTIFIER);
         if (device == null) {
             log.warn("Device not added, try to sync data: {}", sn);
@@ -181,8 +188,18 @@ public class MscWebhookService {
             return;
         }
 
-        // save data
-        dataSyncService.saveHistoryData(device.getKey(), eventId, data, ts, true);
+        switch (type.toUpperCase()) {
+            case "ONLINE" -> deviceStatusServiceProvider.online(device);
+            case "OFFLINE" -> deviceStatusServiceProvider.offline(device);
+            case "PROPERTY", "EVENT" -> {
+                if (data == null) {
+                    log.warn("Invalid data: {}", deviceData);
+                    return;
+                }
+                dataSyncService.saveHistoryData(device.getKey(), eventId, data, ts, true);
+            }
+            default -> log.debug("Unsupported event: {}", deviceData.getType());
+        }
     }
 
     public boolean isSignatureValid(String signature, String requestTimestamp, String requestNonce, WebhookContext webhookContext) {

@@ -5,6 +5,7 @@ import com.milesight.beaveriot.base.annotations.shedlock.DistributedLock;
 import com.milesight.beaveriot.base.annotations.shedlock.LockScope;
 import com.milesight.beaveriot.base.exception.ServiceException;
 import com.milesight.beaveriot.context.api.DeviceServiceProvider;
+import com.milesight.beaveriot.context.api.DeviceStatusServiceProvider;
 import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
 import com.milesight.beaveriot.context.constants.ExchangeContextKeys;
 import com.milesight.beaveriot.context.integration.model.Device;
@@ -24,8 +25,10 @@ import com.milesight.cloud.sdk.client.model.DeviceDetailResponse;
 import com.milesight.cloud.sdk.client.model.DeviceSearchRequest;
 import com.milesight.msc.sdk.error.MscSdkException;
 import com.milesight.msc.sdk.utils.TimeUtils;
-import lombok.*;
-import lombok.extern.slf4j.*;
+import lombok.Getter;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import net.javacrumbs.shedlock.core.LockProvider;
 import net.javacrumbs.shedlock.spring.aop.ScopedLockConfiguration;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -61,6 +64,9 @@ public class MscDataSyncService {
 
     @Autowired
     private DeviceServiceProvider deviceServiceProvider;
+
+    @Autowired
+    private DeviceStatusServiceProvider deviceStatusServiceProvider;
 
     @Autowired
     private EntityValueServiceProvider entityValueServiceProvider;
@@ -353,7 +359,17 @@ public class MscDataSyncService {
         val details = getDeviceDetails(task);
         val deviceId = details.getDeviceId();
         val thingSpec = mscDeviceService.getThingSpec(String.valueOf(deviceId));
-        return mscDeviceService.updateLocalDevice(task.identifier, String.valueOf(deviceId), thingSpec);
+        val device = mscDeviceService.updateLocalDevice(task.identifier, String.valueOf(deviceId), thingSpec);
+        updateDeviceStatus(device, details.getConnectStatus());
+        return device;
+    }
+
+    private void updateDeviceStatus(Device device, DeviceDetailResponse.ConnectStatusEnum connectStatus) {
+        if (DeviceDetailResponse.ConnectStatusEnum.ONLINE.equals(connectStatus)) {
+            deviceStatusServiceProvider.online(device);
+        } else {
+            deviceStatusServiceProvider.offline(device);
+        }
     }
 
     @SneakyThrows
@@ -362,7 +378,9 @@ public class MscDataSyncService {
         val details = getDeviceDetails(task);
         val deviceId = details.getDeviceId();
         val thingSpec = mscDeviceService.getThingSpec(String.valueOf(deviceId));
-        return mscDeviceService.addLocalDevice(task.identifier, details.getName(), String.valueOf(deviceId), thingSpec);
+        val device = mscDeviceService.addLocalDevice(task.identifier, details.getName(), String.valueOf(deviceId), thingSpec);
+        updateDeviceStatus(device, details.getConnectStatus());
+        return device;
     }
 
     @SuppressWarnings("ConstantConditions")
