@@ -74,6 +74,7 @@ public class MsGwIntegrationEntities extends ExchangePayload {
 
         @Entity(name = "Offline Timeout", identifier = "offline-timeout", attributes = @Attribute(
                 min = Constants.OFFLINE_TIMEOUT_ENTITY_MIN_VALUE,
+                max = Constants.OFFLINE_TIMEOUT_ENTITY_MAX_VALUE,
                 defaultValue = Constants.DEFAULT_DEVICE_OFFLINE_TIMEOUT_STR,
                 unit = Constants.OFFLINE_TIMEOUT_ENTITY_UNIT
         ))
