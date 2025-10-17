@@ -57,9 +57,9 @@ public class MqttDeviceBootstrap implements IntegrationBootstrap {
     public void onEnabled(String tenantId, Integration integrationConfig) {
         mqttDeviceService.syncTemplates();
         DeviceStatusConfig config = DeviceStatusConfig.builder()
-                        .offlineTimeoutFetcher(mqttDeviceService::getDeviceOfflineTimeout)
-                        .batchOfflineTimeoutFetcher(mqttDeviceService::getDeviceOfflineTimeouts)
-                        .build();
+                .offlineTimeoutFetcher(mqttDeviceService::getDeviceOfflineTimeout)
+                .batchOfflineTimeoutFetcher(mqttDeviceService::getDeviceOfflineTimeouts)
+                .build();
         deviceStatusServiceProvider.register(integrationConfig.getId(), config);
         IntegrationBootstrap.super.onEnabled(tenantId, integrationConfig);
     }

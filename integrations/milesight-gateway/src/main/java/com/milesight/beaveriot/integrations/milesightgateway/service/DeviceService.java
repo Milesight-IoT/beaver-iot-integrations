@@ -40,6 +40,7 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.StringUtils;
 
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -327,12 +328,12 @@ public class DeviceService {
         return devicePayloadMap;
     }
 
-    public Long getDeviceOfflineTimeout(Device device) {
+    public Duration getDeviceOfflineTimeout(Device device) {
         return getDeviceOfflineTimeouts(List.of(device)).get(device.getId());
     }
 
-    public Map<Long, Long> getDeviceOfflineTimeouts(List<Device> devices) {
-        Map<Long, Long> result = new HashMap<>();
+    public Map<Long, Duration> getDeviceOfflineTimeouts(List<Device> devices) {
+        Map<Long, Duration> result = new HashMap<>();
         Map<Long, String> deviceEntityKey = new HashMap<>();
         devices.forEach(device -> {
             String deviceEui = GatewayString.getDeviceIdentifierByKey(device.getKey());
@@ -346,7 +347,7 @@ public class DeviceService {
                     .findFirst()
                     .ifPresentOrElse(
                         entity -> deviceEntityKey.put(device.getId(), entity.getKey()),
-                        () -> result.put(device.getId(), Constants.DEFAULT_DEVICE_OFFLINE_TIMEOUT * 60)
+                        () -> result.put(device.getId(), Duration.ofMinutes(Constants.DEFAULT_DEVICE_OFFLINE_TIMEOUT))
                     );
         });
 
@@ -355,7 +356,7 @@ public class DeviceService {
         }
 
         Map<String, Object> offlineTimeouts = entityValueServiceProvider.findValuesByKeys(deviceEntityKey.values().stream().toList());
-        deviceEntityKey.forEach((deviceId, entityKey) -> result.put(deviceId, (Long) Objects.requireNonNullElse(offlineTimeouts.get(entityKey), Constants.DEFAULT_DEVICE_OFFLINE_TIMEOUT) * 60));
+        deviceEntityKey.forEach((deviceId, entityKey) -> result.put(deviceId, Duration.ofMinutes((Long) Objects.requireNonNullElse(offlineTimeouts.get(entityKey), Constants.DEFAULT_DEVICE_OFFLINE_TIMEOUT))));
         return result;
     }
 
