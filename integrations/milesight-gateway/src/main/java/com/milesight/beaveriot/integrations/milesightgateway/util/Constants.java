@@ -29,7 +29,7 @@ public class Constants {
 
     public static final String OFFLINE_TIMEOUT_ENTITY_IDENTIFIER = "ms-offline-timeout";
 
-    public static final String OFFLINE_TIMEOUT_ENTITY_UNIT = "mins";
+    public static final String OFFLINE_TIMEOUT_ENTITY_UNIT = "min";
 
     public static final String OFFLINE_TIMEOUT_ENTITY_NAME = "Offline Timeout";
 
