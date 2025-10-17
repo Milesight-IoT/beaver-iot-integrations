@@ -20,6 +20,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -117,42 +118,37 @@ public class MqttDeviceService {
         entityServiceProvider.save(dataInputTemplateEntity);
     }
 
-    public long getDeviceOfflineTimeout(Device device) {
+    public Duration getDeviceOfflineTimeout(Device device) {
         String templateKey = device.getTemplate();
         DeviceTemplate deviceTemplate = deviceTemplateServiceProvider.findByKey(templateKey);
         if (deviceTemplate == null) {
-            return MqttDeviceConstants.DEFAULT_DEVICE_OFFLINE_TIMEOUT;
+            return Duration.ofMinutes(MqttDeviceConstants.DEFAULT_DEVICE_OFFLINE_TIMEOUT);
         }
 
-        // Provided unit: minutes
-        long deviceOfflineTimeout = mqttDeviceTemplateService.getDeviceOfflineTimeout(deviceTemplate.getId());
-        // Required unit: seconds
-        return deviceOfflineTimeout * 60;
+        return mqttDeviceTemplateService.getDeviceOfflineTimeout(deviceTemplate.getId());
     }
 
-    public Map<Long, Long> getDeviceOfflineTimeouts(List<Device> devices) {
+    public Map<Long, Duration> getDeviceOfflineTimeouts(List<Device> devices) {
         List<String> templateKeys = devices.stream().map(Device::getTemplate).toList();
         List<DeviceTemplate> deviceTemplates = deviceTemplateServiceProvider.findByKeys(templateKeys);
         Map<String, Long> templateKeyIdMap = deviceTemplates.stream().collect(Collectors.toMap(DeviceTemplate::getKey, DeviceTemplate::getId));
         List<Long> deviceTemplateIds = deviceTemplates.stream().map(DeviceTemplate::getId).toList();
-        Map<Long, Long> templateDeviceOfflineTimeouts = mqttDeviceTemplateService.getDeviceOfflineTimeouts(deviceTemplateIds);
-        Map<Long, Long> deviceOfflineTimeouts = new HashMap<>();
+        Map<Long, Duration> templateDeviceOfflineTimeouts = mqttDeviceTemplateService.getDeviceOfflineTimeouts(deviceTemplateIds);
+        Map<Long, Duration> deviceOfflineTimeouts = new HashMap<>();
         for (Device device: devices) {
             Long deviceId = device.getId();
             String templateKey = device.getTemplate();
             Long deviceTemplateId = templateKeyIdMap.get(templateKey);
-            Long deviceOfflineTimeout = null;
+            Duration deviceOfflineTimeout = null;
             if (deviceTemplateId != null) {
                 deviceOfflineTimeout = templateDeviceOfflineTimeouts.get(deviceTemplateId);
             }
 
-            // Provided unit: minutes
             if (deviceOfflineTimeout == null) {
-                deviceOfflineTimeout = MqttDeviceConstants.DEFAULT_DEVICE_OFFLINE_TIMEOUT;
+                deviceOfflineTimeout = Duration.ofMinutes(MqttDeviceConstants.DEFAULT_DEVICE_OFFLINE_TIMEOUT);
             }
 
-            // Required unit: seconds
-            deviceOfflineTimeouts.put(deviceId, deviceOfflineTimeout * 60);
+            deviceOfflineTimeouts.put(deviceId, deviceOfflineTimeout);
         }
         return deviceOfflineTimeouts;
     }

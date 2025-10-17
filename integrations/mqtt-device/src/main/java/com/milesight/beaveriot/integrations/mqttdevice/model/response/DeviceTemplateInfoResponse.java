@@ -24,7 +24,7 @@ public class DeviceTemplateInfoResponse extends DeviceTemplateResponseData {
         Long deviceTemplateId = Long.parseLong(deviceTemplateResponseData.getId());
         topic = DataCenter.getTopic(deviceTemplateId);
         MqttDeviceTemplateService mqttDeviceTemplateService = SpringContext.getBean(MqttDeviceTemplateService.class);
-        deviceOfflineTimeout = mqttDeviceTemplateService.getDeviceOfflineTimeout(deviceTemplateId);
+        deviceOfflineTimeout = mqttDeviceTemplateService.getDeviceOfflineTimeout(deviceTemplateId).toMinutes();
     }
 
     public static DeviceTemplateInfoResponse build(DeviceTemplateResponseData deviceTemplateResponseData) {
