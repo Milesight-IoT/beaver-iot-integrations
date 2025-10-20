@@ -15,7 +15,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
-import org.springframework.util.CollectionUtils;
 
 import java.text.MessageFormat;
 import java.util.Map;
@@ -41,7 +40,7 @@ public class CamThinkAiInferenceClient {
                 throw ServiceException.with(ServerErrorCode.SERVER_NOT_REACHABLE.getErrorCode(), ServerErrorCode.SERVER_NOT_REACHABLE.getErrorMessage()).build();
             }
 
-            if (CollectionUtils.isEmpty(camThinkModelListResponse.getData())) {
+            if (camThinkModelListResponse.getData() == null) {
                 throw ServiceException.with(ServerErrorCode.SERVER_NOT_REACHABLE.getErrorCode(), ServerErrorCode.SERVER_NOT_REACHABLE.getErrorMessage()).build();
             }
         } catch (Exception e) {
