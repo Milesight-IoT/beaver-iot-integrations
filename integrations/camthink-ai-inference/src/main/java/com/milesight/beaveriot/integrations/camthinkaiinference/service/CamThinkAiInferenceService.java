@@ -489,7 +489,7 @@ public class CamThinkAiInferenceService {
                 return;
             }
 
-            if (CollectionUtils.isEmpty(camThinkModelListResponse.getData())) {
+            if (camThinkModelListResponse.getData() == null) {
                 throwServiceNotReachableException();
                 return;
             }
