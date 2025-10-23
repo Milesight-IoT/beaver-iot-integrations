@@ -24,6 +24,7 @@ public enum MilesightGatewayErrorCode implements ErrorCodeSpec {
     NO_VALID_PROFILE_FOR_DEVICE(HttpStatus.BAD_REQUEST.value(), "no_valid_profile_for_device", "Gateway has no valid profile for the device", null),
     NS_GATEWAY_DEVICE_DATA_ENCODE_FAILED(HttpStatus.BAD_REQUEST.value(), "ns_gateway_device_data_encode_failed", "Gateway device data encode failed", null),
     NS_GATEWAY_DEVICE_ENCODED_DATA_TYPE_INVALID(HttpStatus.BAD_REQUEST.value(), "ns_gateway_device_encoded_data_type_invalid", "Gateway device encoded data type is invalid", null),
+    CUSTOM_DEVICE_MUST_INPUT_APP_KEY(HttpStatus.BAD_REQUEST.value(), "custom_device_must_input_app_key", "3rd party device must specify an applicaiton key", null),
     ;
 
     private final int status;

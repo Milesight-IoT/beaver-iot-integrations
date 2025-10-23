@@ -26,5 +26,7 @@ public class AddDeviceRequest {
 
     String appKey;
 
+    Boolean isDefaultAppKey;
+
     String applicationID;
 }
