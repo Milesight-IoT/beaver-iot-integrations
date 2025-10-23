@@ -11,8 +11,6 @@ import java.util.List;
 public class Constants {
     public static final String INTEGRATION_ID = "milesight-gateway";
 
-    public static final String DEFAULT_APP_KEY = "5572404c696e6b4c6f52613230313823";
-
     public static final String GATEWAY_IDENTIFIER_PREFIX = "GW-";
 
     public static final String GATEWAY_MQTT_CLIENT_ID_PREFIX = "msgw:";

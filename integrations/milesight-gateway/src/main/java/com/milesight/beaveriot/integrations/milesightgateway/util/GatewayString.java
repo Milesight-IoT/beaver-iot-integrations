@@ -117,5 +117,10 @@ public class GatewayString {
         return parts.length < 2 ? null : parts[1];
     }
 
+    public static boolean isMilesightDevice(String eui) {
+        String standardizeEUI = standardizeEUI(eui);
+        return standardizeEUI.startsWith("24E124") || standardizeEUI.startsWith("C0BA1F");
+    }
+
     private GatewayString() {}
 }

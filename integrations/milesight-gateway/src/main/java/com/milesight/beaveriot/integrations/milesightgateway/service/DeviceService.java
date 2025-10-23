@@ -151,8 +151,13 @@ public class DeviceService {
                     addDeviceRequest.setDescription("From Beaver IoT");
                     if (StringUtils.hasText(addDevice.getAppKey())) {
                         addDeviceRequest.setAppKey(addDevice.getAppKey());
+                    } else if (GatewayString.isMilesightDevice(deviceEUI)) {
+                        addDeviceRequest.setIsDefaultAppKey(true);
+                        addDeviceRequest.setAppKey("");
                     } else {
-                        addDeviceRequest.setAppKey(Constants.DEFAULT_APP_KEY);
+                        throw ServiceException.with(MilesightGatewayErrorCode.CUSTOM_DEVICE_MUST_INPUT_APP_KEY).args(Map.of(
+                                "eui", deviceEUI
+                        )).build();
                     }
 
                     addDeviceRequest.setSkipFCntCheck(!addDevice.getFrameCounterValidation());
