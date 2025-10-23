@@ -32,6 +32,7 @@ import org.springframework.aop.framework.AopContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.ObjectUtils;
 
 import java.util.*;
@@ -246,6 +247,7 @@ public class GatewayService {
     }
 
     @DistributedLock(name = LockConstants.UPDATE_GATEWAY_DEVICE_RELATION_LOCK, waitForLock = "10s")
+    @Transactional(rollbackFor = Throwable.class)
     public void batchDeleteGateway(List<String> gatewayEuiList) {
         Map<String, List<String>> gatewayMap = msGwEntityService.getGatewayRelation();
 
