@@ -54,7 +54,7 @@ public class DataCenter {
         return loadTopicMap().containsKey(topic);
     }
 
-    private static Map<String, Long> loadTopicMap() {
+    public static Map<String, Long> loadTopicMap() {
         AnnotatedEntityWrapper<MqttDeviceIntegrationEntities> entitiesWrapper = new AnnotatedEntityWrapper<>();
         String topicMapStr = (String) entitiesWrapper.getValue(MqttDeviceIntegrationEntities::getTopicMap).orElse("{}");
         return JsonUtils.fromJSON(topicMapStr, new TypeReference<>() {});
