@@ -108,12 +108,23 @@ public class MqttDeviceTemplateService {
     }
 
     public Page<DeviceTemplateResponseData> searchDeviceTemplate(SearchDeviceTemplateRequest searchDeviceTemplateRequest) {
-        Page<DeviceTemplateResponseData> deviceTemplateResponseDataPage = deviceTemplateServiceProvider.searchCustom(searchDeviceTemplateRequest);
+        List<Long> deviceTemplateIds = getDeviceTemplateIds();
+        searchDeviceTemplateRequest.setDeviceTemplateIds(deviceTemplateIds);
+        Page<DeviceTemplateResponseData> deviceTemplateResponseDataPage = deviceTemplateServiceProvider.search(searchDeviceTemplateRequest);
         return deviceTemplateResponseDataPage.map(DeviceTemplateInfoResponse::build);
     }
 
     public DeviceTemplateTestResponse testDeviceTemplate(Long id, TestDeviceTemplateRequest testDeviceTemplateRequest) {
         return inputAndGetTestResponse(DataCenter.INTEGRATION_ID, id, testDeviceTemplateRequest.getTestData());
+    }
+
+    private List<Long> getDeviceTemplateIds() {
+        Map<String, Long> topicMap = DataCenter.loadTopicMap();
+        if (CollectionUtils.isEmpty(topicMap)) {
+            return Collections.emptyList();
+        }
+
+        return topicMap.values().stream().toList();
     }
 
     private void flattenDeviceEntities(List<Entity> deviceEntities, Map<String, Entity> flatDeviceEntityMap) {
