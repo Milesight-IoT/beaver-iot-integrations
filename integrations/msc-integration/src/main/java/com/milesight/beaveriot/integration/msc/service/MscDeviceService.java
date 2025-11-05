@@ -239,32 +239,30 @@ public class MscDeviceService {
     @SneakyThrows
     @EventSubscribe(payloadKeyExpression = "msc-integration.integration.delete_device")
     public void onDeleteDevice(Event<MscServiceEntities.DeleteDevice> event) {
-        if (mscClientProvider == null || mscClientProvider.getMscClient() == null) {
-            throw ServiceException
-                    .with(ErrorCode.SERVER_ERROR.getErrorCode(), "Integration has not been initialized yet.")
-                    .build();
-        }
         val device = deviceServiceProvider.findByIdentifier(
                 event.getPayload().getDeletedDevice().getIdentifier(), MscIntegrationConstants.INTEGRATION_IDENTIFIER);
-        val additionalData = device.getAdditional();
-        if (additionalData == null) {
-            return;
-        }
-        val deviceId = additionalData.get(MscIntegrationConstants.DeviceAdditionalDataName.DEVICE_ID);
-        if (deviceId == null) {
-            return;
-        }
-        try {
-            mscClientProvider.getMscClient().device().delete(deviceId.toString())
-                    .execute();
-        } catch (MscApiException e) {
-            if (!"device_not_found".equals(e.getErrorResponse().getErrCode())) {
-                throw MscErrorCode.wrap(e).build();
-            } else {
-                log.warn("Device '{}' ({}) not found in MSC", device.getIdentifier(), deviceId);
+
+        if (mscClientProvider == null || mscClientProvider.getMscClient() == null) {
+            log.warn("MSC client is not available, try to delete anyway.");
+        } else {
+            val deviceId = Optional.ofNullable(device.getAdditional())
+                    .map(additionalData -> additionalData.get(MscIntegrationConstants.DeviceAdditionalDataName.DEVICE_ID))
+                    .map(Objects::toString)
+                    .orElse(null);
+            try {
+                mscClientProvider.getMscClient().device().delete(deviceId).execute();
+                log.info("Successfully deleted device '{}' ({}) from MSC platform", device.getIdentifier(), deviceId);
+            } catch (MscApiException e) {
+                log.warn("Failed to delete device '{}' ({}) from MSC platform: [{}] {}. Proceeding to delete local data anyway.",
+                        device.getIdentifier(), deviceId, e.getErrorResponse().getErrCode(), e.getErrorResponse().getErrMsg());
+            } catch (Exception e) {
+                log.warn("Failed to delete device '{}' ({}) from MSC platform due to exception: {}. Proceeding to delete local data anyway.",
+                        device.getIdentifier(), deviceId, e.getMessage(), e);
             }
         }
+
         deviceServiceProvider.deleteById(device.getId());
+        log.info("Successfully deleted local data for device '{}' (ID: {})", device.getIdentifier(), device.getId());
     }
 
 }
