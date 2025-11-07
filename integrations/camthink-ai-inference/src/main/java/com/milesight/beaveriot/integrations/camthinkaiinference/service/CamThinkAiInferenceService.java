@@ -7,12 +7,15 @@ import com.milesight.beaveriot.base.utils.JsonUtils;
 import com.milesight.beaveriot.context.api.DeviceServiceProvider;
 import com.milesight.beaveriot.context.api.EntityServiceProvider;
 import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
+import com.milesight.beaveriot.context.api.ResourceServiceProvider;
+import com.milesight.beaveriot.context.enums.ResourceRefType;
 import com.milesight.beaveriot.context.integration.enums.AttachTargetType;
 import com.milesight.beaveriot.context.integration.enums.EntityValueType;
 import com.milesight.beaveriot.context.integration.model.Device;
 import com.milesight.beaveriot.context.integration.model.Entity;
 import com.milesight.beaveriot.context.integration.model.ExchangePayload;
 import com.milesight.beaveriot.context.integration.wrapper.AnnotatedEntityWrapper;
+import com.milesight.beaveriot.context.model.ResourceRefDTO;
 import com.milesight.beaveriot.context.security.TenantContext;
 import com.milesight.beaveriot.context.support.SpringContext;
 import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
@@ -41,6 +44,7 @@ import com.milesight.beaveriot.integrations.camthinkaiinference.support.image.co
 import com.milesight.beaveriot.scheduler.integration.IntegrationScheduled;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
@@ -59,13 +63,15 @@ public class CamThinkAiInferenceService {
     private final DeviceServiceProvider deviceServiceProvider;
     private final EntityServiceProvider entityServiceProvider;
     private final EntityValueServiceProvider entityValueServiceProvider;
+    private final ResourceServiceProvider resourceServiceProvider;
     private final CamThinkAiInferenceClient camThinkAiInferenceClient;
     private final ThreadPoolExecutor autoInferThreadPoolExecutor;
 
-    public CamThinkAiInferenceService(DeviceServiceProvider deviceServiceProvider, EntityServiceProvider entityServiceProvider, EntityValueServiceProvider entityValueServiceProvider, CamThinkAiInferenceClient camThinkAiInferenceClient) {
+    public CamThinkAiInferenceService(DeviceServiceProvider deviceServiceProvider, EntityServiceProvider entityServiceProvider, EntityValueServiceProvider entityValueServiceProvider, ResourceServiceProvider resourceServiceProvider, CamThinkAiInferenceClient camThinkAiInferenceClient) {
         this.deviceServiceProvider = deviceServiceProvider;
         this.entityServiceProvider = entityServiceProvider;
         this.entityValueServiceProvider = entityValueServiceProvider;
+        this.resourceServiceProvider = resourceServiceProvider;
         this.camThinkAiInferenceClient = camThinkAiInferenceClient;
         this.autoInferThreadPoolExecutor = buildAutoInferThreadPoolExecutor();
     }
@@ -258,27 +264,36 @@ public class CamThinkAiInferenceService {
 
             ExchangePayload exchangePayload = new ExchangePayload();
 
+            String imageBase64;
+            if (ImageSupport.isUrl(imageEntityValue)) {
+                ImageSupport.ImageResult imageResult = ImageSupport.getImageBase64FromUrl(imageEntityValue);
+                imageBase64 = imageResult.getImageBase64();
+            } else {
+                imageBase64 = imageEntityValue;
+            }
+            ImageSupport.ImageData originImageData = ImageSupport.parseFromImageBase64(imageBase64);
+            String originImageFileName = getImageFileName(device.getId(), "origin_image", originImageData.getImageSuffix());
+            String originImageResourceUrl = resourceServiceProvider.putTempResource(originImageFileName, originImageData.getContentType(), originImageData.getData());
+
             InferHistory inferHistory = new InferHistory();
             inferHistory.setModelName(modelMap.get(modelId));
-            inferHistory.setOriginImage(imageEntityValue);
+            inferHistory.setOriginImage(originImageResourceUrl);
             inferHistory.setInferStatus(inferStatus.getValue());
             inferHistory.setUplinkAt(uplinkAt);
             inferHistory.setInferAt(inferAt);
 
+            String resultImageResourceUrl = "";
             String inferHistoryEntityKey = EntitySupport.getDeviceEntityKey(device.getKey(), Constants.IDENTIFIER_INFER_HISTORY);
+            String resultImageEntityKey = EntitySupport.getDeviceEntityChildrenKey(deviceKey, modelIdentifier, Constants.IDENTIFIER_MODEL_RESULT_IMAGE);
             if (InferStatus.OK.equals(inferStatus)) {
-                String imageBase64;
-                if (ImageSupport.isUrl(imageEntityValue)) {
-                    ImageSupport.ImageResult imageResult = ImageSupport.getImageBase64FromUrl(imageEntityValue);
-                    imageBase64 = imageResult.getImageBase64();
-                } else {
-                    imageBase64 = imageEntityValue;
-                }
                 String resultImageBase64 = drawResultImage(imageBase64, camThinkModelInferResponse);
-                inferHistory.setResultImage(resultImageBase64);
-                String resultImageEntityKey = EntitySupport.getDeviceEntityChildrenKey(deviceKey, modelIdentifier, Constants.IDENTIFIER_MODEL_RESULT_IMAGE);
+                ImageSupport.ImageData resultImageData = ImageSupport.parseFromImageBase64(resultImageBase64);
+                String resultImageFileName = getImageFileName(device.getId(), "result_image", resultImageData.getImageSuffix());
+                resultImageResourceUrl = resourceServiceProvider.putTempResource(resultImageFileName, resultImageData.getContentType(), resultImageData.getData());
+
+                inferHistory.setResultImage(resultImageResourceUrl);
                 if (entityServiceProvider.findByKey(resultImageEntityKey) != null) {
-                    exchangePayload.put(resultImageEntityKey, resultImageBase64);
+                    exchangePayload.put(resultImageEntityKey, resultImageResourceUrl);
                 }
 
                 if (camThinkModelInferResponse.getData() != null && camThinkModelInferResponse.getData().getOutputs() != null) {
@@ -305,11 +320,39 @@ public class CamThinkAiInferenceService {
             }
 
             if (!exchangePayload.isEmpty()) {
-                entityValueServiceProvider.saveValuesAndPublishSync(exchangePayload);
+                Map<String, Pair<Long, Long>> entityKeyLatestIdAndHistoryIds = entityValueServiceProvider.saveValues(exchangePayload);
+                linkResource(entityKeyLatestIdAndHistoryIds, inferHistoryEntityKey, List.of(originImageResourceUrl, resultImageResourceUrl));
+                linkResource(entityKeyLatestIdAndHistoryIds, resultImageEntityKey, List.of(resultImageResourceUrl));
             }
         } catch (Exception e) {
             log.error("autoInfer error deviceId:{}, imageEntityKey:{}, error:", device.getId(), imageEntityKey, e);
         }
+    }
+
+    private void linkResource(Map<String, Pair<Long, Long>> entityKeyLatestIdAndHistoryIds, String entityKey, List<String> resourceUrls) {
+        if (CollectionUtils.isEmpty(entityKeyLatestIdAndHistoryIds)) {
+            return;
+        }
+
+        Pair<Long, Long> idPair = entityKeyLatestIdAndHistoryIds.get(entityKey);
+        if (idPair == null) {
+            return;
+        }
+
+        Long entityLatestId = idPair.getFirst();
+        ResourceRefDTO entityLatestIdResourceRef = ResourceRefDTO.of(String.valueOf(entityLatestId), ResourceRefType.ENTITY_LATEST.name());
+        resourceServiceProvider.unlinkRef(entityLatestIdResourceRef);
+
+        Long entityHistoryId = idPair.getSecond();
+        ResourceRefDTO entityHistoryIdResourceRef = ResourceRefDTO.of(String.valueOf(entityHistoryId), ResourceRefType.ENTITY_HISTORY.name());
+        resourceUrls.stream().filter(resourceUrl -> !StringUtils.isEmpty(resourceUrl)).forEach(resourceUrl -> {
+            resourceServiceProvider.linkByUrl(resourceUrl, entityLatestIdResourceRef);
+            resourceServiceProvider.linkByUrl(resourceUrl, entityHistoryIdResourceRef);
+        });
+    }
+
+    private String getImageFileName(Long deviceId, String prefix, String suffix) {
+        return deviceId + "_" + prefix + "_" + System.currentTimeMillis() + "." + suffix;
     }
 
     public Map<String, String> getModelMap() {

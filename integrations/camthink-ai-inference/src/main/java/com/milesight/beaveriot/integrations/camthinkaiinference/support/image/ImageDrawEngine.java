@@ -1,5 +1,6 @@
 package com.milesight.beaveriot.integrations.camthinkaiinference.support.image;
 
+import com.milesight.beaveriot.integrations.camthinkaiinference.support.ImageSupport;
 import com.milesight.beaveriot.integrations.camthinkaiinference.support.image.config.ImageDrawConfig;
 import com.milesight.beaveriot.integrations.camthinkaiinference.support.image.intefaces.ImageDrawAction;
 import lombok.Data;
@@ -45,7 +46,7 @@ public class ImageDrawEngine {
 
     @SuppressWarnings("UnusedReturnValue")
     public ImageDrawEngine loadImageFromBase64(String imageBase64) throws IOException {
-        String[] extractedData = extractImageBase64(imageBase64);
+        String[] extractedData = ImageSupport.extractImageBase64(imageBase64);
         imageBase64Header = extractedData[0];
         String base64Data = extractedData[1];
 
@@ -83,12 +84,7 @@ public class ImageDrawEngine {
         g2d.dispose();
 
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        String imageSuffix;
-        if (imageBase64Header == null) {
-            imageSuffix = DEFAULT_IMAGE_SUFFIX;
-        } else {
-            imageSuffix = getImageSuffixFromImageBase64Header(imageBase64Header);
-        }
+        String imageSuffix = ImageSupport.getImageSuffixFromImageBase64Header(imageBase64Header);
 
         if (IMAGE_JPEG_SET.contains(imageSuffix.toLowerCase())) {
             Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName(IMAGE_SUFFIX_JPEG);
@@ -141,7 +137,7 @@ public class ImageDrawEngine {
     }
 
     public static void convertBase64ToImage(String imageBase64, String outputPath) throws IOException {
-        String[] extractedData = extractImageBase64(imageBase64);
+        String[] extractedData = ImageSupport.extractImageBase64(imageBase64);
         String base64Data = extractedData[1];
 
         byte[] imageData = Base64.getDecoder().decode(base64Data);
@@ -149,10 +145,6 @@ public class ImageDrawEngine {
         try (FileOutputStream imageOutFile = new FileOutputStream(outputPath)) {
             imageOutFile.write(imageData);
         }
-    }
-
-    private static String getImageSuffixFromImageBase64Header(String imageBase64Header) {
-        return imageBase64Header.substring(imageBase64Header.indexOf('/') + 1, imageBase64Header.indexOf(';'));
     }
 
     private static String getImageBase64Header(String imageSuffix) {
@@ -165,21 +157,6 @@ public class ImageDrawEngine {
         } else {
             return DEFAULT_IMAGE_SUFFIX;
         }
-    }
-
-    private static String[] extractImageBase64(String imageBase64) {
-        if (imageBase64 == null) {
-            throw new IllegalArgumentException("Invalid Data URI format");
-        }
-
-        if (!imageBase64.contains(",")) {
-            return new String[]{null, imageBase64};
-        }
-
-        String imageBase64Header = imageBase64.substring(0, imageBase64.indexOf(','));
-        String base64Data = imageBase64.substring(imageBase64.indexOf(',') + 1);
-
-        return new String[]{imageBase64Header, base64Data};
     }
 
     private static String composeImageBase64(String prefix, String base64Data) {
