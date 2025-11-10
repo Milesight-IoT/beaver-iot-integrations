@@ -594,6 +594,7 @@ public class CamThinkAiInferenceService {
                         }
                         return null;
                     });
+
             try {
                 allFuture.join();
             } catch (Exception e) {
