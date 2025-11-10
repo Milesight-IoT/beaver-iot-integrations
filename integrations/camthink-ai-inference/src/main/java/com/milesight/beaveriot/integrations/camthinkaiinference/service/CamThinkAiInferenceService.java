@@ -568,7 +568,7 @@ public class CamThinkAiInferenceService {
                 Entity modelServiceEntity = modelServiceEntityTemplate.toEntity();
                 futures.add(fetchAndSetModelInputEntities(modelServiceEntity, modelData.getId()));
             }
-            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+            CompletableFuture<Void> allFuture = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
                     .orTimeout(10, TimeUnit.SECONDS)
                     .thenRun(() -> {
                         try {
@@ -594,6 +594,12 @@ public class CamThinkAiInferenceService {
                         }
                         return null;
                     });
+
+            try {
+                allFuture.join();
+            } catch (Exception e) {
+                log.error("Error occurs while waiting for all futures to complete: fetching model details and setting model input entities", e);
+            }
         }
     }
 
