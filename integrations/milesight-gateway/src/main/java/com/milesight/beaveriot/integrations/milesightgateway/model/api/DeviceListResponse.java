@@ -24,8 +24,4 @@ public class DeviceListResponse {
     private Integer pfTotalCount;
 
     private List<DeviceListProfileItem> profileResult;
-
-    private String channelPlan;
-
-    private Boolean disable;
 }

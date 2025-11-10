@@ -38,9 +38,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import com.milesight.beaveriot.integrations.milesightgateway.util.GatewayString;
 import org.springframework.util.StringUtils;
 
-import static com.milesight.beaveriot.integrations.milesightgateway.mqtt.MsGwMqttUtil.getMqttTopic;
-import static com.milesight.beaveriot.integrations.milesightgateway.mqtt.MsGwMqttUtil.parseGatewayIdFromTopic;
-
 /**
  * MsGwMqttClient class.
  *
@@ -89,12 +86,12 @@ public class MsGwMqttClient {
             return;
         }
 
-        mqttServiceProvider.subscribe(getMqttTopic("+", Constants.GATEWAY_MQTT_UPLINK_SCOPE), (MqttMessage message) -> {
-            this.onDataUplink(parseGatewayIdFromTopic(message.getTopicSubPath()), new String(message.getPayload(), StandardCharsets.UTF_8));
+        mqttServiceProvider.subscribe(MsGwMqttUtil.getUplinkTopic(MsGwMqttUtil.MQTT_TOPIC_PLACEHOLDER), (MqttMessage message) -> {
+            this.onDataUplink(MsGwMqttUtil.parseGatewayIdFromTopic(message.getTopicSubPath()), new String(message.getPayload(), StandardCharsets.UTF_8));
         }, true);
 
-        mqttServiceProvider.subscribe(getMqttTopic("+", Constants.GATEWAY_MQTT_RESPONSE_SCOPE), (MqttMessage message) -> {
-            this.onResponse(parseGatewayIdFromTopic(message.getTopicSubPath()), new String(message.getPayload(), StandardCharsets.UTF_8), message);
+        mqttServiceProvider.subscribe(MsGwMqttUtil.getResponseTopic(MsGwMqttUtil.MQTT_TOPIC_PLACEHOLDER), (MqttMessage message) -> {
+            this.onResponse(MsGwMqttUtil.parseGatewayIdFromTopic(message.getTopicSubPath()), new String(message.getPayload(), StandardCharsets.UTF_8), message);
         }, false);
 
         mqttServiceProvider.onConnect(this::onGatewayConnect);
@@ -212,14 +209,9 @@ public class MsGwMqttClient {
         mqttServiceProvider.publish(topic, data, MqttQos.AT_MOST_ONCE, false);
     }
 
-    public void downlink(String gatewayEui, String deviceEui, Integer fPort, String data) {
-        final String gatewayTopic = getMqttTopic(gatewayEui, Constants.GATEWAY_MQTT_DOWNLINK_SCOPE);
-        MqttDownlinkData downlinkData = new MqttDownlinkData();
-        downlinkData.setDevEUI(deviceEui);
-        downlinkData.setFPort(fPort);
-        downlinkData.setData(data);
+    public void downlink(String topic, Object data) {
         try {
-            mqttPublish(gatewayTopic, json.writeValueAsBytes(downlinkData));
+            mqttPublish(topic, json.writeValueAsBytes(data));
         } catch (JsonProcessingException e) {
             throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), "Downlink Gateway Error: " + e.getMessage()).build();
         }
@@ -232,7 +224,7 @@ public class MsGwMqttClient {
         pendingRequests.put(req.getId(), pendingRequest);
 
         final MqttResponse<T> response = new MqttResponse<>();
-        final String gatewayTopic = getMqttTopic(gatewayEui, Constants.GATEWAY_MQTT_REQUEST_SCOPE);
+        final String gatewayTopic = MsGwMqttUtil.getRequestTopic(gatewayEui);
         try {
             mqttPublish(gatewayTopic, json.writeValueAsBytes(req));
 
@@ -277,5 +269,16 @@ public class MsGwMqttClient {
         }
 
         return result;
+    }
+
+    public void requestWithoutResponse(String gatewayEui, MqttRequest req) {
+        log.trace("request {}", req);
+        final String gatewayTopic = MsGwMqttUtil.getRequestTopic(gatewayEui);
+        try {
+            mqttPublish(gatewayTopic, json.writeValueAsBytes(req));
+        } catch (Exception e) {
+            log.error("Request Gateway Error: " + e.getMessage());
+            throw ServiceException.with(MilesightGatewayErrorCode.GATEWAY_REQUEST_TIMEOUT).build();
+        }
     }
 }

@@ -11,13 +11,15 @@ import com.milesight.beaveriot.context.integration.model.Device;
 import com.milesight.beaveriot.context.integration.model.Entity;
 import com.milesight.beaveriot.context.integration.model.ExchangePayload;
 import com.milesight.beaveriot.integrations.milesightgateway.model.DeviceModelIdentifier;
+import com.milesight.beaveriot.integrations.milesightgateway.model.GatewayData;
 import com.milesight.beaveriot.integrations.milesightgateway.model.GatewayDeviceData;
 import com.milesight.beaveriot.integrations.milesightgateway.model.GatewayDeviceOperation;
 import com.milesight.beaveriot.integrations.milesightgateway.model.api.DeviceListItemFields;
 import com.milesight.beaveriot.integrations.milesightgateway.model.request.SyncGatewayDeviceRequest;
 import com.milesight.beaveriot.integrations.milesightgateway.model.response.SyncDeviceListItem;
+import com.milesight.beaveriot.integrations.milesightgateway.requester.GatewayRequester;
+import com.milesight.beaveriot.integrations.milesightgateway.requester.GatewayRequesterFactory;
 import com.milesight.beaveriot.integrations.milesightgateway.util.Constants;
-import com.milesight.beaveriot.integrations.milesightgateway.util.GatewayRequester;
 import com.milesight.beaveriot.integrations.milesightgateway.util.GatewayString;
 import com.milesight.beaveriot.integrations.milesightgateway.util.LockConstants;
 import lombok.Data;
@@ -44,7 +46,7 @@ import static com.milesight.beaveriot.integrations.milesightgateway.mqtt.MsGwMqt
 @Slf4j
 public class SyncGatewayDeviceService {
     @Autowired
-    GatewayRequester gatewayRequester;
+    GatewayRequesterFactory gatewayRequesterFactory;
 
     @Autowired
     GatewayService gatewayService;
@@ -77,7 +79,7 @@ public class SyncGatewayDeviceService {
             throw ServiceException.with(ErrorCode.PARAMETER_VALIDATION_FAILED.getErrorCode(), "gateway not found: " + gatewayEui).build();
         }
 
-        List<Map<String, Object>> deviceDataMap = gatewayRequester.requestAllDeviceList(gatewayEui, gatewayService.getGatewayApplicationId(gateway));
+        List<Map<String, Object>> deviceDataMap = gatewayRequesterFactory.create(GatewayData.fromMap(gateway.getAdditional())).requestAllDeviceList();
         if (deviceDataMap.isEmpty()) {
             return List.of();
         }
@@ -91,7 +93,7 @@ public class SyncGatewayDeviceService {
         Map<String, String> modelNameToId = deviceModelService.getDeviceModelNameToId();
         return deviceDataMap.stream()
                 .filter(deviceData -> {
-                    String eui = (String) deviceData.get(DeviceListItemFields.DEV_EUI);
+                    String eui = GatewayString.standardizeEUI((String) deviceData.get(DeviceListItemFields.DEV_EUI));
                     return !existedDeviceEuiSet.contains(eui);
                 })
                 .map(deviceData -> {
@@ -115,11 +117,11 @@ public class SyncGatewayDeviceService {
 
     @DistributedLock(name = LockConstants.SYNC_GATEWAY_DEVICE_LOCK)
     public void syncGatewayDevice(String gatewayEui, SyncGatewayDeviceRequest request) {
-        // check connection of gateway. In case a large number of doomed-to-fail requests were sent.
-        gatewayRequester.requestDeviceList(gatewayEui, 0, 1, null);
-
         Device gateway = gatewayService.getGatewayByEui(gatewayEui);
-        String applicationId = gatewayService.getGatewayApplicationId(gateway);
+        GatewayRequester gatewayRequester = gatewayRequesterFactory.create(GatewayData.fromMap(gateway.getAdditional()));
+
+        // check connection of gateway. In case a large number of doomed-to-fail requests were sent.
+        gatewayRequester.requestBase();
 
         // batch reset device codec
         List<UpdateGatewayDeviceResponse> deviceItemList = new ArrayList<>();
@@ -130,7 +132,7 @@ public class SyncGatewayDeviceService {
                     .subList(offset, end)
                     .stream()
                     .map(syncRequest -> CompletableFuture.supplyAsync(() -> {
-                        Map<String, Object> deviceItemData = gatewayService.doUpdateGatewayDevice(gatewayEui, syncRequest.getEui(), applicationId, Map.of(
+                        Map<String, Object> deviceItemData = gatewayService.doUpdateGatewayDevice(gatewayRequester, syncRequest.getEui(), Map.of(
                                 DeviceListItemFields.PAYLOAD_CODEC_ID, NONE_CODEC_ID,
                                 DeviceListItemFields.PAYLOAD_NAME, ""
                         ));

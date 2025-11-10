@@ -10,7 +10,6 @@ import com.milesight.beaveriot.context.integration.enums.CredentialsType;
 import com.milesight.beaveriot.context.integration.model.*;
 import com.milesight.beaveriot.context.integration.model.event.DeviceEvent;
 import com.milesight.beaveriot.context.integration.model.event.ExchangeEvent;
-import com.milesight.beaveriot.context.integration.wrapper.AnnotatedTemplateEntityWrapper;
 import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
 import com.milesight.beaveriot.eventbus.api.Event;
 import com.milesight.beaveriot.integrations.milesightgateway.entity.MsGwIntegrationEntities;
@@ -19,8 +18,9 @@ import com.milesight.beaveriot.integrations.milesightgateway.model.request.Fetch
 import com.milesight.beaveriot.integrations.milesightgateway.model.response.GatewayDeviceListItem;
 import com.milesight.beaveriot.integrations.milesightgateway.model.response.MqttCredentialResponse;
 import com.milesight.beaveriot.integrations.milesightgateway.mqtt.MsGwMqttUtil;
-import com.milesight.beaveriot.integrations.milesightgateway.mqtt.model.MqttResponse;
-import com.milesight.beaveriot.integrations.milesightgateway.util.GatewayRequester;
+import com.milesight.beaveriot.integrations.milesightgateway.requester.GatewayRequester;
+import com.milesight.beaveriot.integrations.milesightgateway.requester.GatewayRequesterFactory;
+import com.milesight.beaveriot.integrations.milesightgateway.requester.model.GatewayRequesterGuessResult;
 import com.milesight.beaveriot.integrations.milesightgateway.model.api.DeviceListResponse;
 import com.milesight.beaveriot.integrations.milesightgateway.model.request.AddGatewayRequest;
 import com.milesight.beaveriot.integrations.milesightgateway.model.response.ConnectionValidateResponse;
@@ -34,10 +34,12 @@ import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.ObjectUtils;
+import org.springframework.util.StringUtils;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.milesight.beaveriot.integrations.milesightgateway.util.Constants.*;
@@ -52,7 +54,7 @@ import static com.milesight.beaveriot.integrations.milesightgateway.util.Constan
 @Slf4j
 public class GatewayService {
     @Autowired
-    GatewayRequester gatewayRequester;
+    GatewayRequesterFactory gatewayRequesterFactory;
 
     @Autowired
     EntityServiceProvider entityServiceProvider;
@@ -104,11 +106,19 @@ public class GatewayService {
         response.setPassword(credentials.getAccessSecret());
         response.setClientId(clientId);
 
+        String downlinkTopic;
+        if (gateway == null || StringUtils.hasText(GatewayData.fromMap(gateway.getAdditional()).getVersion())) {
+            downlinkTopic = MsGwMqttUtil.getDownlinkTopic(gatewayEui, MsGwMqttUtil.DEVICE_EUI_PLACEHOLDER);
+        } else {
+            // compatible
+            downlinkTopic = MsGwMqttUtil.getDownlinkTopic(gatewayEui, null);
+        }
+
         // set topics
-        response.setUplinkDataTopic(mqttServiceProvider.getFullTopicName(credentials.getAccessKey(), MsGwMqttUtil.getMqttTopic(gatewayEui, GATEWAY_MQTT_UPLINK_SCOPE)));
-        response.setDownlinkDataTopic(mqttServiceProvider.getFullTopicName(credentials.getAccessKey(), MsGwMqttUtil.getMqttTopic(gatewayEui, GATEWAY_MQTT_DOWNLINK_SCOPE)));
-        response.setRequestDataTopic(mqttServiceProvider.getFullTopicName(credentials.getAccessKey(), MsGwMqttUtil.getMqttTopic(gatewayEui, GATEWAY_MQTT_REQUEST_SCOPE)));
-        response.setResponseDataTopic(mqttServiceProvider.getFullTopicName(credentials.getAccessKey(), MsGwMqttUtil.getMqttTopic(gatewayEui, GATEWAY_MQTT_RESPONSE_SCOPE)));
+        response.setUplinkDataTopic(mqttServiceProvider.getFullTopicName(credentials.getAccessKey(), MsGwMqttUtil.getUplinkTopic(gatewayEui)));
+        response.setDownlinkDataTopic(mqttServiceProvider.getFullTopicName(credentials.getAccessKey(), downlinkTopic));
+        response.setRequestDataTopic(mqttServiceProvider.getFullTopicName(credentials.getAccessKey(), MsGwMqttUtil.getRequestTopic(gatewayEui)));
+        response.setResponseDataTopic(mqttServiceProvider.getFullTopicName(credentials.getAccessKey(), MsGwMqttUtil.getResponseTopic(gatewayEui)));
 
         return response;
     }
@@ -124,8 +134,8 @@ public class GatewayService {
         String eui = GatewayString.standardizeEUI(inputEui);
         validateGatewayInfo(eui);
         ConnectionValidateResponse result = new ConnectionValidateResponse();
-        MqttResponse<DeviceListResponse> response = gatewayRequester.requestDeviceList(eui, 0, 1, null);
-        DeviceListResponse responseData = response.getSuccessBody();
+        GatewayRequesterGuessResult guessResult = gatewayRequesterFactory.guess(eui);
+        DeviceListResponse responseData = guessResult.getBaseResponse().getSuccessBody();
         if (ObjectUtils.isEmpty(responseData.getAppResult())) {
             throw ServiceException.with(MilesightGatewayErrorCode.GATEWAY_NO_APPLICATION).build();
         }
@@ -136,9 +146,10 @@ public class GatewayService {
 
         result.setAppResult(responseData.getAppResult());
         result.setProfileResult(responseData.getProfileResult());
+        result.setVersion(guessResult.getGatewayRequester().getVersion());
 
         Optional<Credentials> credentials = credentialsServiceProvider.getCredentials(Long.valueOf(credentialId));
-        if (credentials.isEmpty() || !credentials.get().getAccessKey().equals(response.getCtx().getUsername())) {
+        if (credentials.isEmpty() || !credentials.get().getAccessKey().equals(guessResult.getBaseResponse().getCtx().getUsername())) {
             throw ServiceException.with(ErrorCode.PARAMETER_VALIDATION_FAILED.getErrorCode(), "Invalid credential: " + credentialId).build();
         }
 
@@ -209,8 +220,10 @@ public class GatewayService {
         if (validateResult.getAppResult().stream().noneMatch(appItem -> appItem.getApplicationID().equals(request.getApplicationId()))) {
             throw ServiceException.with(ErrorCode.PARAMETER_VALIDATION_FAILED.getErrorCode(), "Unknown application: " + request.getApplicationId()).build();
         }
+
         newGatewayData.setApplicationId(request.getApplicationId());
         newGatewayData.setClientId(request.getClientId());
+        newGatewayData.setVersion(validateResult.getVersion());
 
         if (request.getClientId() == null) {
             throw ServiceException.with(ErrorCode.PARAMETER_VALIDATION_FAILED.getErrorCode(), "Client Id not provided").build();
@@ -249,13 +262,13 @@ public class GatewayService {
     @DistributedLock(name = LockConstants.UPDATE_GATEWAY_DEVICE_RELATION_LOCK, waitForLock = "10s")
     @Transactional(rollbackFor = Throwable.class)
     public void batchDeleteGateway(List<String> gatewayEuiList) {
-        Map<String, List<String>> gatewayMap = msGwEntityService.getGatewayRelation();
+        Map<String, List<String>> gatewayDeviceListMap = msGwEntityService.getGatewayRelation();
 
         // find gateway that have devices then delete gateways and devices
         List<String> deviceEuiList = new ArrayList<>();
         for (String inputEUI : gatewayEuiList) {
             String gatewayEui = GatewayString.standardizeEUI(inputEUI);
-            List<String> gatewayDeviceEuiList = gatewayMap.remove(gatewayEui);
+            List<String> gatewayDeviceEuiList = gatewayDeviceListMap.remove(gatewayEui);
             if (gatewayDeviceEuiList == null) {
                 log.error("Gateway Relation not found: {}", gatewayEui);
                 continue;
@@ -274,13 +287,15 @@ public class GatewayService {
             deviceServiceProvider.deleteById(device.getId());
         }
 
+        Map<String, Device> gatewayEuiMap = getGatewayByEuiList(gatewayEuiList).stream().collect(Collectors.toMap(this::getGatewayEui, Function.identity()));
+
         List<CompletableFuture<Void>> futures = gatewayDeviceToDelete.entrySet().stream().map(entry -> CompletableFuture.runAsync(() -> {
             String gatewayEui = entry.getKey();
+
+            GatewayRequester gatewayRequester = gatewayRequesterFactory.create(GatewayData.fromMap(gatewayEuiMap.get(gatewayEui).getAdditional()));
             try {
-                // check if the gateway is connected.
-                gatewayRequester.requestDeviceList(gatewayEui, 0, 1, null);
                 // delete devices
-                gatewayRequester.requestDeleteDevice(gatewayEui, entry.getValue());
+                gatewayRequester.requestDeleteDeviceAsync(entry.getValue());
             } catch (Exception e) {
                 log.error("Delete device at gateway error: {} {}", gatewayEui, e.getMessage());
             }
@@ -290,14 +305,12 @@ public class GatewayService {
                 .join();
 
         // delete gateway
-        List<Device> gatewayList = getGatewayByEuiList(gatewayEuiList);
-        for (Device gateway : gatewayList) {
-            // TODO: optimize to batch delete
+        for (Device gateway : gatewayEuiMap.values()) {
             deviceServiceProvider.deleteById(gateway.getId());
         }
 
         // save relation
-        msGwEntityService.saveGatewayRelation(gatewayMap);
+        msGwEntityService.saveGatewayRelation(gatewayDeviceListMap);
 
         // delete gateway from add device gateway eui list
         self().removeAddDeviceGatewayEui(gatewayEuiList);
@@ -340,7 +353,9 @@ public class GatewayService {
             self().batchDeleteGateway(List.of(getGatewayEui(device)));
         } else {
             GatewayDeviceData deviceData = deviceService.getDeviceData(device);
-            gatewayRequester.requestDeleteDevice(deviceData.getGatewayEUI(), List.of(deviceData.getEui()));
+            gatewayRequesterFactory
+                    .create(GatewayData.fromMap(getGatewayByEui(deviceData.getGatewayEUI()).getAdditional()))
+                    .requestDeleteDeviceAsync(List.of(deviceData.getEui()));
             deviceService.manageGatewayDevices(deviceData.getGatewayEUI(), deviceData.getEui(), GatewayDeviceOperation.DELETE);
             deviceServiceProvider.deleteById(device.getId());
         }
@@ -371,20 +386,20 @@ public class GatewayService {
         }
     }
 
-    public Map<String, Object> doUpdateGatewayDevice(String gatewayEui, String deviceEui, String appId, Map<String, Object> toUpdate) {
+    public Map<String, Object> doUpdateGatewayDevice(GatewayRequester gatewayRequester, String deviceEui, Map<String, Object> toUpdate) {
         if (toUpdate == null || toUpdate.isEmpty()) {
             return Map.of();
         }
 
-        Optional<Map<String, Object>> deviceItem = gatewayRequester.requestDeviceItemByEui(gatewayEui, deviceEui, appId);
+        Optional<Map<String, Object>> deviceItem = gatewayRequester.requestDeviceItemByEui(deviceEui);
         if (deviceItem.isEmpty()) {
-            log.warn("Device " + deviceEui + " not found in gateway " + gatewayEui);
+            log.warn("Device " + deviceEui + " not found in gateway " + gatewayRequester.getGatewayEui());
             return Map.of();
         }
 
         AtomicBoolean hasUpdate = new AtomicBoolean(false);
         toUpdate.forEach((String key, Object value) -> {
-            if (deviceItem.get().get(key).equals(value)) {
+            if (Objects.equals(deviceItem.get().get(key), value)) {
                 return;
             }
 
@@ -397,7 +412,7 @@ public class GatewayService {
             return deviceItem.get();
         }
 
-        gatewayRequester.requestUpdateDeviceItem(gatewayEui, deviceEui, deviceItem.get());
+        gatewayRequester.requestUpdateDeviceItem(deviceEui, deviceItem.get());
         return deviceItem.get();
     }
 
