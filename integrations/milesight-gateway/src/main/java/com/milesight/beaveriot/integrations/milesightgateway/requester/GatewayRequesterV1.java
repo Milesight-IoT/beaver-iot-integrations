@@ -222,4 +222,10 @@ public class GatewayRequesterV1 implements GatewayRequester {
 
         msGwMqttClient.downlink(MsGwMqttUtil.getDownlinkTopic(this.eui, nodeDeviceEui), downlinkPayload);
     }
+
+    @Override
+    public void detect() {
+        MqttRequest req = buildDeviceListRequest(0, 1);
+        msGwMqttClient.requestWithoutResponse(this.eui, req);
+    }
 }

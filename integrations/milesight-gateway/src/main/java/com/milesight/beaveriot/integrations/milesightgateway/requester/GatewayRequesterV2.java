@@ -222,4 +222,10 @@ public class GatewayRequesterV2 implements GatewayRequester {
                 "confirmed", false
         ));
     }
+
+    @Override
+    public void detect() {
+        MqttRequest req = buildDeviceListRequest("", 0, 1);
+        msGwMqttClient.requestWithoutResponse(this.eui, req);
+    }
 }

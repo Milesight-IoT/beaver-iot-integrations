@@ -361,7 +361,7 @@ public class GatewayService {
         }
     }
 
-    public void syncGatewayListToAddDeviceGatewayEuiList() {
+    public List<Device> syncGatewayListToAddDeviceGatewayEuiList() {
         List<Device> gatwayList = getAllGateways();
         Entity addDeviceGatewayEuiEntity = getAddDeviceGatewayEntity();
         LinkedHashMap<String, String> euiToNameMap = gatwayList.stream().collect(Collectors.toMap(
@@ -375,6 +375,7 @@ public class GatewayService {
             addDeviceGatewayEuiEntity.getAttributes().put(AttributeBuilder.ATTRIBUTE_DEFAULT_VALUE, euiToNameMap.entrySet().iterator().next().getKey());
         }
         entityServiceProvider.save(addDeviceGatewayEuiEntity);
+        return gatwayList;
     }
 
     @EventSubscribe(payloadKeyExpression = Constants.INTEGRATION_ID + ".device.*", eventType = DeviceEvent.EventType.UPDATED)

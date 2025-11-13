@@ -2,35 +2,24 @@ package com.milesight.beaveriot.integrations.milesightgateway.mqtt;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.milesight.beaveriot.base.annotations.shedlock.LockScope;
 import com.milesight.beaveriot.base.enums.ErrorCode;
 import com.milesight.beaveriot.base.exception.ServiceException;
 import com.milesight.beaveriot.context.api.*;
-import com.milesight.beaveriot.context.integration.model.Device;
 import com.milesight.beaveriot.context.integration.model.DeviceStatus;
-import com.milesight.beaveriot.context.integration.wrapper.AnnotatedEntityWrapper;
 import com.milesight.beaveriot.context.model.response.DeviceTemplateInputResult;
 import com.milesight.beaveriot.context.mqtt.enums.MqttQos;
 import com.milesight.beaveriot.context.mqtt.model.MqttConnectEvent;
 import com.milesight.beaveriot.context.mqtt.model.MqttDisconnectEvent;
 import com.milesight.beaveriot.context.mqtt.model.MqttMessage;
-import com.milesight.beaveriot.integrations.milesightgateway.entity.MsGwIntegrationEntities;
 import com.milesight.beaveriot.integrations.milesightgateway.model.MilesightGatewayErrorCode;
-import com.milesight.beaveriot.integrations.milesightgateway.service.MsGwEntityService;
-import com.milesight.beaveriot.integrations.milesightgateway.util.Constants;
 import com.milesight.beaveriot.integrations.milesightgateway.mqtt.model.*;
-import com.milesight.beaveriot.integrations.milesightgateway.util.LockConstants;
 import lombok.extern.slf4j.Slf4j;
-import net.javacrumbs.shedlock.core.LockProvider;
-import net.javacrumbs.shedlock.core.SimpleLock;
-import net.javacrumbs.shedlock.spring.aop.ScopedLockConfiguration;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -60,13 +49,7 @@ public class MsGwMqttClient {
     MqttPubSubServiceProvider mqttServiceProvider;
 
     @Autowired
-    DeviceServiceProvider deviceServiceProvider;
-
-    @Autowired
     TaskExecutor taskExecutor;
-
-    @Autowired
-    LockProvider lockProvider;
 
     @Autowired
     DeviceTemplateParserProvider deviceTemplateParserProvider;
@@ -75,7 +58,7 @@ public class MsGwMqttClient {
     DeviceStatusServiceProvider deviceStatusServiceProvider;
 
     @Autowired
-    MsGwEntityService msGwEntityService;
+    MsGwStatus msGwStatus;
 
     private final Map<String, CompletableFuture<MqttRawResponse>> pendingRequests = new ConcurrentHashMap<>();
 
@@ -85,6 +68,8 @@ public class MsGwMqttClient {
         if (!isInit.compareAndSet(false, true)) {
             return;
         }
+
+        msGwStatus.init();
 
         mqttServiceProvider.subscribe(MsGwMqttUtil.getUplinkTopic(MsGwMqttUtil.MQTT_TOPIC_PLACEHOLDER), (MqttMessage message) -> {
             this.onDataUplink(MsGwMqttUtil.parseGatewayIdFromTopic(message.getTopicSubPath()), new String(message.getPayload(), StandardCharsets.UTF_8));
@@ -115,7 +100,7 @@ public class MsGwMqttClient {
             log.error(e.getMessage());
         }
 
-        updateGatewayStatus(gatewayEui, DeviceStatus.ONLINE, System.currentTimeMillis());
+        msGwStatus.updateGatewayStatus(gatewayEui, DeviceStatus.ONLINE, System.currentTimeMillis());
     }
 
     private void onResponse(String gatewayEui, String message, MqttMessage mqttMessage) {
@@ -125,16 +110,15 @@ public class MsGwMqttClient {
             rawResponse.getCtx().setUsername(mqttMessage.getUsername());
             CompletableFuture<MqttRawResponse> request = pendingRequests.get(rawResponse.getId());
             if (request == null) {
-                log.warn("No request found for {}: {}", gatewayEui, rawResponse.getId());
-                return;
+                log.debug("No request found for {}: {}", gatewayEui, rawResponse.getId());
+            } else {
+                request.complete(rawResponse);
             }
-
-            request.complete(rawResponse);
         } catch (Exception e) {
             log.error("read response error", e);
         }
 
-        updateGatewayStatus(gatewayEui, DeviceStatus.ONLINE, System.currentTimeMillis());
+        msGwStatus.updateGatewayStatus(gatewayEui, DeviceStatus.ONLINE, System.currentTimeMillis());
     }
 
     private void onGatewayConnect(MqttConnectEvent event) {
@@ -151,58 +135,7 @@ public class MsGwMqttClient {
             return;
         }
 
-        updateGatewayStatus(eui, status, ts);
-    }
-
-    private void updateGatewayStatus(String eui, DeviceStatus status, Long ts) {
-        SimpleLock lock = lockProvider.lock(ScopedLockConfiguration.builder(LockScope.TENANT)
-                .name(LockConstants.UPDATE_GATEWAY_STATUS_LOCK_PREFIX + ":" + eui)
-                .lockAtMostFor(Duration.ofSeconds(5))
-                .lockAtLeastFor(Duration.ZERO)
-                .waitForLock(Duration.ofSeconds(5))
-                .build()).orElse(null);
-        if (lock == null) {
-            return;
-        }
-
-        try {
-            String identifier = GatewayString.getGatewayIdentifier(eui);
-            Device gateway = deviceServiceProvider.findByIdentifier(identifier, Constants.INTEGRATION_ID);
-            if (gateway == null) {
-                return;
-            }
-
-            DeviceStatus curStatus = deviceStatusServiceProvider.status(gateway);
-            if (curStatus == null) {
-                curStatus = DeviceStatus.ONLINE;
-            }
-
-            if (status.equals(curStatus)) {
-                return;
-            }
-
-            if (status.equals(DeviceStatus.ONLINE)) {
-                deviceStatusServiceProvider.online(gateway);
-            } else if (status.equals(DeviceStatus.OFFLINE)) {
-                deviceStatusServiceProvider.offline(gateway);
-                List<String> deviceEuiList = msGwEntityService.getGatewayRelation().get(GatewayString.standardizeEUI(eui));
-                if (deviceEuiList != null && !deviceEuiList.isEmpty()) {
-                    deviceServiceProvider.findByIdentifiers(deviceEuiList, Constants.INTEGRATION_ID).forEach(deviceStatusServiceProvider::offline);
-                }
-
-            } else {
-                throw new IllegalArgumentException("Unknown device status: " + status);
-            }
-
-            new AnnotatedEntityWrapper<MsGwIntegrationEntities.GatewayStatusEvent>().saveValues(Map.of(
-                    MsGwIntegrationEntities.GatewayStatusEvent::getStatus, status,
-                    MsGwIntegrationEntities.GatewayStatusEvent::getGatewayName, gateway.getName(),
-                    MsGwIntegrationEntities.GatewayStatusEvent::getEui, eui,
-                    MsGwIntegrationEntities.GatewayStatusEvent::getStatusTimestamp, ts
-            )).publishAsync();
-        } finally {
-            lock.unlock();
-        }
+        msGwStatus.updateGatewayStatus(eui, status, ts);
     }
 
     private void mqttPublish(String topic, byte[] data) {
