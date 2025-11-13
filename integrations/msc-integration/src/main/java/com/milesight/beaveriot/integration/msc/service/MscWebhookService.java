@@ -2,8 +2,8 @@ package com.milesight.beaveriot.integration.msc.service;
 
 import com.milesight.beaveriot.base.exception.ServiceException;
 import com.milesight.beaveriot.context.api.DeviceServiceProvider;
-import com.milesight.beaveriot.context.api.DeviceStatusServiceProvider;
 import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
+import com.milesight.beaveriot.context.integration.model.DeviceStatus;
 import com.milesight.beaveriot.context.integration.model.ExchangePayload;
 import com.milesight.beaveriot.context.security.TenantContext;
 import com.milesight.beaveriot.eventbus.annotations.EventSubscribe;
@@ -62,7 +62,7 @@ public class MscWebhookService {
     private MessagePubSub messagePubSub;
 
     @Autowired
-    private DeviceStatusServiceProvider deviceStatusServiceProvider;
+    private MscDeviceStatusService mscDeviceStatusService;
 
     public void init(String tenantId) {
         val webhookSettingsKey = MscConnectionPropertiesEntities.getKey(MscConnectionPropertiesEntities.Fields.webhook);
@@ -189,8 +189,8 @@ public class MscWebhookService {
         }
 
         switch (type.toUpperCase()) {
-            case "ONLINE" -> deviceStatusServiceProvider.online(device);
-            case "OFFLINE" -> deviceStatusServiceProvider.offline(device);
+            case "ONLINE" -> mscDeviceStatusService.updateDeviceStatus(device, DeviceStatus.ONLINE);
+            case "OFFLINE" -> mscDeviceStatusService.updateDeviceStatus(device, DeviceStatus.OFFLINE);
             case "PROPERTY", "EVENT" -> {
                 if (data == null) {
                     log.warn("Invalid data: {}", deviceData);
