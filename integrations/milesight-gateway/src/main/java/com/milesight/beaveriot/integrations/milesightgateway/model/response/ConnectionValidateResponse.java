@@ -17,4 +17,6 @@ public class ConnectionValidateResponse {
     private List<DeviceListAppItem> appResult;
 
     private List<DeviceListProfileItem> profileResult;
+
+    private String version;
 }

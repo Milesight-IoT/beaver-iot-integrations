@@ -25,7 +25,7 @@ public class GatewayString {
     }
 
     public static String standardizeEUI(String eui) {
-        if (!eui.matches(HEX_PATTERN)) {
+        if (eui == null || !eui.matches(HEX_PATTERN)) {
             throw new IllegalArgumentException("Not a valid eui: " + eui);
         }
 

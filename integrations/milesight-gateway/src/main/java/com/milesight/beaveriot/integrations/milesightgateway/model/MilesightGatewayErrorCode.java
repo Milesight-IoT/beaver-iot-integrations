@@ -18,6 +18,8 @@ public enum MilesightGatewayErrorCode implements ErrorCodeSpec {
     GATEWAY_REQUEST_TIMEOUT(HttpStatus.INTERNAL_SERVER_ERROR.value(), "gateway_request_timeout", "Request gateway timeout.", null),
     DUPLICATED_GATEWAY_EUI(HttpStatus.BAD_REQUEST.value(), "duplicated_gateway_eui", "Duplicated gateway eui.", null),
     DUPLICATED_DEVICE_EUI(HttpStatus.BAD_REQUEST.value(), "duplicated_device_eui", "Duplicated device eui.", null),
+    DUPLICATED_DEVICE_ON_GATEWAY(HttpStatus.BAD_REQUEST.value(), "duplicated_device_on_gateway", "Duplicated device eui or name on gateway.", null),
+    DEVICE_NUM_LIMITED_ON_GATEWAY(HttpStatus.BAD_REQUEST.value(), "device_num_limited_on_gateway", "Device num reaching limitation on gateway application.", null),
     GATEWAY_NO_APPLICATION(HttpStatus.BAD_REQUEST.value(), "gateway_no_application", "Gateway must have at least one application.", null),
     GATEWAY_NO_DEVICE_PROFILE(HttpStatus.BAD_REQUEST.value(), "gateway_no_device_profile", "Gateway must have at least one device profile.", null),
     TEMPLATE_MISSING_LORA_PROFILE(HttpStatus.BAD_REQUEST.value(), "template_missing_device_profile", "Device template must have \"lora_device_profile_class\" in metadata.", null),

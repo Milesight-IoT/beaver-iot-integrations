@@ -25,6 +25,12 @@ public class GatewayData {
 
     private String clientId;
 
+    private String version;
+
+    public static GatewayData fromMap(Map<String, Object> map) {
+        return GatewayString.jsonInstance().convertValue(map, GatewayData.class);
+    }
+
     public void setEui(String eui) {
         this.eui = GatewayString.standardizeEUI(eui);
     }

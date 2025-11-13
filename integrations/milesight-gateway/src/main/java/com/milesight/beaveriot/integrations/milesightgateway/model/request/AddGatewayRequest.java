@@ -21,4 +21,6 @@ public class AddGatewayRequest {
     private String credentialId;
 
     private String clientId;
+
+    private String version;
 }

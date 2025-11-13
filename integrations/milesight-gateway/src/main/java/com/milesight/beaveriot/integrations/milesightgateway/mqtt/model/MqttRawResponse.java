@@ -14,8 +14,6 @@ import java.util.Map;
 public class MqttRawResponse {
     private String id;
 
-    private String gatewayEUI;
-
     private String method;
 
     private String url;

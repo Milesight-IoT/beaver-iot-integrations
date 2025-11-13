@@ -24,8 +24,9 @@ import com.milesight.beaveriot.integrations.milesightgateway.model.api.AddDevice
 import com.milesight.beaveriot.integrations.milesightgateway.model.api.DeviceListProfileItem;
 import com.milesight.beaveriot.integrations.milesightgateway.model.api.DeviceListResponse;
 import com.milesight.beaveriot.integrations.milesightgateway.mqtt.model.MqttResponse;
+import com.milesight.beaveriot.integrations.milesightgateway.requester.GatewayRequester;
+import com.milesight.beaveriot.integrations.milesightgateway.requester.GatewayRequesterFactory;
 import com.milesight.beaveriot.integrations.milesightgateway.util.Constants;
-import com.milesight.beaveriot.integrations.milesightgateway.util.GatewayRequester;
 import com.milesight.beaveriot.integrations.milesightgateway.util.GatewayString;
 import com.milesight.beaveriot.integrations.milesightgateway.util.LockConstants;
 import jakarta.persistence.EntityManager;
@@ -60,7 +61,7 @@ public class DeviceService {
     MsGwEntityService msGwEntityService;
 
     @Autowired
-    GatewayRequester gatewayRequester;
+    GatewayRequesterFactory gatewayRequesterFactory;
 
     @Autowired
     EntityManager entityManager;
@@ -72,10 +73,6 @@ public class DeviceService {
     EntityValueServiceProvider entityValueServiceProvider;
 
     private final ObjectMapper json = GatewayString.jsonInstance();
-
-    public List<Device> getAllDevices() {
-        return deviceServiceProvider.findAll(Constants.INTEGRATION_ID);
-    }
 
     public List<Device> getDevices(List<String> euiList) {
         return deviceServiceProvider.findByIdentifiers(euiList, Constants.INTEGRATION_ID);
@@ -112,11 +109,13 @@ public class DeviceService {
         if (gateway == null) {
             throw ServiceException.with(ErrorCode.PARAMETER_VALIDATION_FAILED.getErrorCode(), "Unknown gateway EUI: " + gatewayEUI).build();
         }
-        GatewayData gatewayData = json.convertValue(gateway.getAdditional(), GatewayData.class);
+        GatewayData gatewayData = GatewayData.fromMap(gateway.getAdditional());
 
         deviceData.setGatewayEUI(gatewayEUI);
 
-        MqttResponse<DeviceListResponse> deviceListResponseMqttResponse = gatewayRequester.requestDeviceList(gatewayEUI, 0, 1, null);
+        GatewayRequester gatewayRequester = gatewayRequesterFactory.create(gatewayData);
+
+        MqttResponse<DeviceListResponse> deviceListResponseMqttResponse = gatewayRequester.requestBase();
 
         // get device model
         String deviceModelId = addDevice.getDeviceModel();
@@ -186,8 +185,8 @@ public class DeviceService {
 
                     self.manageGatewayDevices(gatewayEUI, deviceEUI, GatewayDeviceOperation.ADD);
                     this.registerTransactionRollback(() -> self.manageGatewayDevices(gatewayEUI, deviceEUI, GatewayDeviceOperation.DELETE));
-                    gatewayRequester.requestAddDevice(gatewayEUI, addDeviceRequest);
-                    this.registerTransactionRollback(() -> gatewayRequester.requestDeleteDevice(gatewayEUI, List.of(deviceEUI)));
+                    gatewayRequester.requestAddDevice(addDeviceRequest);
+                    this.registerTransactionRollback(() -> gatewayRequester.requestDeleteDeviceAsync(List.of(deviceEUI)));
 
                     return true;
                 });
@@ -241,15 +240,11 @@ public class DeviceService {
 
     @Data
     private static class DevicePayload {
-        private String gatewayEui;
+        private GatewayRequester gatewayRequester;
 
         private String deviceKey;
 
         private Long fPort;
-
-        private String credentialId;
-
-        private String mqttUsername;
 
         private Map<String, Object> payload = new HashMap<>();
     }
@@ -290,7 +285,8 @@ public class DeviceService {
             if (!StringUtils.hasText(encodedData)) {
                 continue;
             }
-            gatewayRequester.downlink(payload.getGatewayEui(), deviceEui, fPort, encodedData);
+
+            payload.getGatewayRequester().downlink(deviceEui, fPort, encodedData);
         }
     }
 
@@ -300,6 +296,7 @@ public class DeviceService {
 
         Map<String, DevicePayload> devicePayloadMap = new HashMap<>();
         Map<String, String> deviceToGatewayMap = msGwEntityService.getDeviceGatewayRelation();
+        Map<String, GatewayRequester> gatewayRequesterMap = new HashMap<>();
         // split by device
         allPayloads.forEach((String entityKey, Object entityValue) -> {
             Entity entity = entityMap.get(entityKey);
@@ -318,10 +315,18 @@ public class DeviceService {
             DevicePayload devicePayload = devicePayloadMap.computeIfAbsent(deviceEui, k -> new DevicePayload());
             devicePayload.setDeviceKey(deviceKey);
 
-            devicePayload.setGatewayEui(deviceToGatewayMap.get(deviceEui));
-            if (devicePayload.getGatewayEui() == null) {
-                throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), "Cannot find gateway for device: " + deviceKey).build();
-            }
+            devicePayload.setGatewayRequester(gatewayRequesterMap.computeIfAbsent(deviceToGatewayMap.get(deviceEui), gatewayEui -> {
+                if (gatewayEui == null) {
+                    throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), "Cannot find gateway eui for device: " + deviceKey).build();
+                }
+
+                Device gateway = deviceServiceProvider.findByKey(GatewayString.getGatewayKey(gatewayEui));
+                if (gateway == null) {
+                    throw ServiceException.with(ErrorCode.SERVER_ERROR.getErrorCode(), "Cannot find gateway of eui: " + gatewayEui).build();
+                }
+
+                return gatewayRequesterFactory.create(GatewayData.fromMap(gateway.getAdditional()));
+            }));
 
             Object value = entityValue;
             if (entity.getValueType().equals(EntityValueType.BOOLEAN)) {
