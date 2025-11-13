@@ -36,4 +36,6 @@ public interface GatewayRequester {
     String getVersion();
 
     String getGatewayEui();
+
+    void detect();
 }
