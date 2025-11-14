@@ -22,9 +22,10 @@ public interface MscIntegrationConstants {
             String PREFIX = "_#";
             String SUFFIX = "#_";
             String TEMPLATE = "_#%s#_";
+            String SYSTEM_ENTITY_PREFIX = "@";
 
             static boolean match(String key) {
-                return key.startsWith(PREFIX) && key.endsWith(SUFFIX);
+                return (key.startsWith(PREFIX) && key.endsWith(SUFFIX)) || key.startsWith(SYSTEM_ENTITY_PREFIX);
             }
         }
 
