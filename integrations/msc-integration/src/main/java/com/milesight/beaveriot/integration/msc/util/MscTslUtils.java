@@ -18,8 +18,9 @@ import com.milesight.cloud.sdk.client.model.ThingSpec;
 import com.milesight.cloud.sdk.client.model.TslDataSpec;
 import com.milesight.cloud.sdk.client.model.TslDataValidatorSpec;
 import com.milesight.cloud.sdk.client.model.TslKeyValuePair;
-import lombok.*;
-import lombok.extern.slf4j.*;
+import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 
@@ -353,15 +354,23 @@ public class MscTslUtils {
                 log.debug("Ignored invalid key: {}, prefix is {}", key, entityKeyPublicPrefix);
                 return;
             }
+
             val path = key.substring(entityKeyPublicPrefix.length() + 1);
-            if (path.length() == 0) {
+            if (path.isEmpty()) {
                 log.debug("Ignored invalid key: {}", key);
                 return;
             }
+
+            if (path.startsWith("@")) {
+                log.debug("Ignored built-in entity: {}", key);
+                return;
+            }
+
             if (value == null) {
                 log.debug("Null value is ignored: {}", key);
                 return;
             }
+
             ensureParentAndSetValue(objectMapper, result, path, value);
         });
         return result;
