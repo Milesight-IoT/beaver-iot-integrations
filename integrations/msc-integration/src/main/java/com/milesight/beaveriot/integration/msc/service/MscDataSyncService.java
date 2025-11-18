@@ -7,6 +7,7 @@ import com.milesight.beaveriot.base.exception.ServiceException;
 import com.milesight.beaveriot.context.api.DeviceServiceProvider;
 import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
 import com.milesight.beaveriot.context.constants.ExchangeContextKeys;
+import com.milesight.beaveriot.context.i18n.locale.LocaleContext;
 import com.milesight.beaveriot.context.integration.model.Device;
 import com.milesight.beaveriot.context.integration.model.DeviceStatus;
 import com.milesight.beaveriot.context.integration.model.ExchangePayload;
@@ -99,9 +100,11 @@ public class MscDataSyncService {
     private Future<?> runSyncTask(boolean delta) {
         val tenantId = TenantContext.getTenantId();
         val user = SecurityUserContext.getSecurityUser();
+        val locale = LocaleContext.getLocale();
         return executor.submit(() -> {
             TenantContext.setTenantId(tenantId);
             SecurityUserContext.setSecurityUser(user);
+            LocaleContext.setLocale(locale);
 
             val lockConfiguration = ScopedLockConfiguration.builder(LockScope.TENANT)
                     .name("msc-integration:sync-all")
@@ -252,10 +255,12 @@ public class MscDataSyncService {
 
         val tenantId = TenantContext.getTenantId();
         val user = SecurityUserContext.getSecurityUser();
+        val locale = LocaleContext.getLocale();
         return CompletableFuture.supplyAsync(() -> {
             try {
                 TenantContext.setTenantId(tenantId);
                 SecurityUserContext.setSecurityUser(user);
+                LocaleContext.setLocale(locale);
 
                 Device device = null;
                 switch (task.type) {
