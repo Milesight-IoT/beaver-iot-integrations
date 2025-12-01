@@ -40,6 +40,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -47,7 +49,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -300,13 +301,16 @@ public class MscDataSyncService {
     private void syncPropertiesHistory(Device device, long lastSyncTime) {
         // deviceId should not be null
         val deviceId = (String) device.getAdditional().get(MscIntegrationConstants.DeviceAdditionalDataName.DEVICE_ID);
+        val deviceKey = device.getKey();
         long time24HoursBefore = TimeUtils.currentTimeSeconds() - TimeUnit.DAYS.toSeconds(1);
         long startTime = Math.max(lastSyncTime, time24HoursBefore) * 1000;
         long endTime = TimeUtils.currentTimeMillis();
         long pageSize = 100;
         String pageKey = null;
         boolean hasNextPage = true;
-        val isLatestData = new AtomicBoolean(true);
+        val handledEntityKey = new HashSet<String>();
+        val timestampToLatestValues = new HashMap<Long, ExchangePayload>();
+
         while (hasNextPage) {
             val page = mscClientProvider.getMscClient()
                     .device()
@@ -323,19 +327,35 @@ public class MscDataSyncService {
                 val objectMapper = mscClientProvider.getMscClient().getObjectMapper();
                 val properties = objectMapper.convertValue(item.getProperties(), JsonNode.class);
                 val timestamp = item.getTs() != null ? item.getTs() : TimeUtils.currentTimeMillis();
-                self.saveHistoryData(device.getKey(), null, properties, timestamp, isLatestData.get());
-                if (isLatestData.get()) {
-                    isLatestData.set(false);
+                val payload = createHistoryDataExchangePayload(device.getKey(), null, properties);
+
+                if (payload != null && !payload.isEmpty()) {
+                    val latestValues = new HashMap<String, Object>();
+                    payload.forEach((key, value) -> {
+                        if (!handledEntityKey.contains(key)) {
+                            latestValues.put(key, value);
+                            handledEntityKey.add(key);
+                        }
+                    });
+                    latestValues.keySet().forEach(payload::remove);
+                    timestampToLatestValues.put(timestamp, ExchangePayload.create(latestValues));
                 }
+                self.saveHistoryData(deviceKey, timestamp, payload, false);
             });
+
+            if (!timestampToLatestValues.isEmpty()) {
+                timestampToLatestValues.forEach((timestamp, payload) -> self.saveHistoryData(deviceKey, timestamp, payload, true));
+            }
         }
     }
 
-    @DistributedLock(name = "msc-integration:saveHistoryData(#{#p0},#{#p3})", waitForLock = "5s")
-    public void saveHistoryData(String deviceKey, String eventId, JsonNode data, long timestampMs, boolean isLatestData) {
-        val payload = eventId == null
-                ? MscTslUtils.convertJsonNodeToExchangePayload(deviceKey, data)
-                : MscTslUtils.convertJsonNodeToExchangePayload(String.format("%s.%s", deviceKey, eventId), data, false);
+    public void saveHistoryData(String deviceKey, long timestampMs, String eventId, JsonNode data, boolean isLatestData) {
+        val payload = createHistoryDataExchangePayload(deviceKey, eventId, data);
+        self.saveHistoryData(deviceKey, timestampMs, payload, isLatestData);
+    }
+
+    @DistributedLock(name = "msc-integration:saveHistoryData(#{#p0},#{#p1})", waitForLock = "5s")
+    public void saveHistoryData(String deviceKey, long timestampMs, ExchangePayload payload, boolean isLatestData) {
         if (payload == null || payload.isEmpty()) {
             return;
         }
@@ -345,7 +365,7 @@ public class MscDataSyncService {
         log.debug("Existing keys: {}, ts: {}", existingKeys, timestampMs);
         payload.entrySet().removeIf(entry -> existingKeys.contains(entry.getKey()));
         if (payload.isEmpty()) {
-            log.debug("Nothing updated: {}, {}", deviceKey, eventId);
+            log.debug("Nothing updated");
             return;
         }
 
@@ -356,6 +376,13 @@ public class MscDataSyncService {
             payload.putContext(ExchangeContextKeys.EXCHANGE_IGNORE_INVALID_KEY, true);
             entityValueServiceProvider.saveValuesAndPublishAsync(payload, MscIntegrationConstants.EventType.LATEST_VALUE);
         }
+    }
+
+    @Nullable
+    private static ExchangePayload createHistoryDataExchangePayload(String deviceKey, String eventId, JsonNode data) {
+        return eventId == null
+                ? MscTslUtils.convertJsonNodeToExchangePayload(deviceKey, data)
+                : MscTslUtils.convertJsonNodeToExchangePayload(String.format("%s.%s", deviceKey, eventId), data, false);
     }
 
     @SneakyThrows
