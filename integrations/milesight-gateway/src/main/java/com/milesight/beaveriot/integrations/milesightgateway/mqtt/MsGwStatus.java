@@ -3,6 +3,7 @@ package com.milesight.beaveriot.integrations.milesightgateway.mqtt;
 import com.milesight.beaveriot.base.annotations.shedlock.LockScope;
 import com.milesight.beaveriot.context.api.DeviceServiceProvider;
 import com.milesight.beaveriot.context.api.DeviceStatusServiceProvider;
+import com.milesight.beaveriot.context.api.RequestCoalescerProvider;
 import com.milesight.beaveriot.context.integration.model.Device;
 import com.milesight.beaveriot.context.integration.model.DeviceStatus;
 import com.milesight.beaveriot.context.integration.wrapper.AnnotatedEntityWrapper;
@@ -54,6 +55,9 @@ public class MsGwStatus {
     @Autowired
     DeviceStatusServiceProvider deviceStatusServiceProvider;
 
+    @Autowired
+    RequestCoalescerProvider requestCoalescer;
+
     public void init() {
         messagePubSub.subscribe(GatewayActiveMessage.class, this::onGatewayActive);
     }
@@ -64,6 +68,13 @@ public class MsGwStatus {
 
     public void updateGatewayStatus(String inputEui, DeviceStatus status, Long ts, boolean shouldPublish) {
         final String eui = GatewayString.standardizeEUI(inputEui);
+        requestCoalescer.execute(eui + "-" + status, () -> {
+            this.doUpdateGatewayStatus(eui, status, ts, shouldPublish);
+            return inputEui;
+        });
+    }
+
+    private void doUpdateGatewayStatus(String eui, DeviceStatus status, Long ts, boolean shouldPublish) {
         if (shouldPublish) {
             this.publishGatewayActiveMessage(GatewayActiveMessage.builder().eui(eui).status(status).build());
         }
