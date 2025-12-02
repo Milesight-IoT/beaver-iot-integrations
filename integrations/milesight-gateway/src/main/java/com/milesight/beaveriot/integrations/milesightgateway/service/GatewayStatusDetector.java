@@ -73,15 +73,14 @@ public class GatewayStatusDetector {
             return;
         }
 
+        pendingGatewayMap.values().forEach(gatewayData -> msGwStatus.registerGatewayStatusHandler(gatewayData.getEui(), foundLambda));
+
         scheduler.schedule(
                 "Detect-Gateway-" + System.currentTimeMillis() + "-" + GatewayString.generateRandomString(6),
                 getScheduleSettings(PRE_OFFLINE_SECONDS),
                 detectTask -> {
                     log.debug("schedule gateways: " + pendingGatewayMap.values().stream().map(GatewayData::getEui).toList());
-                    pendingGatewayMap.values().forEach(gatewayData -> {
-                        msGwStatus.registerGatewayStatusHandler(gatewayData.getEui(), foundLambda);
-                        gatewayRequesterFactory.create(gatewayData).detect();
-                    });
+                    pendingGatewayMap.values().forEach(gatewayData -> gatewayRequesterFactory.create(gatewayData).detect());
                     this.scheduleOffline();
                 });
     }
