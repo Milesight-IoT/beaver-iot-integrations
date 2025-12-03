@@ -60,6 +60,9 @@ public class MsGwMqttClient {
     @Autowired
     MsGwStatus msGwStatus;
 
+    @Autowired
+    RequestCoalescerProvider requestCoalescer;
+
     private final Map<String, CompletableFuture<MqttRawResponse>> pendingRequests = new ConcurrentHashMap<>();
 
     private final ObjectMapper json = GatewayString.jsonInstance();
@@ -95,7 +98,10 @@ public class MsGwMqttClient {
 
             log.debug("Payload: {}", inputResult.getPayload());
             entityValueServiceProvider.saveValuesAndPublishAsync(inputResult.getPayload(), "DEVICE_UPLINK");
-            deviceStatusServiceProvider.online(inputResult.getDevice());
+            requestCoalescer.execute(deviceKey + "-" + DeviceStatus.ONLINE, () -> {
+                deviceStatusServiceProvider.online(inputResult.getDevice());
+                return deviceKey;
+            });
         } catch (JsonProcessingException e) {
             log.error(e.getMessage());
         }
