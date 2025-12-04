@@ -26,8 +26,14 @@ import com.milesight.msc.sdk.MscClient;
 import com.milesight.msc.sdk.config.Credentials;
 import com.milesight.msc.sdk.error.MscSdkException;
 import com.milesight.msc.sdk.utils.LongStringNumberDeserializer;
-import lombok.*;
-import lombok.extern.slf4j.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import okhttp3.ConnectionPool;
 import org.openapitools.jackson.nullable.JsonNullableModule;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -69,14 +75,18 @@ public class MscConnectionService implements IMscClientProvider {
     public void onOpenapiPropertiesUpdate(Event<MscConnectionPropertiesEntities.Openapi> event) {
         val tenantId = TenantContext.getTenantId();
         val openapiSettings = event.getPayload();
-        val configChanged = isConfigChanged(event);
-        if (configChanged) {
+
+        if (isConfigChanged(event)) {
             initConnection(tenantId, openapiSettings.getServerUrl(), openapiSettings.getClientId(), openapiSettings.getClientSecret());
             updateConnectionStatus(IntegrationStatus.NOT_READY);
         }
-        testConnection(tenantId);
 
-        messagePubSub.publishAfterCommit(MscClientUpdateEvent.builder()
+        syncOpenapiSettings(tenantId, openapiSettings);
+        testConnection(tenantId);
+    }
+
+    private void syncOpenapiSettings(String tenantId, MscConnectionPropertiesEntities.Openapi openapiSettings) {
+        messagePubSub.publish(MscClientUpdateEvent.builder()
                 .tenantId(tenantId)
                 .clientId(openapiSettings.getClientId())
                 .serverUrl(openapiSettings.getServerUrl())
