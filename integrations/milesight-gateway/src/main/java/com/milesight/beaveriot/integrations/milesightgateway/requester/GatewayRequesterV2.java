@@ -153,7 +153,7 @@ public class GatewayRequesterV2 implements GatewayRequester {
         reqBody.putAll(NET_CONFIG.get(requestData.getProfileID()));
         reqBody.put("appKey", ObjectUtils.isEmpty(requestData.getAppKey()) ? "5572404c696e6b4c6f52613230313823" : requestData.getAppKey());
         reqBody.put("applicationId", requestData.getApplicationID());
-        reqBody.put("skipFCntCheck", requestData.getSkipFCntCheck());
+        reqBody.put("skipFCntCheck", !requestData.getSkipFCntCheck()); // For some reason, it's opposite to UG65/67
         reqBody.put("fPort", requestData.getFPort());
         reqBody.put("fCntUp", 0);
         reqBody.put("fCntDown", 0);
@@ -218,7 +218,7 @@ public class GatewayRequesterV2 implements GatewayRequester {
     public void downlink(String nodeDeviceEui, Integer fPort, String data) {
         msGwMqttClient.downlink(MsGwMqttUtil.getDownlinkTopic(this.eui, nodeDeviceEui), Map.of(
                 "fPort", fPort,
-                "data", "data",
+                "data", data,
                 "confirmed", false
         ));
     }
