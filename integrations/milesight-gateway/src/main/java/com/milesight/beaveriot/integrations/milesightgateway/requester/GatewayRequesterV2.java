@@ -218,7 +218,7 @@ public class GatewayRequesterV2 implements GatewayRequester {
     public void downlink(String nodeDeviceEui, Integer fPort, String data) {
         msGwMqttClient.downlink(MsGwMqttUtil.getDownlinkTopic(this.eui, nodeDeviceEui), Map.of(
                 "fPort", fPort,
-                "data", "data",
+                "data", data,
                 "confirmed", false
         ));
     }
