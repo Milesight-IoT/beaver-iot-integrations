@@ -109,6 +109,10 @@ public class MqttDeviceTemplateService {
 
     public Page<DeviceTemplateResponseData> searchDeviceTemplate(SearchDeviceTemplateRequest searchDeviceTemplateRequest) {
         List<Long> deviceTemplateIds = getDeviceTemplateIds();
+        if (CollectionUtils.isEmpty(deviceTemplateIds)) {
+            return Page.empty();
+        }
+
         searchDeviceTemplateRequest.setDeviceTemplateIds(deviceTemplateIds);
         Page<DeviceTemplateResponseData> deviceTemplateResponseDataPage = deviceTemplateServiceProvider.search(searchDeviceTemplateRequest);
         return deviceTemplateResponseDataPage.map(DeviceTemplateInfoResponse::build);
