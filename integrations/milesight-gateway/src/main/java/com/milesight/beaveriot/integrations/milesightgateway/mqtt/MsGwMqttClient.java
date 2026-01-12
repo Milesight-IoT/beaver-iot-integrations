@@ -98,7 +98,7 @@ public class MsGwMqttClient {
 
             log.debug("Payload: {}", inputResult.getPayload());
             entityValueServiceProvider.saveValuesAndPublishAsync(inputResult.getPayload(), "DEVICE_UPLINK");
-            requestCoalescer.execute(deviceKey + "-" + DeviceStatus.ONLINE, () -> {
+            requestCoalescer.executeAsync(deviceKey + "-" + DeviceStatus.ONLINE, () -> {
                 deviceStatusServiceProvider.online(inputResult.getDevice());
                 return deviceKey;
             });
