@@ -1,9 +1,11 @@
 package com.milesight.beaveriot.integrations.milesightgateway;
 
 import com.milesight.beaveriot.context.api.BlueprintLibrarySyncerProvider;
+import com.milesight.beaveriot.context.api.DeviceServiceProvider;
 import com.milesight.beaveriot.context.api.DeviceStatusServiceProvider;
 import com.milesight.beaveriot.context.integration.bootstrap.IntegrationBootstrap;
 import com.milesight.beaveriot.context.integration.model.Device;
+import com.milesight.beaveriot.context.integration.model.DeviceStatus;
 import com.milesight.beaveriot.context.integration.model.DeviceStatusConfig;
 import com.milesight.beaveriot.context.integration.model.Integration;
 import com.milesight.beaveriot.integrations.milesightgateway.legacy.VersionUpgradeService;
@@ -11,11 +13,9 @@ import com.milesight.beaveriot.integrations.milesightgateway.model.GatewayData;
 import com.milesight.beaveriot.integrations.milesightgateway.mqtt.MsGwMqttClient;
 import com.milesight.beaveriot.integrations.milesightgateway.mqtt.MsGwStatus;
 import com.milesight.beaveriot.integrations.milesightgateway.requester.GatewayRequesterFactory;
-import com.milesight.beaveriot.integrations.milesightgateway.service.DeviceModelService;
-import com.milesight.beaveriot.integrations.milesightgateway.service.DeviceService;
-import com.milesight.beaveriot.integrations.milesightgateway.service.GatewayService;
-import com.milesight.beaveriot.integrations.milesightgateway.service.GatewayStatusDetector;
+import com.milesight.beaveriot.integrations.milesightgateway.service.*;
 import com.milesight.beaveriot.integrations.milesightgateway.util.Constants;
+import com.milesight.beaveriot.integrations.milesightgateway.util.GatewayString;
 import com.milesight.beaveriot.scheduler.core.Scheduler;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -55,6 +55,12 @@ public class MilesightGatewayBootstrap implements IntegrationBootstrap {
     BlueprintLibrarySyncerProvider blueprintLibrarySyncerProvider;
 
     @Autowired
+    private MsGwEntityService msGwEntityService;
+
+    @Autowired
+    private DeviceServiceProvider deviceServiceProvider;
+
+    @Autowired
     private GatewayRequesterFactory gatewayRequesterFactory;
 
     @Autowired
@@ -90,6 +96,20 @@ public class MilesightGatewayBootstrap implements IntegrationBootstrap {
         DeviceStatusConfig config = DeviceStatusConfig.builder()
                         .offlineTimeoutFetcher(deviceService::getDeviceOfflineTimeout)
                         .batchOfflineTimeoutFetcher(deviceService::getDeviceOfflineTimeouts)
+                        .onlineListener(device -> {
+                            if (GatewayString.isGatewayIdentifier(device.getIdentifier())) {
+                                msGwStatus.publishGatewayStatusEvent(DeviceStatus.ONLINE, device, System.currentTimeMillis());
+                            }
+                        })
+                        .offlineListener(device -> {
+                            if (GatewayString.isGatewayIdentifier(device.getIdentifier())) {
+                                msGwStatus.publishGatewayStatusEvent(DeviceStatus.OFFLINE, device, System.currentTimeMillis());
+                                List<String> deviceEuiList = msGwEntityService.getGatewayRelation().get(GatewayData.fromMap(device.getAdditional()).getEui());
+                                if (deviceEuiList != null && !deviceEuiList.isEmpty()) {
+                                    deviceServiceProvider.findByIdentifiers(deviceEuiList, Constants.INTEGRATION_ID).forEach(deviceStatusServiceProvider::offline);
+                                }
+                            }
+                        })
                         .build();
         deviceStatusServiceProvider.register(Constants.INTEGRATION_ID, config);
     }
