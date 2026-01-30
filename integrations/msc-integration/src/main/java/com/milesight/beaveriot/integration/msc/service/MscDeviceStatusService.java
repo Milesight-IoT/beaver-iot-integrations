@@ -1,5 +1,7 @@
 package com.milesight.beaveriot.integration.msc.service;
 
+import com.milesight.beaveriot.context.api.EntityServiceProvider;
+import com.milesight.beaveriot.context.api.EntityTemplateServiceProvider;
 import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
 import com.milesight.beaveriot.context.integration.model.Device;
 import com.milesight.beaveriot.context.integration.model.DeviceStatus;
@@ -19,6 +21,12 @@ public class MscDeviceStatusService {
 
     @Autowired
     private EntityValueServiceProvider entityValueServiceProvider;
+
+    @Autowired
+    EntityServiceProvider entityServiceProvider;
+
+    @Autowired
+    EntityTemplateServiceProvider entityTemplateServiceProvider;
 
     /**
      * Update device status by directly saving the status value via EntityValueServiceProvider.
@@ -52,6 +60,20 @@ public class MscDeviceStatusService {
 
             if (Objects.equals(deviceStatus.name(), existValue)) {
                 return;
+            }
+
+            // ensure entity exists
+            if (device.getEntities().stream()
+                    .noneMatch(entity -> IDENTIFIER_DEVICE_STATUS.equals(entity.getIdentifier()))) {
+
+                var entityTemplate = entityTemplateServiceProvider.findByKey(IDENTIFIER_DEVICE_STATUS);
+                if (entityTemplate == null) {
+                    log.warn("Device status entity template not found: device={}", device.getKey());
+                    return;
+                }
+
+                var statusEntity = entityTemplate.toEntity(device.getIntegrationId(), device.getKey());
+                entityServiceProvider.save(statusEntity);
             }
 
             var payload = ExchangePayload.create(statusEntityKey, deviceStatus.name());
