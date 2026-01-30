@@ -31,7 +31,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
-import javax.crypto.Mac;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -85,8 +84,7 @@ public class MscWebhookService {
         }
 
         val webhookContext = tenantIdToWebhookContext.computeIfAbsent(tenantId, WebhookContext::new);
-        if (secretKey != null && !secretKey.isEmpty() && !secretKey.equals(webhookContext.secretKey)) {
-            webhookContext.mac = HMacUtils.getMac(secretKey);
+        if (secretKey != null && !secretKey.isEmpty()) {
             webhookContext.secretKey = secretKey;
         }
         webhookContext.enabled = true;
@@ -196,15 +194,17 @@ public class MscWebhookService {
                     log.warn("Invalid data: {}", deviceData);
                     return;
                 }
-                dataSyncService.saveHistoryData(device.getKey(), eventId, data, ts, true);
+                dataSyncService.saveHistoryData(device.getKey(), ts, eventId, data, true);
             }
             default -> log.debug("Unsupported event: {}", deviceData.getType());
         }
     }
 
     public boolean isSignatureValid(String signature, String requestTimestamp, String requestNonce, WebhookContext webhookContext) {
-        val mac = webhookContext.getMac();
-        if (mac != null) {
+        val secretKey = webhookContext.getSecretKey();
+        if (secretKey != null && !secretKey.isEmpty()) {
+            // Create a new Mac instance for each validation to ensure thread safety
+            val mac = HMacUtils.getMac(secretKey);
             val expectedSignature = HMacUtils.digestHex(mac, String.format("%s%s", requestTimestamp, requestNonce));
             return expectedSignature.equals(signature);
         }
@@ -230,7 +230,6 @@ public class MscWebhookService {
         private String tenantId;
         private boolean enabled;
         private String secretKey;
-        private Mac mac;
 
         public WebhookContext(String tenantId) {
             this.tenantId = tenantId;
