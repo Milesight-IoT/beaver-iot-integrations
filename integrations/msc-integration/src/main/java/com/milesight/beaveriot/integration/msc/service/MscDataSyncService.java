@@ -5,11 +5,11 @@ import com.milesight.beaveriot.base.annotations.shedlock.DistributedLock;
 import com.milesight.beaveriot.base.annotations.shedlock.LockScope;
 import com.milesight.beaveriot.base.exception.ServiceException;
 import com.milesight.beaveriot.context.api.DeviceServiceProvider;
+import com.milesight.beaveriot.context.api.DeviceStatusServiceProvider;
 import com.milesight.beaveriot.context.api.EntityValueServiceProvider;
 import com.milesight.beaveriot.context.constants.ExchangeContextKeys;
 import com.milesight.beaveriot.context.i18n.locale.LocaleContext;
 import com.milesight.beaveriot.context.integration.model.Device;
-import com.milesight.beaveriot.context.integration.model.DeviceStatus;
 import com.milesight.beaveriot.context.integration.model.ExchangePayload;
 import com.milesight.beaveriot.context.security.SecurityUserContext;
 import com.milesight.beaveriot.context.security.TenantContext;
@@ -67,7 +67,7 @@ public class MscDataSyncService {
     private DeviceServiceProvider deviceServiceProvider;
 
     @Autowired
-    private MscDeviceStatusService mscDeviceStatusService;
+    private DeviceStatusServiceProvider deviceStatusServiceProvider;
 
     @Autowired
     private EntityValueServiceProvider entityValueServiceProvider;
@@ -371,11 +371,9 @@ public class MscDataSyncService {
 
     private void updateDeviceStatus(Device device, DeviceDetailResponse.ConnectStatusEnum connectStatus) {
         if (DeviceDetailResponse.ConnectStatusEnum.ONLINE.equals(connectStatus)) {
-            mscDeviceStatusService.updateDeviceStatus(device, DeviceStatus.ONLINE);
-        } else if (DeviceDetailResponse.ConnectStatusEnum.OFFLINE.equals(connectStatus)) {
-            mscDeviceStatusService.updateDeviceStatus(device, DeviceStatus.OFFLINE);
+            deviceStatusServiceProvider.online(device);
         } else {
-            mscDeviceStatusService.updateDeviceStatus(device, null);
+            deviceStatusServiceProvider.offline(device);
         }
     }
 
