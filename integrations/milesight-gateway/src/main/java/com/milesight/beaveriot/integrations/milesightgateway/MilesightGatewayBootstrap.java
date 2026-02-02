@@ -106,7 +106,7 @@ public class MilesightGatewayBootstrap implements IntegrationBootstrap {
                                 msGwStatus.publishGatewayStatusEvent(DeviceStatus.OFFLINE, device, System.currentTimeMillis());
                                 List<String> deviceEuiList = msGwEntityService.getGatewayRelation().get(GatewayData.fromMap(device.getAdditional()).getEui());
                                 if (deviceEuiList != null && !deviceEuiList.isEmpty()) {
-                                    deviceServiceProvider.findByIdentifiers(deviceEuiList, Constants.INTEGRATION_ID).forEach(deviceStatusServiceProvider::offline);
+                                    deviceServiceProvider.findByIdentifiers(deviceEuiList, Constants.INTEGRATION_ID).forEach(deviceStatusServiceProvider::offlineIfPreviouslySeen);
                                 }
                             }
                         })
