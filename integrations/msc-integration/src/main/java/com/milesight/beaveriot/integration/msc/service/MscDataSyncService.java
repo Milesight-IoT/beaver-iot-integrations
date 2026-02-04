@@ -397,10 +397,14 @@ public class MscDataSyncService {
     }
 
     private void updateDeviceStatus(Device device, DeviceDetailResponse.ConnectStatusEnum connectStatus) {
-        if (DeviceDetailResponse.ConnectStatusEnum.ONLINE.equals(connectStatus)) {
-            deviceStatusServiceProvider.online(device);
-        } else {
-            deviceStatusServiceProvider.offline(device);
+        if (connectStatus == null) {
+            connectStatus = DeviceDetailResponse.ConnectStatusEnum.DISCONNECT;
+        }
+
+        switch (connectStatus) {
+            case ONLINE -> deviceStatusServiceProvider.online(device);
+            case OFFLINE -> deviceStatusServiceProvider.offline(device);
+            default -> deviceStatusServiceProvider.offlineIfPreviouslySeen(device);
         }
     }
 
