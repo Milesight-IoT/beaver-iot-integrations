@@ -75,9 +75,11 @@ public class MscConnectionService implements IMscClientProvider {
     public void onOpenapiPropertiesUpdate(Event<MscConnectionPropertiesEntities.Openapi> event) {
         val tenantId = TenantContext.getTenantId();
         val openapiSettings = event.getPayload();
+        val configChanged = isConfigChanged(event);
 
-        if (isConfigChanged(event)) {
-            initConnection(tenantId, openapiSettings.getServerUrl(), openapiSettings.getClientId(), openapiSettings.getClientSecret());
+        initConnection(tenantId, openapiSettings.getServerUrl(), openapiSettings.getClientId(), openapiSettings.getClientSecret());
+
+        if (configChanged) {
             updateConnectionStatus(IntegrationStatus.NOT_READY);
         }
 
